@@ -1176,11 +1176,6 @@ def generar_constancia_estudio_view(request, cedula):
     # ── Datos del estudiante ──────────────────────────────────────────────────
     estudiante = get_object_or_404(Estudiante, cedula_identidad=cedula)
 
-    # Grado actual: primero desde la inscripción más reciente, luego desde ano_cursando
-    inscripcion = Inscripcion.objects.filter(
-        estudiante=estudiante
-    ).order_by('-periodo__fecha_inicio').first()
-
     mapa_grados = {
         11: "1er Grado", 12: "2do Grado", 13: "3er Grado",
         14: "4to Grado", 15: "5to Grado", 16: "6to Grado",
@@ -1188,14 +1183,11 @@ def generar_constancia_estudio_view(request, cedula):
         4: "4to Año", 5: "5to Año", 6: "Egresado/Graduado"
     }
 
-    if inscripcion:
-        grado_text = mapa_grados.get(inscripcion.ano_grado, "Año no determinado")
-        periodo_escolar = inscripcion.periodo.nombre
-    else:
-        grado_text = mapa_grados.get(estudiante.ano_cursando, "Año no determinado")
-        ahora_temp = datetime.datetime.now()
-        a = ahora_temp.year
-        periodo_escolar = f"{a}-{a+1}" if ahora_temp.month >= 8 else f"{a-1}-{a}"
+    # PRIORIDAD: Información en tiempo real del perfil
+    grado_text = mapa_grados.get(estudiante.ano_cursando, "Año no determinado")
+    ahora_temp = datetime.datetime.now()
+    a = ahora_temp.year
+    periodo_escolar = f"{a}-{a+1}" if ahora_temp.month >= 8 else f"{a-1}-{a}"
 
     # Edad calculada dinámicamente desde fecha_nacimiento
     hoy = datetime.date.today()
@@ -1323,27 +1315,18 @@ def emitir_documento_formato_view(request, cedula, tipo_documento):
     from django.template import TemplateDoesNotExist
 
     estudiante = get_object_or_404(Estudiante, cedula_identidad=cedula)
-    
-    inscripcion = Inscripcion.objects.filter(
-        estudiante=estudiante
-    ).order_by('-periodo__fecha_inicio').first()
-
     mapa_grados = {
-        1: "1er",
-        2: "2do",
-        3: "3er",
-        4: "4to",
-        5: "5to",
+        11: "1er", 12: "2do", 13: "3er",
+        14: "4to", 15: "5to", 16: "6to",
+        1: "1er", 2: "2do", 3: "3er",
+        4: "4to", 5: "5to", 6: "Egresado",
     }
-
-    if inscripcion:
-        grado_text = mapa_grados.get(inscripcion.ano_grado, str(inscripcion.ano_grado))
-        periodo_escolar = inscripcion.periodo.nombre
-    else:
-        grado_text = mapa_grados.get(estudiante.ano_cursando, str(estudiante.ano_cursando))
-        ahora_temp = datetime.datetime.now()
-        a = ahora_temp.year
-        periodo_escolar = f"{a}-{a+1}" if ahora_temp.month >= 8 else f"{a-1}-{a}"
+    
+    # PRIORIDAD: Información en tiempo real del perfil
+    grado_text = mapa_grados.get(estudiante.ano_cursando, str(estudiante.ano_cursando))
+    ahora_temp = datetime.datetime.now()
+    a = ahora_temp.year
+    periodo_escolar = f"{a}-{a+1}" if ahora_temp.month >= 8 else f"{a-1}-{a}"
 
     hoy = datetime.date.today()
     fn = estudiante.fecha_nacimiento
@@ -1493,7 +1476,7 @@ def generar_boleta_view(request, cedula):
     except (ValueError, TypeError):
         ano_grado = estudiante.ano_cursando
 
-    if not (1 <= ano_grado <= 6) and not (11 <= ano_grado <= 16):
+    if not (1 <= ano_grado <= 6):
         ano_grado = 1
 
     # Fetch enrollment
@@ -1503,8 +1486,6 @@ def generar_boleta_view(request, cedula):
     ).order_by('-periodo__fecha_inicio').first()
 
     mapa_grados = {
-        11: "1er Grado", 12: "2do Grado", 13: "3er Grado",
-        14: "4to Grado", 15: "5to Grado", 16: "6to Grado",
         1: "1er Año", 2: "2do Año", 3: "3er Año",
         4: "4to Año", 5: "5to Año", 6: "Egresado/Graduado"
     }
