@@ -98,4 +98,8 @@ test_dump_supabase.json
 !vercel.json
 !*.code-workspace
 
+# Customizaciones de Agente (Antigravity Config)
+.agents/
+
+
 
