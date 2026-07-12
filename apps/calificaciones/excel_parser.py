@@ -31,7 +31,8 @@ COLUMN_ALIASES = {
     'pais':             ['PAIS DE NACIMIENTO', 'PAIS', 'PAÍS', 'NACIONALIDAD'],
     'estado':           ['ESTADO', 'ESTADO DE NACIMIENTO'],
     'municipio':        ['MUNICIPIO', 'MUNICIPIO DE NACIMIENTO'],
-    'ano_cursante':     ['AÑO CURSANTE', 'ANO CURSANTE', 'GRADO'],
+    'ano_cursante':     ['AÑO CURSANTE', 'ANO CURSANTE'],
+    'grado_cursante':   ['GRADO CURSANTE', 'GRADO'],
     'seccion':          ['SECCIÓN', 'SECCION'],
     'representante':    ['REPRESENTANTE', 'NOMBRE REPRESENTANTE', 'NOMBRE DEL REPRESENTANTE'],
     'cedula_representante': ['CEDULA DEL REPRESENTANTE', 'CÉDULA DEL REPRESENTANTE', 'CI REPRESENTANTE', 'C.I. REPRESENTANTE', 'C.I REPRESENTANTE'],
@@ -45,7 +46,7 @@ COLUMN_ALIASES = {
 HEADER_KEYWORDS = [
     'CEDULA', 'CÉDULA', 'C.I', 'APELLIDOS', 'NOMBRES', 'SEXO', 'GENERO',
     'F.N', 'N C', 'LISTA', 'N°', 'NRO', 'NACIMIENTO', 'LUGAR', 'NOMBRE',
-    'ESTADO', 'MUNICIPIO', 'AÑO CURSANTE'
+    'ESTADO', 'MUNICIPIO', 'AÑO CURSANTE', 'GRADO CURSANTE'
 ]
 
 # Patrones de año académico detectables en cabeceras del documento
@@ -55,6 +56,16 @@ YEAR_PATTERNS_DOC = {
     '3ER': 3, '3RO': 3, 'TERCERO': 3, 'TERCER AÑO': 3,
     '4TO': 4, 'CUARTO': 4, 'CUARTO AÑO': 4,
     '5TO': 5, 'QUINTO': 5, 'QUINTO AÑO': 5,
+}
+
+# Patrones de grado para Primaria (códigos BD: 11-16)
+GRADE_PATTERNS_DOC = {
+    '1ER': 11, '1RO': 11, 'PRIMERO': 11, 'PRIMER GRADO': 11,
+    '2DO': 12, '2NDO': 12, 'SEGUNDO': 12, 'SEGUNDO GRADO': 12,
+    '3ER': 13, '3RO': 13, 'TERCERO': 13, 'TERCER GRADO': 13,
+    '4TO': 14, 'CUARTO': 14, 'CUARTO GRADO': 14,
+    '5TO': 15, 'QUINTO': 15, 'QUINTO GRADO': 15,
+    '6TO': 16, 'SEXTO': 16, 'SEXTO GRADO': 16,
 }
 
 # Inferencia de año académico por rango de edad
@@ -126,17 +137,63 @@ class ExcelParser:
         self._col_map = {}
         self._header_row = None
         self._data_start_row = None
+        self._hoja_tipo = None  # 'primaria', 'media', o None (flujo legacy)
 
     # ─── PUNTO DE ENTRADA ────────────────────────────────────────────────────
     def parse(self) -> ExcelParserResult:
         try:
-            self._fase0_cargar()
-            self._fase1_detectar_ano_documental()
-            self._fase2_detectar_encabezado()
-            self._fase3_construir_mapa_columnas()
-            self._fase4_extraer_registros()
-            self._fase5_inferir_ano_por_edad()
-            self._fase6_metricas_calidad()
+            # Intentar lectura multi-hoja (Primaria / Media)
+            sheets = pd.read_excel_all_sheets(self.file_object)
+            nombres_hojas = [n.strip().upper() for n in sheets.keys()]
+            tiene_primaria = any('PRIMARIA' in n for n in nombres_hojas)
+            tiene_media = any('MEDIA' in n for n in nombres_hojas)
+
+            if tiene_primaria or tiene_media:
+                # ── Modo multi-hoja ──
+                for sheet_name, df in sheets.items():
+                    nombre_upper = sheet_name.strip().upper()
+                    if 'PRIMARIA' in nombre_upper:
+                        self._hoja_tipo = 'primaria'
+                    elif 'MEDIA' in nombre_upper:
+                        self._hoja_tipo = 'media'
+                    else:
+                        # Hoja no reconocida, saltar
+                        self.result.diagnostico['advertencias'].append(
+                            f'Hoja "{sheet_name}" ignorada (no es Primaria ni Media).'
+                        )
+                        continue
+
+                    # Reset estado interno para cada hoja
+                    self._df_raw = df.fillna('')
+                    self._col_map = {}
+                    self._header_row = None
+                    self._data_start_row = None
+
+                    self.result.diagnostico['total_filas_raw'] += len(self._df_raw)
+
+                    self._fase1_detectar_ano_documental()
+                    self._fase2_detectar_encabezado()
+                    self._fase3_construir_mapa_columnas()
+                    self._fase4_extraer_registros()
+
+                    logger.info(f"[ExcelParser] Hoja '{sheet_name}' ({self._hoja_tipo}): "
+                                f"{len(self.result.alumnos)} alumnos acumulados")
+
+                # Fases finales sobre todos los alumnos acumulados
+                self._hoja_tipo = None  # Reset para fases globales
+                self._fase5_inferir_ano_por_edad()
+                self._fase6_metricas_calidad()
+            else:
+                # ── Modo legacy (hoja única / sin nombres reconocidos) ──
+                self._hoja_tipo = None
+                self._fase0_cargar()
+                self._fase1_detectar_ano_documental()
+                self._fase2_detectar_encabezado()
+                self._fase3_construir_mapa_columnas()
+                self._fase4_extraer_registros()
+                self._fase5_inferir_ano_por_edad()
+                self._fase6_metricas_calidad()
+
         except Exception as e:
             logger.error(f"[ExcelParser] Error crítico: {e}", exc_info=True)
             self.result.diagnostico['advertencias'].append(f"Error crítico de motor: {str(e)}")
@@ -312,8 +369,9 @@ class ExcelParser:
         pais         = get('pais') or 'VENEZUELA'
         num_lista    = get('num_lista')
 
-        ano_cursante_raw = get('ano_cursante')
-        seccion_raw      = get('seccion')
+        ano_cursante_raw   = get('ano_cursante')
+        grado_cursante_raw = get('grado_cursante')
+        seccion_raw        = get('seccion')
         estado_raw       = get('estado')
         municipio_raw    = get('municipio')
         representante    = get('representante')
@@ -371,7 +429,7 @@ class ExcelParser:
             'pais':             pais.upper(),
             'estado':           self._limpiar_texto(estado_raw).upper(),
             'municipio':        self._limpiar_texto(municipio_raw).upper(),
-            'ano_cursante':     self._parse_ano_cursante(ano_cursante_raw) if ano_cursante_raw else None,
+            'ano_cursante':     self._resolver_ano_grado(ano_cursante_raw, grado_cursante_raw),
             'seccion':          seccion_raw.strip().upper()[:1] if seccion_raw else '',
             'representante':    self._limpiar_texto(representante).upper(),
             'cedula_representante': self._normalizar_cedula(cedula_rep),
@@ -466,6 +524,7 @@ class ExcelParser:
         return ''
 
     def _parse_ano_cursante(self, raw: str):
+        """Parsea valor de 'AÑO CURSANTE' → código 1-5 (Media)."""
         if not raw:
             return None
         upper = str(raw).upper().strip()
@@ -479,6 +538,46 @@ class ExcelParser:
         except (ValueError, TypeError):
             pass
         return None
+
+    def _parse_grado_cursante(self, raw: str):
+        """Parsea valor de 'GRADO CURSANTE' → código 11-16 (Primaria)."""
+        if not raw:
+            return None
+        upper = str(raw).upper().strip()
+        for pattern, codigo in GRADE_PATTERNS_DOC.items():
+            if pattern in upper:
+                return codigo
+        try:
+            val = int(float(raw))
+            if 1 <= val <= 6:
+                # Valor numérico crudo (1-6) en hoja Primaria → mapear a 10+val
+                return 10 + val
+        except (ValueError, TypeError):
+            pass
+        return None
+
+    def _resolver_ano_grado(self, ano_cursante_raw: str, grado_cursante_raw: str):
+        """
+        Resuelve el código de año/grado según el tipo de hoja actual.
+        Primaria → usa grado_cursante_raw (→ 11-16)
+        Media    → usa ano_cursante_raw   (→ 1-5)
+        Legacy   → intenta ambos en orden
+        """
+        if self._hoja_tipo == 'primaria':
+            return self._parse_grado_cursante(grado_cursante_raw) if grado_cursante_raw else None
+        elif self._hoja_tipo == 'media':
+            return self._parse_ano_cursante(ano_cursante_raw) if ano_cursante_raw else None
+        else:
+            # Flujo legacy: intentar año primero, luego grado
+            if ano_cursante_raw:
+                resultado = self._parse_ano_cursante(ano_cursante_raw)
+                if resultado:
+                    return resultado
+            if grado_cursante_raw:
+                resultado = self._parse_grado_cursante(grado_cursante_raw)
+                if resultado:
+                    return resultado
+            return None
 
     def _limpiar_texto(self, texto: str) -> str:
         if not texto:

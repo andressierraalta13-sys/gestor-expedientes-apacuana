@@ -70,7 +70,34 @@ def read_excel(file_object, header=None, dtype=str):
         
     return MockDataFrame(data)
 
+def read_excel_all_sheets(file_object):
+    """Lee todas las hojas de un archivo Excel y retorna un dict {nombre_hoja: MockDataFrame}."""
+    wb = openpyxl.load_workbook(file_object, data_only=True)
+    sheets = {}
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        data = []
+        max_col = 0
+        # First pass to find max columns
+        for row in ws.iter_rows(values_only=True):
+            if len(row) > max_col:
+                max_col = len(row)
+
+        # Second pass to normalize rows
+        for row in ws.iter_rows(values_only=True):
+            row_list = list(row)
+            while len(row_list) < max_col:
+                row_list.append(None)
+            data.append(row_list)
+
+        sheets[sheet_name] = MockDataFrame(data)
+    return sheets
+
 class pd:
     @staticmethod
     def read_excel(file_object, header=None, dtype=str):
         return read_excel(file_object, header=header, dtype=dtype)
+
+    @staticmethod
+    def read_excel_all_sheets(file_object):
+        return read_excel_all_sheets(file_object)

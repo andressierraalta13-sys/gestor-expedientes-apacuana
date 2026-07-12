@@ -324,7 +324,13 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
 # Supabase (para uso directo desde Python/JS si es necesario)
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+SUPABASE_SERVICE_ROLE_KEY = (
+    os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or 
+    os.environ.get('SUPABASE_SERVICE_KEY') or 
+    os.environ.get('SERVICE_ROLE_KEY') or 
+    os.environ.get('SUPABASE_SECRET_KEY') or 
+    ''
+)
 
 
 # ── Autenticacion ──────────────────────────────────────────────────────────────

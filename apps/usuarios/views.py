@@ -247,6 +247,11 @@ def crear_operador_view(request):
     if rol not in ROLES_VALIDOS:
         rol = 'PERSONAL'
 
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        return JsonResponse({
+            'error': 'Falta configurar la clave de servicio (service_role) de Supabase. Por favor, añade la variable de entorno SUPABASE_SERVICE_ROLE_KEY en el panel de Vercel.'
+        }, status=400)
+
     # Crear en Supabase Auth usando la API Admin
     url = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
     headers = {
@@ -410,23 +415,26 @@ def eliminar_usuario_view(request, user_id):
     # Dado que no guardamos el UUID en la base local (podríamos, pero requeriría una migración),
     # haremos una llamada para listar usuarios por correo, obtener el UUID y borrarlo.
     
-    url_list = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
-    headers = {
-        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        # Obtenemos los usuarios y filtramos
-        response = requests.get(url_list, headers=headers)
-        if response.status_code == 200:
-            users_data = response.json().get('users', [])
-            user_uuid = None
-            for u in users_data:
-                if u.get('email') == email_eliminado:
-                    user_uuid = u.get('id')
-                    break
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        logger.warning("No se pudo eliminar de Supabase porque SUPABASE_SERVICE_ROLE_KEY no está configurada. Procediendo a eliminar solo localmente.")
+    else:
+        url_list = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
+        headers = {
+            "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            # Obtenemos los usuarios y filtramos
+            response = requests.get(url_list, headers=headers)
+            if response.status_code == 200:
+                users_data = response.json().get('users', [])
+                user_uuid = None
+                for u in users_data:
+                    if u.get('email') == email_eliminado:
+                        user_uuid = u.get('id')
+                        break
             
             if user_uuid:
                 # Procedemos a eliminarlo de Supabase
@@ -434,8 +442,8 @@ def eliminar_usuario_view(request, user_id):
                 del_response = requests.delete(url_del, headers=headers)
                 if del_response.status_code not in [200, 204]:
                     logger.error(f"Fallo al eliminar de Supabase: {del_response.text}")
-    except Exception as e:
-        pass # Si falla Supabase, igual procedemos a borrarlo localmente por seguridad
+        except Exception as e:
+            pass # Si falla Supabase, igual procedemos a borrarlo localmente por seguridad
         
     # 2. Hard delete local
     try:
