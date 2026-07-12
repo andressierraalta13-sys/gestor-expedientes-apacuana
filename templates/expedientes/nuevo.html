@@ -82,14 +82,24 @@
             <div id="anoContainer" style="display:none">
                 <div class="form-grid form-grid-2" style="gap:12px">
                     <div class="form-group">
-                        <label class="form-label" style="color:var(--color-accent)">Año Cursante <span
+                        <label class="form-label" style="color:var(--color-accent)">Grado/Año Cursante <span
                                 class="form-required">*</span></label>
                         <select name="ano_cursando" class="form-input" style="border-color:var(--color-accent)">
-                            <option value="1">1er Año</option>
-                            <option value="2">2do Año</option>
-                            <option value="3">3er Año</option>
-                            <option value="4">4to Año</option>
-                            <option value="5">5to Año</option>
+                            <optgroup label="Primaria">
+                                <option value="11">1er Grado</option>
+                                <option value="12">2do Grado</option>
+                                <option value="13">3er Grado</option>
+                                <option value="14">4to Grado</option>
+                                <option value="15">5to Grado</option>
+                                <option value="16">6to Grado</option>
+                            </optgroup>
+                            <optgroup label="Secundaria">
+                                <option value="1">1er Año</option>
+                                <option value="2">2do Año</option>
+                                <option value="3">3er Año</option>
+                                <option value="4">4to Año</option>
+                                <option value="5">5to Año</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="form-group">

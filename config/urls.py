@@ -20,7 +20,7 @@ from calificaciones.views import (
     notas_certificadas_unificar_view, notas_certificadas_delete_view,
     emitir_notas_certificadas_auto_view, emitir_notas_certificadas_xlsx_view
 )
-from calificaciones.notas_views import notas_calificaciones_view, api_periodos_list_create, api_periodo_update_delete
+from calificaciones.notas_views import notas_calificaciones_view
 from ia_analitica.asistente_view import asistente_chat_view
 from auditoria.views import centro_notificaciones_view
 from usuarios.views import login_view, custom_logout_view, crear_operador_view, revocar_operador_view, usuarios_view, expediente_usuario_view, guardar_perfil_usuario_view, eliminar_usuario_view
@@ -64,8 +64,6 @@ urlpatterns = [
     path('calificaciones/notas-certificadas/emitir-auto/<str:cedula>/', emitir_notas_certificadas_auto_view, name='emitir_notas_certificadas_auto'),
     path('calificaciones/notas-certificadas/emitir-xlsx/<str:cedula>/', emitir_notas_certificadas_xlsx_view, name='emitir_notas_certificadas_xlsx'),
     path('notas/', notas_calificaciones_view, name='notas_calificaciones'),
-    path('notas/periodos/', api_periodos_list_create, name='api_periodos_list_create'),
-    path('notas/periodos/<int:pk>/', api_periodo_update_delete, name='api_periodo_update_delete'),
 
     # ─── Docentes (mockup estático — reemplazado por docentes.urls para el portal) ──
     path('docentes/notas/', notas_docentes_view, name='notas_docentes'),

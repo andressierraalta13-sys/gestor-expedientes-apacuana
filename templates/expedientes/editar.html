@@ -56,14 +56,24 @@
 
             <div class="grid grid-cols-2 gap-4 mt-4 mb-4">
                 <div>
-                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Año Cursante</label>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Grado/Año Cursante</label>
                     <select name="ano_cursando" required class="form-input w-full">
-                        <option value="1" {% if estudiante.ano_cursando == 1 %}selected{% endif %}>1er Año</option>
-                        <option value="2" {% if estudiante.ano_cursando == 2 %}selected{% endif %}>2do Año</option>
-                        <option value="3" {% if estudiante.ano_cursando == 3 %}selected{% endif %}>3er Año</option>
-                        <option value="4" {% if estudiante.ano_cursando == 4 %}selected{% endif %}>4to Año</option>
-                        <option value="5" {% if estudiante.ano_cursando == 5 %}selected{% endif %}>5to Año</option>
-                        <option value="6" {% if estudiante.ano_cursando == 6 %}selected{% endif %}>Egresado</option>
+                        <optgroup label="Primaria">
+                            <option value="11" {% if estudiante.ano_cursando == 11 %}selected{% endif %}>1er Grado</option>
+                            <option value="12" {% if estudiante.ano_cursando == 12 %}selected{% endif %}>2do Grado</option>
+                            <option value="13" {% if estudiante.ano_cursando == 13 %}selected{% endif %}>3er Grado</option>
+                            <option value="14" {% if estudiante.ano_cursando == 14 %}selected{% endif %}>4to Grado</option>
+                            <option value="15" {% if estudiante.ano_cursando == 15 %}selected{% endif %}>5to Grado</option>
+                            <option value="16" {% if estudiante.ano_cursando == 16 %}selected{% endif %}>6to Grado</option>
+                        </optgroup>
+                        <optgroup label="Secundaria">
+                            <option value="1" {% if estudiante.ano_cursando == 1 %}selected{% endif %}>1er Año</option>
+                            <option value="2" {% if estudiante.ano_cursando == 2 %}selected{% endif %}>2do Año</option>
+                            <option value="3" {% if estudiante.ano_cursando == 3 %}selected{% endif %}>3er Año</option>
+                            <option value="4" {% if estudiante.ano_cursando == 4 %}selected{% endif %}>4to Año</option>
+                            <option value="5" {% if estudiante.ano_cursando == 5 %}selected{% endif %}>5to Año</option>
+                            <option value="6" {% if estudiante.ano_cursando == 6 %}selected{% endif %}>Egresado</option>
+                        </optgroup>
                     </select>
                 </div>
                 <div>

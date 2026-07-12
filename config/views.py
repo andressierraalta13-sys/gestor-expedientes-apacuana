@@ -147,7 +147,12 @@ def api_check_estudiante(request):
     
     estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
     if estudiante:
-        mapa_grados = {1: '1er Año', 2: '2do Año', 3: '3er Año', 4: '4to Año', 5: '5to Año', 6: 'Egresado/Graduado'}
+        mapa_grados = {
+            11: '1er Grado', 12: '2do Grado', 13: '3er Grado',
+            14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
+            1: '1er Año', 2: '2do Año', 3: '3er Año', 
+            4: '4to Año', 5: '5to Año', 6: 'Egresado/Graduado'
+        }
         return JsonResponse({
             'existe': True,
             'ano_cursando': estudiante.ano_cursando,
@@ -620,6 +625,12 @@ def detalle_expediente_view(request, cedula):
     
     # Mátriz de Construcción IA para organizar Años, Materias y Lapsos
     boleta_organizada = { 
+        11: {'titulo': '1ER GRADO', 'materias': {}},
+        12: {'titulo': '2DO GRADO', 'materias': {}},
+        13: {'titulo': '3ER GRADO', 'materias': {}},
+        14: {'titulo': '4TO GRADO', 'materias': {}},
+        15: {'titulo': '5TO GRADO', 'materias': {}},
+        16: {'titulo': '6TO GRADO', 'materias': {}},
         1: {'titulo': '1ER AÑO', 'materias': {}},
         2: {'titulo': '2DO AÑO', 'materias': {}},
         3: {'titulo': '3ER AÑO', 'materias': {}},
@@ -1171,11 +1182,10 @@ def generar_constancia_estudio_view(request, cedula):
     ).order_by('-periodo__fecha_inicio').first()
 
     mapa_grados = {
-        1: "1er Año",
-        2: "2do Año",
-        3: "3er Año",
-        4: "4to Año",
-        5: "5to Año",
+        11: "1er Grado", 12: "2do Grado", 13: "3er Grado",
+        14: "4to Grado", 15: "5to Grado", 16: "6to Grado",
+        1: "1er Año", 2: "2do Año", 3: "3er Año",
+        4: "4to Año", 5: "5to Año", 6: "Egresado/Graduado"
     }
 
     if inscripcion:
@@ -1483,7 +1493,7 @@ def generar_boleta_view(request, cedula):
     except (ValueError, TypeError):
         ano_grado = estudiante.ano_cursando
 
-    if not (1 <= ano_grado <= 5):
+    if not (1 <= ano_grado <= 6) and not (11 <= ano_grado <= 16):
         ano_grado = 1
 
     # Fetch enrollment
@@ -1493,11 +1503,10 @@ def generar_boleta_view(request, cedula):
     ).order_by('-periodo__fecha_inicio').first()
 
     mapa_grados = {
-        1: "1er Año",
-        2: "2do Año",
-        3: "3er Año",
-        4: "4to Año",
-        5: "5to Año",
+        11: "1er Grado", 12: "2do Grado", 13: "3er Grado",
+        14: "4to Grado", 15: "5to Grado", 16: "6to Grado",
+        1: "1er Año", 2: "2do Año", 3: "3er Año",
+        4: "4to Año", 5: "5to Año", 6: "Egresado/Graduado"
     }
     grado_text = mapa_grados.get(ano_grado, f"{ano_grado}° Año")
 

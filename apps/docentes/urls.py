@@ -10,6 +10,7 @@ urlpatterns = [
     # ─── Gestión Administrativa ───────────────────────────────────────────────
     path('gestion/', views.gestion_docentes_view, name='gestion_docentes'),
     path('gestion/<int:docente_id>/', views.perfil_docente_admin_view, name='perfil_docente_admin'),
+    path('periodos/', views.gestion_periodos_view, name='gestion_periodos'),
 
     # ─── APIs Administrativas ─────────────────────────────────────────────────
     path('api/perfil/guardar/', views.api_guardar_perfil_docente, name='api_guardar_perfil_docente'),
@@ -29,6 +30,8 @@ urlpatterns = [
     path('api/notas/guardar/', views.api_guardar_notas, name='api_guardar_notas'),
     path('api/notas/guardar-individual/', views.api_guardar_nota_estudiante, name='api_guardar_nota_estudiante'),
     path('api/periodo/cerrar/', views.api_cerrar_periodo, name='api_cerrar_periodo'),
+    path('api/periodos/', views.api_periodos_list_create, name='api_periodos_list_create'),
+    path('api/periodos/<int:pk>/', views.api_periodo_update_delete, name='api_periodo_update_delete'),
     path('api/evaluaciones/eliminar-masivo/', views.api_eliminar_evaluaciones, name='api_eliminar_evaluaciones'),
     path('api/evaluaciones/buscar-admin/', views.api_buscar_evaluaciones_admin, name='api_buscar_evaluaciones_admin'),
     

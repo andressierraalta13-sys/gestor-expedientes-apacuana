@@ -391,7 +391,7 @@ def api_limpiar_horario(request, horario_id):
 def api_periodos(request):
     """Lista todos los períodos académicos ordenados por ID descendente."""
     periodos = list(
-        PeriodoAcademico.objects.all().order_by('-id').values('id', 'nombre', 'activo')
+        PeriodoAcademico.objects.all().order_by('-activo', '-id').values('id', 'nombre', 'activo')
     )
     return JsonResponse({'periodos': periodos})
 
@@ -449,7 +449,7 @@ def api_crear_periodo(request):
 def api_periodos(request):
     """Lista todos los períodos académicos ordenados por ID descendente."""
     periodos = list(
-        PeriodoAcademico.objects.all().order_by('-id').values('id', 'nombre', 'activo')
+        PeriodoAcademico.objects.all().order_by('-activo', '-id').values('id', 'nombre', 'activo')
     )
     return JsonResponse({'periodos': periodos})
 

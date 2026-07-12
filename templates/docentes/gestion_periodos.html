@@ -1,0 +1,552 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Períodos Académicos | Gestor Apacuana{% endblock %}
+
+{% block content %}
+<style>
+  .gp-wrapper { max-width: 1100px; margin: 0 auto; font-family: var(--font-body); }
+  .gp-header { display: flex; align-items: center; gap: 14px; margin-bottom: 1.5rem; }
+  .gp-header-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gp-header-icon span { font-size: 22px; color: var(--color-accent); }
+  .gp-title { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 800; color: var(--color-text-primary); }
+  .gp-subtitle { font-size: .82rem; color: var(--color-text-secondary); margin-top: 2px; }
+
+  .gp-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
+  @media (max-width: 900px) { .gp-grid { grid-template-columns: 1fr; } }
+
+  .gp-card {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .gp-card-title {
+    font-family: var(--font-heading); font-weight: 700; font-size: .95rem;
+    color: var(--color-text-primary); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .gp-card-title span { color: var(--color-accent); font-size: 18px; }
+
+  .gp-label {
+    display: block; font-size: .65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--color-text-tertiary); margin-bottom: 5px;
+  }
+  .gp-input {
+    width: 100%; background: var(--color-bg-secondary); border: 1px solid var(--color-border);
+    border-radius: 10px; padding: 9px 12px; font-size: .85rem; color: var(--color-text-primary);
+    outline: none; transition: border-color .2s; color-scheme: dark;
+    font-family: var(--font-body);
+  }
+  .gp-input:focus { border-color: var(--color-accent); }
+  .gp-field { margin-bottom: 14px; }
+
+  .gp-check-label {
+    display: flex; align-items: center; gap: 8px; font-size: .85rem;
+    font-weight: 600; color: var(--color-text-secondary); cursor: pointer;
+  }
+  .gp-check-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-accent); }
+
+  .gp-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: .82rem;
+    border: none; cursor: pointer; transition: all .2s; font-family: var(--font-body);
+  }
+  .gp-btn-primary { background: var(--color-accent); color: #fff; flex: 1; }
+  .gp-btn-primary:hover { opacity: .85; }
+  .gp-btn-secondary { background: var(--color-bg-secondary); color: var(--color-text-secondary); border: 1px solid var(--color-border); flex: 1; }
+  .gp-btn-secondary:hover { color: var(--color-text-primary); }
+  .gp-btn-warn { background: #f59e0b; color: #fff; }
+  .gp-btn-warn:hover { opacity: .85; }
+  .gp-btn-error { background: var(--color-error); color: #fff; }
+  .gp-btn-error:hover { opacity: .85; }
+  .gp-btn-row { display: flex; gap: 10px; margin-top: 18px; }
+
+  .gp-alert {
+    padding: 10px 16px; border-radius: 10px; font-size: .82rem; font-weight: 600;
+    border: 1px solid transparent; margin-bottom: 14px; display: none;
+  }
+  .gp-alert.ok { background: rgba(16,185,129,.1); color: #10b981; border-color: rgba(16,185,129,.2); }
+  .gp-alert.err { background: rgba(239,68,68,.1); color: #ef4444; border-color: rgba(239,68,68,.2); }
+
+  /* Promotion banner */
+  .gp-promo-banner {
+    background: linear-gradient(90deg, rgba(245,158,11,.1), transparent);
+    border: 1px solid rgba(245,158,11,.2); border-radius: 16px; padding: 20px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .gp-promo-title {
+    font-family: var(--font-heading); font-weight: 700; font-size: .95rem;
+    color: var(--color-text-primary); display: flex; align-items: center; gap: 8px;
+  }
+  .gp-promo-title span { color: #f59e0b; font-size: 20px; }
+  .gp-promo-desc { font-size: .75rem; color: var(--color-text-tertiary); margin-top: 4px; }
+
+  /* Períodos table */
+  .gp-table-wrap { overflow-x: auto; }
+  .gp-table { width: 100%; border-collapse: collapse; }
+  .gp-table thead th {
+    padding: 12px 16px; font-size: .65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--color-text-tertiary);
+    background: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);
+    text-align: left;
+  }
+  .gp-table thead th.tc { text-align: center; }
+  .gp-table tbody td {
+    padding: 12px 16px; font-size: .85rem; color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border-subtle, rgba(255,255,255,.04));
+  }
+  .gp-table tbody tr:hover { background: var(--color-bg-secondary); }
+  .gp-table .td-name { font-weight: 700; color: var(--color-text-primary); }
+  .gp-table .td-date { font-family: 'SF Mono', 'Consolas', monospace; font-size: .78rem; }
+  .gp-table .td-center { text-align: center; }
+
+  .gp-badge {
+    display: inline-block; padding: 3px 8px; border-radius: 6px;
+    font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  }
+  .gp-badge-active { background: rgba(16,185,129,.12); color: #10b981; border: 1px solid rgba(16,185,129,.2); }
+  .gp-badge-closed { background: var(--color-bg-secondary); color: var(--color-text-tertiary); border: 1px solid var(--color-border); }
+
+  .gp-action-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .2s;
+    font-size: 16px;
+  }
+  .gp-action-edit { background: rgba(99,102,241,.1); color: var(--color-accent); }
+  .gp-action-edit:hover { background: rgba(99,102,241,.2); }
+  .gp-action-del { background: rgba(239,68,68,.1); color: var(--color-error); }
+  .gp-action-del:hover { background: rgba(239,68,68,.2); }
+
+  .gp-empty { text-align: center; padding: 2rem; color: var(--color-text-tertiary); font-size: .85rem; }
+
+  /* Modals */
+  .gp-modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 99999;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+    justify-content: center; align-items: center;
+  }
+  .gp-modal-overlay.active { display: flex; }
+  .gp-modal {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 16px; max-width: 420px; width: 90%; padding: 28px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  .gp-modal-icon {
+    width: 56px; height: 56px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; margin: 0 auto 16px;
+  }
+  .gp-modal-icon.warn { background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); }
+  .gp-modal-icon.warn span { color: #f59e0b; font-size: 32px; }
+  .gp-modal-icon.danger { background: var(--color-error); }
+  .gp-modal-icon.danger span { color: #fff; font-size: 32px; }
+  .gp-modal-title { font-family: var(--font-heading); font-weight: 800; font-size: 1.15rem; color: var(--color-text-primary); margin-bottom: 8px; }
+  .gp-modal-msg { font-size: .85rem; color: var(--color-text-secondary); line-height: 1.5; }
+  .gp-modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+</style>
+
+<div class="gp-wrapper">
+  <!-- Header -->
+  <div class="gp-header">
+    <div class="gp-header-icon"><span class="material-symbols-outlined">calendar_month</span></div>
+    <div>
+      <div class="gp-title">Gestión de Períodos Académicos</div>
+      <div class="gp-subtitle">Administra los años escolares, activa nuevos períodos y realiza los cierres correspondientes.</div>
+    </div>
+  </div>
+
+  <!-- Alert -->
+  <div id="page-alert" class="gp-alert"></div>
+
+  <div class="gp-grid">
+    <!-- Form -->
+    <div>
+      <div class="gp-card" style="position: sticky; top: 24px;">
+        <div class="gp-card-title">
+          <span class="material-symbols-outlined">edit_note</span>
+          <span id="form-action-title">Agregar Nuevo Período</span>
+        </div>
+        <form id="form-periodo">
+          <input type="hidden" id="periodo-id" value="">
+          <div class="gp-field">
+            <label class="gp-label">Nombre Período <span style="color:var(--color-error)">*</span></label>
+            <input type="text" id="p-nombre" placeholder="Ej: 2025-2026" required class="gp-input">
+          </div>
+          <div class="gp-field">
+            <label class="gp-label">Fecha Inicio <span style="color:var(--color-error)">*</span></label>
+            <input type="date" id="p-fecha-inicio" required class="gp-input">
+          </div>
+          <div class="gp-field">
+            <label class="gp-label">Fecha Fin <span style="color:var(--color-error)">*</span></label>
+            <input type="date" id="p-fecha-fin" required class="gp-input">
+          </div>
+          <div style="margin-top:10px;">
+            <label class="gp-check-label">
+              <input type="checkbox" id="p-activo"> Establecer como Período Activo
+            </label>
+          </div>
+          <div class="gp-btn-row">
+            <button type="submit" id="btn-save-periodo" class="gp-btn gp-btn-primary">
+              <span class="material-symbols-outlined" style="font-size:16px;">check</span> Guardar
+            </button>
+            <button type="button" id="btn-cancel-edit" class="gp-btn gp-btn-secondary" style="display:none;">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div>
+      <!-- Promotion Banner -->
+      <div class="gp-promo-banner">
+        <div>
+          <div class="gp-promo-title"><span class="material-symbols-outlined">bolt</span> Cierre de Período Académico</div>
+          <div class="gp-promo-desc">Al cerrar el período, todos los estudiantes aprobados serán promovidos al siguiente nivel (ej: 6to Grado → 1er Año).</div>
+        </div>
+        <button id="btn-promover" class="gp-btn gp-btn-warn">
+          <span class="material-symbols-outlined" style="font-size:16px;">trending_up</span> Promover Estudiantes
+        </button>
+      </div>
+
+      <!-- Table Card -->
+      <div class="gp-card" style="padding:0; overflow:hidden;">
+        <div style="padding:16px 20px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-secondary);">
+          <div class="gp-card-title" style="margin-bottom:0;">
+            <span class="material-symbols-outlined">list</span> Períodos Registrados
+          </div>
+        </div>
+        <div class="gp-table-wrap">
+          <table class="gp-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th class="tc">Estado</th>
+                <th class="tc">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="lista-periodos-tbody">
+              <tr><td colspan="5" class="gp-empty">Cargando períodos…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Promoción -->
+<div id="modal-promocion" class="gp-modal-overlay">
+  <div class="gp-modal">
+    <div class="gp-modal-icon warn"><span class="material-symbols-outlined">warning</span></div>
+    <div class="gp-modal-title">Cerrar Período Académico</div>
+    <p class="gp-modal-msg" id="msg-promocion">¿Estás seguro de cerrar el período actual y promover a todos los estudiantes? Esta acción actualizará los años cursantes según la lógica del sistema (Primaria y Secundaria).</p>
+    <div class="gp-modal-actions">
+      <button onclick="cerrarModalPromocion()" class="gp-btn gp-btn-secondary">Cancelar</button>
+      <button onclick="ejecutarPromocion()" id="btn-ejecutar-promocion" class="gp-btn gp-btn-warn">Sí, Promover</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Eliminar 1 -->
+<div id="modal-eliminar-p-1" class="gp-modal-overlay">
+  <div class="gp-modal">
+    <div class="gp-modal-icon warn"><span class="material-symbols-outlined">warning</span></div>
+    <div class="gp-modal-title">¿Estás seguro?</div>
+    <p class="gp-modal-msg" id="msg-eliminar-p-1">Estás a punto de eliminar este período académico.</p>
+    <div class="gp-modal-actions">
+      <button onclick="cerrarModalEliminarPeriodo()" class="gp-btn gp-btn-secondary">Cancelar</button>
+      <button onclick="siguientePasoEliminarPeriodo()" class="gp-btn gp-btn-primary">Sí, Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Eliminar 2 (Desarrollador) -->
+<div id="modal-eliminar-p-2" class="gp-modal-overlay">
+  <div class="gp-modal" style="border-color: rgba(239,68,68,.3);">
+    <div class="gp-modal-icon danger"><span class="material-symbols-outlined">skull</span></div>
+    <div class="gp-modal-title" style="color: var(--color-error); text-transform: uppercase; letter-spacing: .05em;">Confirmación de Seguridad</div>
+    <p class="gp-modal-msg">
+      Esta acción es <strong>IRREVERSIBLE</strong> y usará tu <strong>Super Poder de Desarrollador</strong> para saltar restricciones de integridad. Se eliminarán permanentemente el período académico y <strong>TODAS sus inscripciones y notas asociadas</strong>.
+    </p>
+    <p style="color:var(--color-text-primary); font-weight:700; font-size:.85rem; margin-top:8px;" id="msg-eliminar-p-2"></p>
+    <div class="gp-modal-actions">
+      <button onclick="cerrarModalEliminarPeriodo()" class="gp-btn gp-btn-secondary">Cancelar</button>
+      <button onclick="confirmarEliminacionPeriodo()" id="btn-ejecutar-eliminar-p" class="gp-btn gp-btn-error">Eliminar Definitivamente</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const IS_DEV = {% if request.user.rol == 'DESARROLLADOR' %}true{% else %}false{% endif %};
+
+const formPeriodo = document.getElementById('form-periodo');
+const inputId = document.getElementById('periodo-id');
+const inputNombre = document.getElementById('p-nombre');
+const inputInicio = document.getElementById('p-fecha-inicio');
+const inputFin = document.getElementById('p-fecha-fin');
+const inputActivo = document.getElementById('p-activo');
+const btnCancelEdit = document.getElementById('btn-cancel-edit');
+const formActionTitle = document.getElementById('form-action-title');
+const listaTbody = document.getElementById('lista-periodos-tbody');
+const pageAlert = document.getElementById('page-alert');
+
+function getCsrfToken() {
+  const c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+  if (c) return c.split('=')[1];
+  const input = document.querySelector('[name=csrfmiddlewaretoken]');
+  return input ? input.value : '';
+}
+
+function showAlert(msg, isError = false) {
+  pageAlert.textContent = msg;
+  pageAlert.style.display = 'block';
+  pageAlert.className = 'gp-alert ' + (isError ? 'err' : 'ok');
+  setTimeout(() => { pageAlert.style.display = 'none'; }, 5000);
+}
+
+function resetForm() {
+  inputId.value = '';
+  inputNombre.value = '';
+  inputInicio.value = '';
+  inputFin.value = '';
+  inputActivo.checked = false;
+  formActionTitle.textContent = 'Agregar Nuevo Período';
+  btnCancelEdit.style.display = 'none';
+}
+
+if (btnCancelEdit) btnCancelEdit.addEventListener('click', resetForm);
+
+// Cargar periodos
+async function cargarPeriodos() {
+  listaTbody.innerHTML = `<tr><td colspan="5" class="gp-empty">Cargando períodos…</td></tr>`;
+  try {
+    const res = await fetch('/docentes/api/periodos/');
+    const data = await res.json();
+    if (data.success) {
+      actualizarVistas(data.periodos);
+    } else {
+      listaTbody.innerHTML = `<tr><td colspan="5" class="gp-empty" style="color:var(--color-error)">Error al recuperar períodos del servidor.</td></tr>`;
+    }
+  } catch (err) {
+    console.error('Error cargando periodos:', err);
+    listaTbody.innerHTML = `<tr><td colspan="5" class="gp-empty" style="color:var(--color-error)">Fallo de conexión: ${err.message}</td></tr>`;
+  }
+}
+
+function actualizarVistas(periodos) {
+  if (periodos.length === 0) {
+    listaTbody.innerHTML = `<tr><td colspan="5" class="gp-empty">No hay períodos registrados.</td></tr>`;
+  } else {
+    listaTbody.innerHTML = periodos.map(p => `
+      <tr>
+        <td class="td-name">${p.nombre}</td>
+        <td class="td-date">${p.fecha_inicio}</td>
+        <td class="td-date">${p.fecha_fin}</td>
+        <td class="td-center">
+          ${p.activo
+            ? `<span class="gp-badge gp-badge-active">ACTIVO</span>`
+            : `<span class="gp-badge gp-badge-closed">CERRADO</span>`
+          }
+        </td>
+        <td class="td-center">
+          <button type="button" class="gp-action-btn gp-action-edit btn-edit-p" data-id="${p.id}" data-nombre="${p.nombre}" data-inicio="${p.fecha_inicio}" data-fin="${p.fecha_fin}" data-activo="${p.activo}" title="Editar">
+            <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+          </button>
+          <button type="button" class="gp-action-btn gp-action-del btn-delete-p" data-id="${p.id}" data-nombre="${p.nombre}" title="Eliminar" style="margin-left:6px;">
+            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    document.querySelectorAll('.btn-edit-p').forEach(b => {
+      b.addEventListener('click', (e) => {
+        const trg = e.currentTarget;
+        inputId.value = trg.getAttribute('data-id');
+        inputNombre.value = trg.getAttribute('data-nombre');
+        inputInicio.value = trg.getAttribute('data-inicio');
+        inputFin.value = trg.getAttribute('data-fin');
+        inputActivo.checked = trg.getAttribute('data-activo') === 'true';
+        formActionTitle.textContent = 'Editar Período: ' + trg.getAttribute('data-nombre');
+        btnCancelEdit.style.display = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    document.querySelectorAll('.btn-delete-p').forEach(b => {
+      b.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        const nombre = e.currentTarget.getAttribute('data-nombre');
+        if (IS_DEV) {
+          abrirModalEliminarPeriodo(id, nombre);
+        } else {
+          if (confirm(`¿Estás 100% seguro de eliminar el período "${nombre}"?`)) {
+            ejecutarEliminacionPeriodo(id);
+          }
+        }
+      });
+    });
+  }
+}
+
+// Enviar formulario
+formPeriodo.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = inputId.value;
+  const nombre = inputNombre.value.trim();
+  const fecha_inicio = inputInicio.value;
+  const fecha_fin = inputFin.value;
+  const activo = inputActivo.checked;
+
+  const url = id ? `/docentes/api/periodos/${id}/` : '/docentes/api/periodos/';
+  const payload = { nombre, fecha_inicio, fecha_fin, activo };
+
+  const btn = document.getElementById('btn-save-periodo');
+  const oldHtml = btn.innerHTML;
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;animation:spin 1s linear infinite">sync</span> Guardando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      body: JSON.stringify(payload)
+    });
+    const rData = await res.json();
+    if (rData.success) {
+      showAlert(id ? 'Período actualizado exitosamente.' : 'Período creado exitosamente.');
+      resetForm();
+      cargarPeriodos();
+    } else {
+      showAlert(rData.error || 'Ocurrió un error inesperado.', true);
+    }
+  } catch (err) {
+    showAlert('Error de comunicación con el servidor.', true);
+  } finally {
+    btn.innerHTML = oldHtml;
+    btn.disabled = false;
+  }
+});
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', () => { cargarPeriodos(); });
+
+// Promoción
+const btnPromover = document.getElementById('btn-promover');
+const modalPromocion = document.getElementById('modal-promocion');
+
+if (btnPromover) btnPromover.addEventListener('click', () => { modalPromocion.classList.add('active'); });
+
+window.cerrarModalPromocion = function() { modalPromocion.classList.remove('active'); }
+
+window.ejecutarPromocion = async function() {
+  const btn = document.getElementById('btn-ejecutar-promocion');
+  const oldText = btn.textContent;
+  btn.textContent = 'Procesando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/docentes/api/periodo/cerrar/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrfToken() }
+    });
+    const data = await res.json();
+    if (data.success) {
+      showAlert('Período cerrado y estudiantes promovidos exitosamente.');
+      cerrarModalPromocion();
+      cargarPeriodos();
+    } else {
+      showAlert(data.error || 'Error al promover.', true);
+      cerrarModalPromocion();
+    }
+  } catch (err) {
+    showAlert('Error de conexión.', true);
+    cerrarModalPromocion();
+  } finally {
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+}
+
+// Borrado de periodos
+let targetPeriodoId = null;
+let targetPeriodoName = '';
+
+function abrirModalEliminarPeriodo(id, nombre) {
+  targetPeriodoId = id;
+  targetPeriodoName = nombre;
+  document.getElementById('msg-eliminar-p-1').innerHTML = `Estás a punto de eliminar el período <strong>"${nombre}"</strong>.`;
+  document.getElementById('modal-eliminar-p-1').classList.add('active');
+}
+
+function cerrarModalEliminarPeriodo() {
+  document.getElementById('modal-eliminar-p-1').classList.remove('active');
+  document.getElementById('modal-eliminar-p-2').classList.remove('active');
+  targetPeriodoId = null;
+  targetPeriodoName = '';
+}
+
+function siguientePasoEliminarPeriodo() {
+  document.getElementById('modal-eliminar-p-1').classList.remove('active');
+  document.getElementById('msg-eliminar-p-2').innerText = `¿Eliminar el período "${targetPeriodoName}" para siempre?`;
+  document.getElementById('modal-eliminar-p-2').classList.add('active');
+}
+
+async function confirmarEliminacionPeriodo() {
+  if (!targetPeriodoId) return;
+  const btn = document.getElementById('btn-ejecutar-eliminar-p');
+  const oldText = btn.textContent;
+  btn.textContent = 'Eliminando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/docentes/api/periodos/${targetPeriodoId}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: '_method=DELETE'
+    });
+    const rData = await res.json();
+    if (rData.success) {
+      cerrarModalEliminarPeriodo();
+      showAlert('Período eliminado correctamente.');
+      cargarPeriodos();
+    } else {
+      showAlert(rData.error || 'Error al eliminar.', true);
+      cerrarModalEliminarPeriodo();
+    }
+  } catch (err) {
+    showAlert('Error de conexión al eliminar.', true);
+    cerrarModalEliminarPeriodo();
+  } finally {
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+}
+
+async function ejecutarEliminacionPeriodo(id) {
+  try {
+    const res = await fetch(`/docentes/api/periodos/${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: '_method=DELETE'
+    });
+    const rData = await res.json();
+    if (rData.success) {
+      showAlert('Período eliminado correctamente.');
+      cargarPeriodos();
+    } else {
+      showAlert(rData.error || 'Error al eliminar.', true);
+    }
+  } catch (err) {
+    showAlert('Error de conexión al eliminar.', true);
+  }
+}
+
+window.cerrarModalEliminarPeriodo = cerrarModalEliminarPeriodo;
+window.siguientePasoEliminarPeriodo = siguientePasoEliminarPeriodo;
+window.confirmarEliminacionPeriodo = confirmarEliminacionPeriodo;
+</script>
+{% endblock %}

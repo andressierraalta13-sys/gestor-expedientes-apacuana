@@ -63,30 +63,31 @@
             <p class="text-text-muted tracking-widest uppercase text-xs mt-2 relative z-10">C.I. {{estudiante.cedula_identidad|formato_cedula}}</p>
 
             <div class="mt-4 relative z-10 flex flex-col items-center">
-                <span class="text-[9px] font-bold text-text-muted/80 tracking-widest uppercase mb-1">AÑO CURSANDO</span>
-                {% if estudiante.ano_cursando == 1 %}
-                <span
-                    class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER
-                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                <span class="text-[9px] font-bold text-text-muted/80 tracking-widest uppercase mb-1">{% if estudiante.ano_cursando >= 11 %}GRADO CURSANDO{% else %}AÑO CURSANDO{% endif %}</span>
+                {% if estudiante.ano_cursando == 11 %}
+                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 12 %}
+                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">2DO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 13 %}
+                <span class="bg-sky-500/20 text-sky-400 border border-sky-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">3ER GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 14 %}
+                <span class="bg-sky-500/20 text-sky-400 border border-sky-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">4TO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 15 %}
+                <span class="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">5TO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 16 %}
+                <span class="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">6TO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 1 %}
+                <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% elif estudiante.ano_cursando == 2 %}
-                <span
-                    class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">2DO
-                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">2DO AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% elif estudiante.ano_cursando == 3 %}
-                <span
-                    class="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">3ER
-                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                <span class="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">3ER AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% elif estudiante.ano_cursando == 4 %}
-                <span
-                    class="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">4TO
-                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                <span class="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">4TO AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% elif estudiante.ano_cursando == 5 %}
-                <span
-                    class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">5TO
-                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">5TO AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% else %}
-                <span
-                    class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">EGRESADO</span>
+                <span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">EGRESADO</span>
                 {% endif %}
             </div>
 

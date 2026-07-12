@@ -60,10 +60,10 @@ def calificaciones_docente_view(request):
     periodos = PeriodoAcademico.objects.filter(
         asignaciones__docente=docente,
         asignaciones__activa=True
-    ).distinct().order_by('-nombre')
+    ).distinct().order_by('-activo', '-nombre')
 
     if not periodos.exists():
-        periodos = PeriodoAcademico.objects.order_by('-nombre')
+        periodos = PeriodoAcademico.objects.order_by('-activo', '-nombre')
 
     return render(request, 'docentes/calificaciones_docente.html', {
         'docente': docente,
@@ -76,10 +76,10 @@ def planificacion_docente_view(request):
     periodos = PeriodoAcademico.objects.filter(
         asignaciones__docente=docente,
         asignaciones__activa=True
-    ).distinct().order_by('-nombre')
+    ).distinct().order_by('-activo', '-nombre')
 
     if not periodos.exists():
-        periodos = PeriodoAcademico.objects.order_by('-nombre')
+        periodos = PeriodoAcademico.objects.order_by('-activo', '-nombre')
 
     return render(request, 'docentes/planificacion_docente.html', {
         'docente': docente,
@@ -89,7 +89,12 @@ def planificacion_docente_view(request):
 
 # ─── APIs JSON ────────────────────────────────────────────────────────────────
 
-MAPA_GRADOS = {1: '1er Año', 2: '2do Año', 3: '3er Año', 4: '4to Año', 5: '5to Año'}
+MAPA_GRADOS = {
+    11: '1er Grado', 12: '2do Grado', 13: '3er Grado', 
+    14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
+    1: '1er Año', 2: '2do Año', 3: '3er Año', 
+    4: '4to Año', 5: '5to Año'
+}
 
 
 @login_required
@@ -594,10 +599,15 @@ def perfil_docente_admin_view(request, docente_id):
         docente=docente, activa=True
     ).select_related('asignatura', 'periodo').order_by('ano_grado', 'seccion')
     asignaturas_disponibles = Asignatura.objects.all().order_by('nombre')
-    periodos = PeriodoAcademico.objects.all().order_by('-nombre')
+    periodos = PeriodoAcademico.objects.all().order_by('-activo', '-nombre')
     periodo_activo = PeriodoAcademico.objects.filter(activo=True).first() or periodos.first()
 
-    MAPA = {1: '1er Año', 2: '2do Año', 3: '3er Año', 4: '4to Año', 5: '5to Año'}
+    MAPA = {
+        11: '1er Grado', 12: '2do Grado', 13: '3er Grado', 
+        14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
+        1: '1er Año', 2: '2do Año', 3: '3er Año', 
+        4: '4to Año', 5: '5to Año'
+    }
 
     return render(request, 'docentes/perfil_docente_admin.html', {
         'docente': docente,
@@ -763,7 +773,7 @@ def api_gestionar_asignacion(request):
 
         periodo = PeriodoAcademico.objects.filter(activo=True).first()
         if not periodo:
-            periodo = PeriodoAcademico.objects.order_by('-nombre').first()
+            periodo = PeriodoAcademico.objects.order_by('-activo', '-nombre').first()
         if not periodo:
             return JsonResponse({'error': 'No hay período académico configurado'}, status=400)
 
@@ -905,7 +915,12 @@ def api_combinaciones_docente(request):
         )
     asignaciones = asignaciones.values('ano_grado', 'seccion').distinct().order_by('ano_grado', 'seccion')
 
-    MAPA = {1: '1er Año', 2: '2do Año', 3: '3er Año', 4: '4to Año', 5: '5to Año'}
+    MAPA = {
+        11: '1er Grado', 12: '2do Grado', 13: '3er Grado', 
+        14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
+        1: '1er Año', 2: '2do Año', 3: '3er Año', 
+        4: '4to Año', 5: '5to Año'
+    }
     data, seen = [], set()
     for a in asignaciones:
         key = (a['ano_grado'], a['seccion'])
@@ -1297,3 +1312,220 @@ def api_plan_evaluacion_flask(request, docente_id):
         traceback.print_exc()
         print("============================")
         return JsonResponse({'error': f"Error inesperado: {str(e)}"}, status=500)
+
+# ─── Gestión de Períodos Académicos ──────────────────────────────────────────
+
+def gestion_periodos_view(request):
+    """
+    Vista principal para la gestión de Períodos Académicos.
+    """
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    # Solo roles autorizados pueden ver esta página
+    if request.user.rol not in ['DESARROLLADOR', 'DIRECTIVO', 'COORDINADOR', 'ADMINISTRATIVO']:
+        return redirect('home')
+
+    context = {
+        'periodos': PeriodoAcademico.objects.all().order_by('-activo', '-fecha_inicio')
+    }
+    return render(request, 'docentes/gestion_periodos.html', context)
+
+
+def api_periodos_list_create(request):
+    """
+    API sencilla para listar y crear periodos académicos.
+    """
+    if request.method == 'GET':
+        periodos = PeriodoAcademico.objects.all().order_by('-activo', '-fecha_inicio')
+        data = []
+        for p in periodos:
+            data.append({
+                'id': p.id,
+                'nombre': p.nombre,
+                'fecha_inicio': p.fecha_inicio.strftime('%Y-%m-%d') if p.fecha_inicio else '',
+                'fecha_fin': p.fecha_fin.strftime('%Y-%m-%d') if p.fecha_fin else '',
+                'activo': p.activo,
+            })
+        return JsonResponse({'success': True, 'periodos': data})
+        
+    elif request.method == 'POST':
+        if request.content_type == 'application/json':
+            try:
+                body = json.loads(request.body)
+                nombre = body.get('nombre', '').strip()
+                fecha_inicio = body.get('fecha_inicio', '').strip()
+                fecha_fin = body.get('fecha_fin', '').strip()
+                activo = body.get('activo', False)
+            except Exception:
+                return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
+        else:
+            nombre = request.POST.get('nombre', '').strip()
+            fecha_inicio = request.POST.get('fecha_inicio', '').strip()
+            fecha_fin = request.POST.get('fecha_fin', '').strip()
+            activo = request.POST.get('activo') == 'true' or request.POST.get('activo') == 'on' or request.POST.get('activo') is True
+
+        if not nombre or not fecha_inicio or not fecha_fin:
+            return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+
+        # Validar único
+        if PeriodoAcademico.objects.filter(nombre=nombre).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un período académico con ese nombre.'}, status=400)
+
+        from datetime import datetime
+        try:
+            inicio_date = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fin_date = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Formato de fecha inválido. Debe ser AAAA-MM-DD.'}, status=400)
+
+        try:
+            if activo:
+                # Desactivar otros períodos si este es activo
+                PeriodoAcademico.objects.filter(activo=True).update(activo=False)
+            
+            p = PeriodoAcademico.objects.create(
+                nombre=nombre,
+                fecha_inicio=inicio_date,
+                fecha_fin=fin_date,
+                activo=activo
+            )
+            return JsonResponse({
+                'success': True,
+                'periodo': {
+                    'id': p.id,
+                    'nombre': p.nombre,
+                    'fecha_inicio': p.fecha_inicio.strftime('%Y-%m-%d'),
+                    'fecha_fin': p.fecha_fin.strftime('%Y-%m-%d'),
+                    'activo': p.activo
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al guardar: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+
+
+def api_periodo_update_delete(request, pk):
+    """
+    API sencilla para editar o eliminar un periodo académico.
+    """
+    try:
+        p = PeriodoAcademico.objects.get(pk=pk)
+    except PeriodoAcademico.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'El período académico no existe.'}, status=404)
+
+    # Detectar si es una solicitud de eliminación (DELETE real o POST simulado)
+    is_delete = (request.method == 'DELETE') or (request.method == 'POST' and request.POST.get('_method') == 'DELETE')
+
+    if is_delete:
+        try:
+            if request.user.is_authenticated and request.user.rol == 'DESARROLLADOR':
+                # Super-poder del Desarrollador: eliminar inscripciones asociadas en cascada para evitar el ProtectedError
+                p.inscripciones.all().delete()
+            p.delete()
+            return JsonResponse({'success': True})
+        except Exception:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se puede eliminar este período porque tiene inscripciones o notas asociadas.'
+            }, status=400)
+
+    # Si no es eliminación, procesar como actualización (edición)
+    if request.method in ('POST', 'PUT'):
+        if request.content_type == 'application/json':
+            try:
+                body = json.loads(request.body)
+                nombre = body.get('nombre', '').strip()
+                fecha_inicio = body.get('fecha_inicio', '').strip()
+                fecha_fin = body.get('fecha_fin', '').strip()
+                activo = body.get('activo', False)
+            except Exception:
+                return JsonResponse({'success': False, 'error': 'JSON inválido.'}, status=400)
+        else:
+            nombre = request.POST.get('nombre', '').strip()
+            fecha_inicio = request.POST.get('fecha_inicio', '').strip()
+            fecha_fin = request.POST.get('fecha_fin', '').strip()
+            activo = request.POST.get('activo') == 'true' or request.POST.get('activo') == 'on' or request.POST.get('activo') is True
+
+        if not nombre or not fecha_inicio or not fecha_fin:
+            return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+
+        # Validar único excepto a sí mismo
+        if PeriodoAcademico.objects.filter(nombre=nombre).exclude(pk=pk).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe otro período académico con ese nombre.'}, status=400)
+
+        from datetime import datetime
+        try:
+            inicio_date = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fin_date = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'success': False, 'error': 'Formato de fecha inválido. Debe ser AAAA-MM-DD.'}, status=400)
+
+        try:
+            if activo:
+                # Desactivar otros períodos
+                PeriodoAcademico.objects.filter(activo=True).exclude(pk=pk).update(activo=False)
+            
+            p.nombre = nombre
+            p.fecha_inicio = inicio_date
+            p.fecha_fin = fin_date
+            p.activo = activo
+            p.save()
+            
+            return JsonResponse({
+                'success': True,
+                'periodo': {
+                    'id': p.id,
+                    'nombre': p.nombre,
+                    'fecha_inicio': p.fecha_inicio.strftime('%Y-%m-%d') if p.fecha_inicio else '',
+                    'fecha_fin': p.fecha_fin.strftime('%Y-%m-%d') if p.fecha_fin else '',
+                    'activo': p.activo
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'}, status=500)
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+
+
+@require_POST
+def api_cerrar_periodo(request):
+    """
+    Cierra el periodo activo y promueve a los estudiantes al siguiente grado/año.
+    """
+    from django.db import transaction
+    
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'No autenticado.'}, status=401)
+    if request.user.rol not in ['DESARROLLADOR', 'DIRECTIVO', 'COORDINADOR', 'ADMINISTRATIVO']:
+        return JsonResponse({'success': False, 'error': 'No autorizado.'}, status=403)
+        
+    periodo = PeriodoAcademico.objects.filter(activo=True).first()
+    if not periodo:
+        return JsonResponse({'success': False, 'error': 'No hay un período activo para cerrar.'})
+
+    try:
+        with transaction.atomic():
+            periodo.activo = False
+            periodo.save()
+            
+            # Promover estudiantes activos
+            estudiantes = Estudiante.objects.filter(activo=True)
+            for est in estudiantes:
+                if est.ano_cursando in [11, 12, 13, 14, 15]:
+                    est.ano_cursando += 1
+                elif est.ano_cursando == 16:
+                    est.ano_cursando = 1  # Pasa a Secundaria 1er Año
+                elif est.ano_cursando in [1, 2, 3, 4]:
+                    est.ano_cursando += 1
+                elif est.ano_cursando == 5:
+                    est.ano_cursando = 6  # Pasa a Egresado
+                
+                est.save()
+
+            lanzar_alerta_operativa('info', f'Período "{periodo.nombre}" cerrado y estudiantes promovidos (Primaria y Secundaria) por {request.user.username}.')
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al promover estudiantes: {str(e)}'}, status=500)

@@ -34,6 +34,12 @@ class Estudiante(models.Model):
     cedula_representante = models.CharField(max_length=20, blank=True, null=True, verbose_name="C.I. del Representante")
     
     ANO_CURSANDO_CHOICES = (
+        (11, '1er Grado'),
+        (12, '2do Grado'),
+        (13, '3er Grado'),
+        (14, '4to Grado'),
+        (15, '5to Grado'),
+        (16, '6to Grado'),
         (1, '1er Año'),
         (2, '2do Año'),
         (3, '3er Año'),
@@ -41,7 +47,7 @@ class Estudiante(models.Model):
         (5, '5to Año'),
         (6, 'Egresado/Graduado'),
     )
-    ano_cursando = models.IntegerField(choices=ANO_CURSANDO_CHOICES, default=1, verbose_name="Año que cursa")
+    ano_cursando = models.IntegerField(choices=ANO_CURSANDO_CHOICES, default=1, verbose_name="Grado/Año que cursa")
     seccion = models.CharField(max_length=1, blank=True, null=True, verbose_name="Sección")
 
     # ── Fechas de Culminación de Años Académicos ─────────────────────────────

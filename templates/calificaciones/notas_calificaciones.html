@@ -193,12 +193,22 @@
               Año Cursante (Grado) *
             </label>
             <select name="ano_grado" id="nc-ano" class="calif-select" required>
-              <option value="" disabled selected>— Selecciona el año —</option>
-              <option value="1">1er Año</option>
-              <option value="2">2do Año</option>
-              <option value="3">3er Año</option>
-              <option value="4">4to Año</option>
-              <option value="5">5to Año</option>
+              <option value="" disabled selected>— Selecciona el nivel —</option>
+              <optgroup label="Primaria">
+                <option value="11">1er Grado</option>
+                <option value="12">2do Grado</option>
+                <option value="13">3er Grado</option>
+                <option value="14">4to Grado</option>
+                <option value="15">5to Grado</option>
+                <option value="16">6to Grado</option>
+              </optgroup>
+              <optgroup label="Secundaria">
+                <option value="1">1er Año</option>
+                <option value="2">2do Año</option>
+                <option value="3">3er Año</option>
+                <option value="4">4to Año</option>
+                <option value="5">5to Año</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -206,7 +216,7 @@
 
         <p style="font-size:.72rem;color:var(--color-text-secondary);margin-top:0.75rem;">
           <ion-icon name="information-circle-outline" style="vertical-align:middle;"></ion-icon>
-          Las notas se asociarán al período y año seleccionados. <a href="#" id="btn-gestionar-periodos" style="color:var(--color-accent);font-weight:700;text-decoration:underline;">Gestionar Períodos Académicos</a>.
+          Las notas se asociarán al período y año seleccionados.
         </p>
       </div>
 
@@ -442,91 +452,10 @@
             class="ti" style="color:{% if total_errores == 0 and total_no_enc == 0 %}#10b981{% else %}#f59e0b{% endif %};"></ion-icon>
   <div>
     <div class="tt">Carga de notas completada</div>
-    <div class="tm">{{ total_notas }} notas · {{ total_no_enc }} no encontrados · {{ total_errores }} errores</div>
+    <div class="td">{{ total_cargadas }} cargadas · {{ total_duplicados }} actualizadas · {{ total_no_enc }} no encontrados · {{ total_errores }} errores</div>
   </div>
 </div>
-<script>setTimeout(() => { const t = document.getElementById('nc-toast'); if(t) t.style.opacity='0'; }, 6000);</script>
 {% endif %}
-
-<!-- Modal de Gestión de Períodos Académicos -->
-<div id="modal-periodos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1.5rem; transition:opacity 0.3s ease;">
-  <div class="glass-panel" style="width:100%; max-width:650px; background:var(--color-surface); border:1px solid rgba(99,102,241,0.25); border-radius:18px; padding:2rem; box-shadow:0 20px 50px rgba(0,0,0,0.5); display:flex; flex-direction:column; max-height:85vh; overflow-y:auto; position:relative; gap:1.25rem;">
-    <!-- Botón Cerrar -->
-    <button type="button" id="btn-close-modal" style="position:absolute; top:1.25rem; right:1.25rem; background:none; border:none; color:var(--color-text-secondary); cursor:pointer; font-size:1.6rem; transition:color 0.2s;" onmouseover="this.style.color='var(--color-accent)'" onmouseout="this.style.color='var(--color-text-secondary)'">
-      <ion-icon name="close-circle-outline"></ion-icon>
-    </button>
-    
-    <div style="display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid var(--color-border); padding-bottom:0.75rem;">
-      <ion-icon name="calendar-outline" style="font-size:1.8rem; color:var(--color-accent);"></ion-icon>
-      <h2 style="font-size:1.4rem; font-weight:800; margin:0;" class="text-text-main">Gestión de Períodos Académicos</h2>
-    </div>
-
-    <!-- Mensajes de Notificación local inside Modal -->
-    <div id="modal-alert" style="display:none; border-radius:10px; padding:0.75rem 1rem; font-size:0.85rem; font-weight:600; margin-bottom:0.5rem;"></div>
-
-    <!-- Formulario para agregar / editar -->
-    <form id="form-periodo" style="background:rgba(99,102,241,0.04); border:1px solid rgba(99,102,241,0.15); border-radius:12px; padding:1.25rem; display:flex; flex-direction:column; gap:0.85rem;">
-      <input type="hidden" id="periodo-id" value="">
-      
-      <div style="font-weight:700; font-size:0.9rem; color:var(--color-text-primary); display:flex; align-items:center; gap:0.3rem;">
-        <span id="form-action-title">Agregar Nuevo Período</span>
-        <button type="button" id="btn-cancel-edit" style="display:none; margin-left:auto; background:none; border:none; color:#ef4444; font-size:0.75rem; font-weight:700; cursor:pointer;">Cancelar Edición</button>
-      </div>
-      
-      <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:0.75rem; align-items:end;">
-        <div>
-          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.25rem;">Nombre Período *</label>
-          <input type="text" id="p-nombre" placeholder="Ej: 2025-2026" required style="width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:8px; padding:0.5rem 0.75rem; font-size:0.85rem; font-weight:600; outline:none; transition:border-color 0.2s;">
-        </div>
-        <div>
-          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.25rem;">F. Inicio *</label>
-          <input type="date" id="p-fecha-inicio" required style="width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:8px; padding:0.45rem 0.5rem; font-size:0.85rem; font-weight:600; outline:none; transition:border-color 0.2s;">
-        </div>
-        <div>
-          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.25rem;">F. Fin *</label>
-          <input type="date" id="p-fecha-fin" required style="width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:8px; padding:0.45rem 0.5rem; font-size:0.85rem; font-weight:600; outline:none; transition:border-color 0.2s;">
-        </div>
-      </div>
-      
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:0.25rem;">
-        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:600; color:var(--color-text-secondary); cursor:pointer;">
-          <input type="checkbox" id="p-activo" style="width:16px; height:16px; accent-color:#10b981; cursor:pointer;">
-          Establecer como Período Activo
-        </label>
-        <button type="submit" id="btn-save-periodo" class="btn-primary" style="padding:0.5rem 1.5rem; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:0.35rem; transition:transform 0.2s, box-shadow 0.2s;">
-          <ion-icon name="checkmark-outline"></ion-icon> Guardar
-        </button>
-      </div>
-    </form>
-
-    <!-- Lista de Períodos -->
-    <div>
-      <div style="font-weight:700; font-size:0.9rem; color:var(--color-text-primary); margin-bottom:0.5rem; display:flex; align-items:center; gap:0.35rem;">
-        <ion-icon name="list-outline" style="color:var(--color-accent);"></ion-icon>
-        <span>Períodos Registrados</span>
-      </div>
-      
-      <div style="max-height:220px; overflow-y:auto; border:1px solid var(--color-border); border-radius:12px; background:rgba(255,255,255,0.01);">
-        <table class="nc-table" style="width:100%; border-collapse:collapse; margin:0;">
-          <thead>
-            <tr>
-              <th style="padding:0.6rem;">Nombre</th>
-              <th style="padding:0.6rem;">Inicio</th>
-              <th style="padding:0.6rem;">Fin</th>
-              <th style="padding:0.6rem; text-align:center;">Estado</th>
-              <th style="padding:0.6rem; text-align:center;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="lista-periodos-tbody">
-            <tr>
-              <td colspan="5" style="text-align:center; padding:1.5rem; color:var(--color-text-secondary);">Cargando períodos…</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script>
 {
@@ -553,364 +482,8 @@ if (drop) {
   });
 }
 if (form) form.addEventListener('submit', () => { if(spin) spin.style.display = 'flex'; });
-
-// ═══ GESTIÓN DE PERÍODOS ACADÉMICOS EN MODAL ═══
-const btnGestionar = document.getElementById('btn-gestionar-periodos');
-const modalPeriodos = document.getElementById('modal-periodos');
-const btnCloseModal = document.getElementById('btn-close-modal');
-const formPeriodo = document.getElementById('form-periodo');
-const btnCancelEdit = document.getElementById('btn-cancel-edit');
-const formActionTitle = document.getElementById('form-action-title');
-const listaTbody = document.getElementById('lista-periodos-tbody');
-const modalAlert = document.getElementById('modal-alert');
-const selectMain = document.getElementById('nc-periodo');
-
-// Inputs de Periodo
-const inputId = document.getElementById('periodo-id');
-const inputNombre = document.getElementById('p-nombre');
-const inputInicio = document.getElementById('p-fecha-inicio');
-const inputFin = document.getElementById('p-fecha-fin');
-const inputActivo = document.getElementById('p-activo');
-
-function getCsrfToken() {
-  const input = document.querySelector('[name=csrfmiddlewaretoken]');
-  return input ? input.value : '';
-}
-
-function showAlert(msg, isError = false) {
-  modalAlert.textContent = msg;
-  modalAlert.style.display = 'block';
-  if (isError) {
-    modalAlert.style.background = 'rgba(239,68,68,0.15)';
-    modalAlert.style.color = '#f87171';
-    modalAlert.style.border = '1px solid rgba(239,68,68,0.3)';
-  } else {
-    modalAlert.style.background = 'rgba(16,185,129,0.15)';
-    modalAlert.style.color = '#34d399';
-    modalAlert.style.border = '1px solid rgba(16,185,129,0.3)';
-  }
-  setTimeout(() => {
-    modalAlert.style.display = 'none';
-  }, 5000);
-}
-
-function resetForm() {
-  inputId.value = '';
-  inputNombre.value = '';
-  inputInicio.value = '';
-  inputFin.value = '';
-  inputActivo.checked = false;
-  formActionTitle.textContent = 'Agregar Nuevo Período';
-  btnCancelEdit.style.display = 'none';
-}
-
-btnCancelEdit.addEventListener('click', resetForm);
-
-// Abrir modal
-if (btnGestionar) {
-  btnGestionar.addEventListener('click', (e) => {
-    e.preventDefault();
-    modalPeriodos.style.display = 'flex';
-    cargarPeriodos();
-  });
-}
-
-// Cerrar modal
-if (btnCloseModal) {
-  btnCloseModal.addEventListener('click', () => {
-    modalPeriodos.style.display = 'none';
-    resetForm();
-  });
-}
-
-// Cerrar click fuera
-modalPeriodos.addEventListener('click', (e) => {
-  if (e.target === modalPeriodos) {
-    modalPeriodos.style.display = 'none';
-    resetForm();
-  }
-});
-
-// Cargar periodos desde backend
-async function cargarPeriodos() {
-  listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--color-text-secondary);">Cargando períodos…</td></tr>`;
-  try {
-    const res = await fetch('/notas/periodos/');
-    const data = await res.json();
-    if (data.success) {
-      actualizarVistas(data.periodos);
-    } else {
-      listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#ef4444;">Error al recuperar períodos del servidor.</td></tr>`;
-    }
-  } catch (err) {
-    listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#ef4444;">Fallo de conexión.</td></tr>`;
-  }
-}
-
-// Actualizar tabla modal y select principal sincronizadamente
-function actualizarVistas(periodos) {
-  // 1. Renderizar tabla en el modal
-  if (periodos.length === 0) {
-    listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--color-text-secondary);">No hay períodos registrados.</td></tr>`;
-  } else {
-    listaTbody.innerHTML = periodos.map(p => `
-      <tr style="border-bottom: 1px solid var(--color-border);">
-        <td style="padding:0.6rem; font-weight:700; color:var(--color-text-primary);">${p.nombre}</td>
-        <td style="padding:0.6rem; font-family:monospace; font-size:0.78rem;">${p.fecha_inicio}</td>
-        <td style="padding:0.6rem; font-family:monospace; font-size:0.78rem;">${p.fecha_fin}</td>
-        <td style="padding:0.6rem; text-align:center;">
-          ${p.activo 
-            ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.7rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px; border:1px solid rgba(16,185,129,0.3);">ACTIVO</span>` 
-            : `<span style="background:rgba(255,255,255,0.06); color:var(--color-text-secondary); font-size:0.7rem; padding:0.15rem 0.45rem; border-radius:6px;">Cerrado</span>`
-          }
-        </td>
-        <td style="padding:0.6rem; text-align:center;">
-          <div style="display:flex; justify-content:center; gap:0.4rem;">
-            <button type="button" class="btn-edit-p" data-id="${p.id}" data-nombre="${p.nombre}" data-inicio="${p.fecha_inicio}" data-fin="${p.fecha_fin}" data-activo="${p.activo}" style="background:rgba(99,102,241,0.1); color:var(--color-accent); border:none; padding:0.35rem; border-radius:6px; cursor:pointer; font-size:1.1rem; display:inline-flex; align-items:center; justify-content:center; transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Editar">
-              <ion-icon name="create-outline"></ion-icon>
-            </button>
-            <button type="button" class="btn-delete-p" data-id="${p.id}" data-nombre="${p.nombre}" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; padding:0.35rem; border-radius:6px; cursor:pointer; font-size:1.1rem; display:inline-flex; align-items:center; justify-content:center; transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar">
-              <ion-icon name="trash-outline"></ion-icon>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
-    
-    // Registrar controladores para botones cargados
-    document.querySelectorAll('.btn-edit-p').forEach(b => {
-      b.addEventListener('click', (e) => {
-        const trg = e.currentTarget;
-        inputId.value = trg.getAttribute('data-id');
-        inputNombre.value = trg.getAttribute('data-nombre');
-        inputInicio.value = trg.getAttribute('data-inicio');
-        inputFin.value = trg.getAttribute('data-fin');
-        inputActivo.checked = trg.getAttribute('data-activo') === 'true';
-        formActionTitle.textContent = 'Editar Período: ' + trg.getAttribute('data-nombre');
-        btnCancelEdit.style.display = 'inline-block';
-        
-        // Scroll suave al formulario
-        formPeriodo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
-    });
-    
-    const IS_DEV = {% if request.user.rol == 'DESARROLLADOR' %}true{% else %}false{% endif %};
-
-    document.querySelectorAll('.btn-delete-p').forEach(b => {
-      b.addEventListener('click', async (e) => {
-        const id = e.currentTarget.getAttribute('data-id');
-        const nombre = e.currentTarget.getAttribute('data-nombre');
-        if (IS_DEV) {
-          abrirModalEliminarPeriodo(id, nombre);
-        } else {
-          if (confirm(`¿Estás 100% seguro de eliminar el período "${nombre}"? Esta acción no se puede deshacer.`)) {
-            ejecutarEliminacionPeriodo(id);
-          }
-        }
-      });
-    });
-  }
-
-  // 2. Sincronizar el select dropdown principal de la interfaz original
-  const prevValue = selectMain.value;
-  selectMain.innerHTML = '<option value="" disabled>— Selecciona el período académico —</option>';
-  
-  if (periodos.length === 0) {
-    selectMain.innerHTML += '<option value="" disabled>No hay períodos registrados. Administra en el panel.</option>';
-  } else {
-    periodos.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.nombre + (p.activo ? ' (Activo)' : '');
-      if (p.activo) {
-        opt.style.color = '#10b981';
-        opt.style.fontWeight = '700';
-      }
-      selectMain.appendChild(opt);
-    });
-  }
-  
-  // Reestablecer selección previa o seleccionar el activo por defecto
-  if (prevValue && Array.from(selectMain.options).some(o => o.value === prevValue)) {
-    selectMain.value = prevValue;
-  } else {
-    const act = periodos.find(p => p.activo);
-    if (act && !prevValue) {
-      selectMain.value = act.id;
-    }
-  }
-}
-
-// Envío del Formulario (Agregar / Editar)
-formPeriodo.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const id = inputId.value;
-  const nombre = inputNombre.value.trim();
-  const fecha_inicio = inputInicio.value;
-  const fecha_fin = inputFin.value;
-  const activo = inputActivo.checked;
-  
-  const url = id ? `/notas/periodos/${id}/` : '/notas/periodos/';
-  const payload = { nombre, fecha_inicio, fecha_fin, activo };
-  
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken()
-      },
-      body: JSON.stringify(payload)
-    });
-    
-    const rData = await res.json();
-    if (rData.success) {
-      showAlert(id ? 'Período académico actualizado exitosamente.' : 'Período académico creado exitosamente.');
-      setTimeout(() => {
-        modalPeriodos.style.display = 'none';
-        resetForm();
-        window.location.reload();
-      }, 1500);
-    } else {
-      showAlert(rData.error || 'Ocurrió un error inesperado al procesar.', true);
-    }
-  } catch (err) {
-    showAlert('Error de comunicación con el servidor al guardar el período.', true);
-  }
-});
-
-// ═══ SISTEMA DE BORRADO SEGURO PARA DESARROLLADOR ═══
-let targetPeriodoId = null;
-let targetPeriodoName = '';
-
-function abrirModalEliminarPeriodo(id, nombre) {
-  targetPeriodoId = id;
-  targetPeriodoName = nombre;
-  document.getElementById('msg-eliminar-p-1').innerHTML = `Estás a punto de eliminar el período <strong class="text-white">"${nombre}"</strong>.`;
-  document.getElementById('modal-eliminar-p-1').classList.remove('hidden');
-}
-
-function cerrarModalEliminarPeriodo() {
-  document.getElementById('modal-eliminar-p-1').classList.add('hidden');
-  document.getElementById('modal-eliminar-p-2').classList.add('hidden');
-  targetPeriodoId = null;
-  targetPeriodoName = '';
-}
-
-function siguientePasoEliminarPeriodo() {
-  document.getElementById('modal-eliminar-p-1').classList.add('hidden');
-  document.getElementById('msg-eliminar-p-2').innerText = `¿Eliminar el período "${targetPeriodoName}" para siempre?`;
-  document.getElementById('modal-eliminar-p-2').classList.remove('hidden');
-}
-
-async function confirmarEliminacionPeriodo() {
-  if (!targetPeriodoId) return;
-  const btn = document.getElementById('btn-ejecutar-eliminar-p');
-  const oldText = btn.textContent;
-  btn.textContent = 'Eliminando...';
-  btn.disabled = true;
-  
-  try {
-    const res = await fetch(`/notas/periodos/${targetPeriodoId}/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': getCsrfToken(),
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: '_method=DELETE'
-    });
-    const rData = await res.json();
-    btn.textContent = oldText;
-    btn.disabled = false;
-    
-    if (rData.success) {
-      cerrarModalEliminarPeriodo();
-      showAlert('Período eliminado correctamente.');
-      cargarPeriodos();
-      if (selectMain && selectMain.value == targetPeriodoId) {
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    } else {
-      showAlert(rData.error || 'Error al intentar eliminar el período.', true);
-      cerrarModalEliminarPeriodo();
-    }
-  } catch (err) {
-    showAlert('Error de conexión al eliminar.', true);
-    btn.textContent = oldText;
-    btn.disabled = false;
-    cerrarModalEliminarPeriodo();
-  }
-}
-
-async function ejecutarEliminacionPeriodo(id) {
-  try {
-    const res = await fetch(`/notas/periodos/${id}/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': getCsrfToken(),
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: '_method=DELETE'
-    });
-    const rData = await res.json();
-    if (rData.success) {
-      showAlert('Período eliminado correctamente.');
-      cargarPeriodos();
-      if (selectMain && selectMain.value == id) {
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    } else {
-      showAlert(rData.error || 'Error al intentar eliminar el período.', true);
-    }
-  } catch (err) {
-    showAlert('Error de conexión al eliminar.', true);
-  }
-}
-
-// Exportar funciones globales necesarias para onclick inline attributes
-window.cerrarModalEliminarPeriodo = cerrarModalEliminarPeriodo;
-window.siguientePasoEliminarPeriodo = siguientePasoEliminarPeriodo;
-window.confirmarEliminacionPeriodo = confirmarEliminacionPeriodo;
 }
 </script>
-
-<!-- Modales de Eliminación de Período Académico (Doble Confirmación para Desarrollador) -->
-<!-- Modal 1: Pregunta Inicial -->
-<div id="modal-eliminar-p-1" class="hidden fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-  <div class="bg-surface-container border border-white/10 rounded-2xl shadow-glass w-full max-w-md mx-4 p-6 space-y-5 text-center">
-    <div class="w-16 h-16 rounded-full bg-error/20 flex items-center justify-center mx-auto mb-4 border border-error/30 shadow-neon-error">
-      <ion-icon name="warning-outline" class="text-4xl text-error"></ion-icon>
-    </div>
-    <h4 class="font-headline font-bold text-xl text-white">¿Estás seguro?</h4>
-    <p class="text-text-muted text-sm" id="msg-eliminar-p-1">Estás a punto de eliminar este período académico.</p>
-    <div class="flex items-center gap-3 pt-4">
-      <button onclick="cerrarModalEliminarPeriodo()" class="flex-1 bg-surface-element hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl text-sm transition-all border border-white/10">Cancelar</button>
-      <button onclick="siguientePasoEliminarPeriodo()" class="flex-1 bg-primary hover:bg-primary/80 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-neon-primary">Sí, Continuar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal 2: Confirmación de Seguridad -->
-<div id="modal-eliminar-p-2" class="hidden fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-  <div class="bg-surface-container border border-error/30 rounded-2xl shadow-glass w-full max-w-md mx-4 p-6 space-y-5 text-center relative overflow-hidden">
-    <div class="absolute inset-0 bg-error/5 z-0 pointer-events-none"></div>
-    <div class="relative z-10">
-      <div class="w-16 h-16 rounded-full bg-error flex items-center justify-center mx-auto mb-4 shadow-neon-error">
-        <ion-icon name="skull-outline" class="text-4xl text-white"></ion-icon>
-      </div>
-      <h4 class="font-headline font-extrabold text-xl text-error uppercase tracking-wider">Confirmación de Seguridad</h4>
-      <p class="text-text-muted text-sm mt-3">
-        Esta acción es <strong>IRREVERSIBLE</strong> y usará tu <strong>Super Poder de Desarrollador</strong> para saltar restricciones de integridad. Se eliminarán permanentemente el período académico y <strong>TODAS sus inscripciones, calificaciones asociadas, horarios y asignaciones de docentes</strong>.
-      </p>
-      <p class="text-white text-sm font-bold mt-2" id="msg-eliminar-p-2"></p>
-      <div class="flex items-center gap-3 pt-6">
-        <button onclick="cerrarModalEliminarPeriodo()" class="flex-1 bg-surface-element hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl text-sm transition-all border border-white/10">Cancelar</button>
-        <button onclick="confirmarEliminacionPeriodo()" id="btn-ejecutar-eliminar-p" class="flex-1 bg-error hover:bg-error/80 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-error">Eliminar Definitivamente</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Modal de Ayuda (Guía de Calificaciones) -->
 <div id="califHelpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

@@ -347,12 +347,12 @@
             </div>
 
             <!-- Docentes -->
-            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'notas_docentes,gestion_docentes,perfil_docente_admin' %}true{% else %}false{% endif %}">
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'notas_docentes,gestion_docentes,perfil_docente_admin,gestion_periodos' %}true{% else %}false{% endif %}">
                 <span class="sidebar-link-icon"><span class="material-symbols-outlined">school</span></span>
                 <span class="sidebar-link-text">Docentes</span>
                 <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
             </button>
-            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'notas_docentes,gestion_docentes,perfil_docente_admin' %}open{% endif %}">
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'notas_docentes,gestion_docentes,perfil_docente_admin,gestion_periodos' %}open{% endif %}">
                 <a href="{% url 'notas_docentes' %}"
                     class="sidebar-link {% if request.resolver_match.url_name == 'notas_docentes' %}active{% endif %}">
                     <span class="sidebar-link-icon"><span class="material-symbols-outlined">assignment</span></span>
@@ -362,6 +362,11 @@
                     class="sidebar-link {% if request.resolver_match.url_name == 'gestion_docentes' or request.resolver_match.url_name == 'perfil_docente_admin' %}active{% endif %}">
                     <span class="sidebar-link-icon"><span class="material-symbols-outlined">group</span></span>
                     <span class="sidebar-link-text">Gestión</span>
+                </a>
+                <a href="{% url 'gestion_periodos' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'gestion_periodos' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">calendar_month</span></span>
+                    <span class="sidebar-link-text">Períodos</span>
                 </a>
             </div>
 
