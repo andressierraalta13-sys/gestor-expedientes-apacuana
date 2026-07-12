@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Operadores{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div>
+      <h2 class="font-headline font-extrabold text-2xl tracking-tight text-text-main flex items-center gap-3">
+        <ion-icon name="people-outline" class="text-primary"></ion-icon>
+        Usuarios del Sistema
+      </h2>
+      <p class="text-sm text-text-muted mt-1">Control de credenciales y accesos para operadores del Intranet.</p>
+    </div>
+    <button onclick="abrirModalNuevoUsuario()"
+      class="flex items-center gap-2 bg-primary hover:bg-primary/80 text-text-main px-4 py-2.5 rounded-xl text-sm font-semibold shadow-neon-primary transition-all">
+      <ion-icon name="person-add-outline" class="text-base"></ion-icon> Nuevo Usuario
+    </button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md overflow-hidden">
+    <div class="overflow-x-auto custom-scrollbar tabla-admin-usuarios-contenedor">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr
+            class="bg-surface-element/50 border-b border-border text-[10px] uppercase tracking-wider text-text-muted">
+            <th class="px-6 py-4 cursor-pointer hover:text-text-main transition-colors select-none columna-nombre-usuario" onclick="sortTable(0)">Usuario <span class="sort-icon inline-block ml-1 opacity-50 text-[8px]">▲</span></th>
+            <th class="px-6 py-4 cursor-pointer hover:text-text-main transition-colors select-none" onclick="sortTable(1)">Nombre Completo <span class="sort-icon inline-block ml-1 opacity-50 text-[8px]">▲</span></th>
+            <th class="px-6 py-4 cursor-pointer hover:text-text-main transition-colors select-none" onclick="sortTable(2)">Cargo / Rol <span class="sort-icon inline-block ml-1 opacity-50 text-[8px]">▲</span></th>
+            <th class="px-6 py-4 cursor-pointer hover:text-text-main transition-colors select-none" onclick="sortTable(3)">Último Acceso <span class="sort-icon inline-block ml-1 opacity-50 text-[8px]">▲</span></th>
+            <th class="px-6 py-4 cursor-pointer hover:text-text-main transition-colors select-none" onclick="sortTable(4)">Estatus <span class="sort-icon inline-block ml-1 opacity-50 text-[8px]">▲</span></th>
+            <th class="px-6 py-4 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-sm" id="tabla-body">
+          {% for u in usuarios_lista %}
+          <tr class="hover:bg-white/3 transition-colors" id="fila-{{ u.id }}">
+            <td class="px-6 py-4 columna-nombre-usuario">
+              <a href="{% url 'expediente_usuario' u.id %}" class="flex items-center gap-3 group celda-usuario-info">
+                <div
+                  class="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold transition-all group-hover:scale-110 group-hover:bg-primary group-hover:text-black shadow-neon-primary">
+                  {{ u.username|first|upper }}
+                </div>
+                <span class="font-semibold text-text-main group-hover:text-primary transition-colors nombre-texto">{{ u.username }}</span>
+              </a>
+            </td>
+            <td class="px-6 py-4">
+              <a href="{% url 'expediente_usuario' u.id %}" class="text-text-muted hover:text-text-main transition-colors">
+                {{ u.nombre_completo|default:"—" }}
+              </a>
+            </td>
+            <td class="px-6 py-4">
+              {% if u.rol == 'PERSONAL' %}
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">Administrativo</span>
+              {% elif u.rol == 'ADMINISTRATIVO' %}
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase">Directora</span>
+              {% elif u.rol == 'DOCENTE' %}
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/20 uppercase">Docente</span>
+              {% elif u.rol == 'COORDINADOR' %}
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-400/10 text-indigo-400 border border-indigo-400/20 uppercase">Coordinador</span>
+              {% elif u.rol == 'DESARROLLADOR' %}
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase">Desarrollador</span>
+              {% else %}
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-surface-element text-text-muted border border-border uppercase">{{ u.rol }}</span>
+              {% endif %}
+              {% if u.perfiladministrativo.cargo %}
+              <span class="text-[11px] text-text-muted block mt-1 font-medium">{{ u.perfiladministrativo.cargo }}</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-text-muted text-xs">{{ u.last_login|default:"Nunca" }}</td>
+            <td class="px-6 py-4">
+              {% if u.is_active %}
+              <span class="flex items-center gap-1.5 text-secondary text-xs font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Activo
+              </span>
+              {% else %}
+              <span class="flex items-center gap-1.5 text-error text-xs font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-error"></span> Bloqueado
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-right flex items-center justify-end gap-2">
+              {% if request.user.username != u.username %}
+              <button onclick="toggleUsuario({{ u.id }}, {{ u.is_active|yesno:'true,false' }}, this)"
+                class="text-xs px-3 py-1.5 rounded-lg transition-all font-semibold text-white shadow-sm
+                             {% if u.is_active %}bg-error hover:bg-error/80 shadow-neon-error{% else %}bg-secondary hover:bg-secondary/80 shadow-neon-secondary{% endif %}">
+                {{ u.is_active|yesno:"Revocar,Activar" }}
+              </button>
+              {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' or request.user.rol == 'COORDINADOR' %}
+              <button onclick="eliminarUsuario({{ u.id }}, '{{ u.username }}')"
+                class="p-2 rounded-lg bg-error hover:bg-error/80 text-white transition-all flex items-center justify-center shadow-sm shadow-neon-error"
+                title="Eliminar permanentemente">
+                <ion-icon name="trash-outline" class="text-base"></ion-icon>
+              </button>
+              {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Nuevo Usuario ─────────────────────────────────────────────────── -->
+<div id="modal-operador"
+  class="hidden fixed inset-0 z-[9999] items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-md mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-base text-text-main">Nuevo Usuario</h4>
+      <button onclick="cerrarModalNuevoUsuario()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+
+    <div id="op-error" class="hidden bg-error/10 border border-error/20 text-error text-xs rounded-xl px-3 py-2"></div>
+    <div id="op-ok"
+      class="hidden bg-secondary/10 border border-secondary/20 text-secondary text-xs rounded-xl px-3 py-2"></div>
+
+    <div class="grid grid-cols-1 gap-4">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Correo Electrónico
+          <span class="text-error">*</span></label>
+        <input id="op-email" type="email" placeholder="ej: nombre@dominio.com" autocomplete="off"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Nombre de Usuario
+          <span class="text-error">*</span></label>
+        <input id="op-username" type="text" placeholder="ej: jdoe" autocomplete="off"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Nombre
+          Completo</label>
+        <input id="op-nombre" type="text" placeholder="ej: Juan Doe"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Cargo <span
+            class="text-error">*</span></label>
+        <select id="op-rol"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+          <option value="DOCENTE">Docente</option>
+          <option value="ADMINISTRATIVO">Directora</option>
+          <option value="PERSONAL">Administrativo</option>
+          <option value="COORDINADOR">Coordinador Académico</option>
+          {% if request.user.rol == 'DESARROLLADOR' %}
+          <option value="DESARROLLADOR">Desarrollador</option>
+          {% endif %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Contraseña <span
+            class="text-error">*</span></label>
+        <input id="op-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Confirmar Contraseña
+          <span class="text-error">*</span></label>
+        <input id="op-pass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50" />
+      </div>
+    </div>
+
+    <button onclick="crearOperador()" id="btn-crear"
+      class="w-full bg-primary hover:bg-primary/80 text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all">
+      Crear Usuario
+    </button>
+  </div>
+</div>
+
+<!-- ── Modales de Eliminación de Usuario (Doble Confirmación) ───────────────── -->
+<!-- Modal 1: Pregunta Inicial -->
+<div id="modal-eliminar-1"
+  class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div
+    class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-md mx-4 p-6 space-y-5 text-center">
+    <div
+      class="w-16 h-16 rounded-full bg-error/20 flex items-center justify-center mx-auto mb-4 border border-error/30 shadow-neon-error">
+      <ion-icon name="warning-outline" class="text-4xl text-error"></ion-icon>
+    </div>
+    <h4 class="font-headline font-bold text-xl text-text-main">¿Estás seguro?</h4>
+    <p class="text-text-muted text-sm" id="msg-eliminar-1">Estás a punto de eliminar a este usuario.</p>
+    <div class="flex items-center gap-3 pt-4">
+      <button onclick="cerrarModalEliminar()"
+        class="flex-1 bg-surface-element hover:bg-surface-element text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all border border-border">Cancelar</button>
+      <button onclick="siguientePasoEliminar()"
+        class="flex-1 bg-primary hover:bg-primary/80 text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all shadow-neon-primary">Sí,
+        Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Confirmación de Seguridad -->
+<div id="modal-eliminar-2"
+  class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div
+    class="bg-surface-container border border-error/30 rounded-2xl shadow-md w-full max-w-md mx-4 p-6 space-y-5 text-center relative overflow-hidden">
+    <div class="absolute inset-0 bg-error/5 z-0 pointer-events-none"></div>
+    <div class="relative z-10">
+      <div class="w-16 h-16 rounded-full bg-error flex items-center justify-center mx-auto mb-4 shadow-neon-error">
+        <ion-icon name="skull-outline" class="text-4xl text-text-main"></ion-icon>
+      </div>
+      <h4 class="font-headline font-extrabold text-xl text-error uppercase tracking-wider">Confirmación de Seguridad
+      </h4>
+      <p class="text-text-muted text-sm mt-3">
+        Esta acción es <strong>IRREVERSIBLE</strong>. El usuario será borrado permanentemente junto con TODAS sus
+        dependencias (horarios, calificaciones, asignaciones).
+      </p>
+      <p class="text-text-main text-sm font-bold mt-2" id="msg-eliminar-2"></p>
+      <div class="flex items-center gap-3 pt-6">
+        <button onclick="cerrarModalEliminar()"
+          class="flex-1 bg-surface-element hover:bg-surface-element text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all border border-border">Cancelar</button>
+        <button onclick="ejecutarEliminacion()" id="btn-ejecutar-eliminar"
+          class="flex-1 bg-error hover:bg-error/80 text-text-main font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-error">Eliminar
+          Definitivamente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CSRF = '{{ csrf_token }}';
+
+  function abrirModalNuevoUsuario() {
+    document.getElementById('modal-operador').classList.remove('hidden');
+    document.getElementById('modal-operador').classList.add('flex');
+    document.getElementById('op-error').classList.add('hidden');
+    document.getElementById('op-ok').classList.add('hidden');
+    ['op-email', 'op-username', 'op-nombre', 'op-pass', 'op-pass2'].forEach(id => document.getElementById(id).value = '');
+  }
+  function cerrarModalNuevoUsuario() { 
+      document.getElementById('modal-operador').classList.add('hidden'); 
+      document.getElementById('modal-operador').classList.remove('flex'); 
+  }
+  document.getElementById('modal-operador').addEventListener('click', function (e) { if (e.target === this) cerrarModalNuevoUsuario(); });
+
+  async function crearOperador() {
+    const errEl = document.getElementById('op-error');
+    const okEl = document.getElementById('op-ok');
+    errEl.classList.add('hidden'); okEl.classList.add('hidden');
+
+    const form = new FormData();
+    form.append('email', document.getElementById('op-email').value.trim());
+    form.append('username', document.getElementById('op-username').value.trim());
+    form.append('nombre_completo', document.getElementById('op-nombre').value.trim());
+    form.append('rol', document.getElementById('op-rol').value);
+    form.append('password', document.getElementById('op-pass').value);
+    form.append('confirmar_password', document.getElementById('op-pass2').value);
+
+    const btn = document.getElementById('btn-crear');
+    btn.textContent = 'Creando...'; btn.disabled = true;
+
+    const r = await fetch('/usuarios/nuevo/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': CSRF },
+      body: form
+    });
+    const d = await r.json();
+    btn.textContent = 'Crear Operador'; btn.disabled = false;
+
+    if (d.ok) {
+      okEl.textContent = `Usuario "${d.usuario.username}" creado exitosamente.`;
+      okEl.classList.remove('hidden');
+      setTimeout(() => { cerrarModalNuevoUsuario(); location.reload(); }, 1800);
+    } else {
+      errEl.textContent = d.error || 'Error desconocido.';
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  async function toggleUsuario(userId, estaActivo, btn) {
+    try {
+      const r = await fetch(`/usuarios/revocar/${userId}/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF }
+      });
+      const d = await r.json();
+      if (d.ok) {
+        const fila = document.getElementById(`fila-${userId}`);
+        const estadoCel = fila.querySelector('td:nth-child(5) span');
+        if (d.activo) {
+          estadoCel.className = 'flex items-center gap-1.5 text-secondary text-xs font-semibold';
+          estadoCel.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Activo';
+          btn.textContent = 'Revocar';
+          btn.className = 'text-xs px-3 py-1.5 rounded-lg transition-all font-semibold text-white shadow-sm bg-error hover:bg-error/80 shadow-neon-error';
+          btn.onclick = function() { toggleUsuario(userId, true, this); };
+        } else {
+          estadoCel.className = 'flex items-center gap-1.5 text-error text-xs font-semibold';
+          estadoCel.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-error"></span> Bloqueado';
+          btn.textContent = 'Activar';
+          btn.className = 'text-xs px-3 py-1.5 rounded-lg transition-all font-semibold text-white shadow-sm bg-secondary hover:bg-secondary/80 shadow-neon-secondary';
+          btn.onclick = function() { toggleUsuario(userId, false, this); };
+        }
+      } else {
+        alert(d.error || 'Error al cambiar estado');
+      }
+    } catch(err) {
+      alert('Error de conexión');
+    }
+  }
+
+  let targetEliminarId = null;
+  let targetEliminarName = '';
+
+  function eliminarUsuario(userId, username) {
+    targetEliminarId = userId;
+    targetEliminarName = username;
+    document.getElementById('msg-eliminar-1').innerHTML = `Estás a punto de eliminar al usuario <strong class="text-text-main">"${username}"</strong>.`;
+    document.getElementById('modal-eliminar-1').classList.remove('hidden');
+  }
+
+  function cerrarModalEliminar() {
+    document.getElementById('modal-eliminar-1').classList.add('hidden');
+    document.getElementById('modal-eliminar-2').classList.add('hidden');
+    targetEliminarId = null;
+  }
+
+  function siguientePasoEliminar() {
+    document.getElementById('modal-eliminar-1').classList.add('hidden');
+    document.getElementById('msg-eliminar-2').innerText = `¿Eliminar a ${targetEliminarName} para siempre?`;
+    document.getElementById('modal-eliminar-2').classList.remove('hidden');
+  }
+
+  async function ejecutarEliminacion() {
+    if (!targetEliminarId) return;
+    const btn = document.getElementById('btn-ejecutar-eliminar');
+    const oldText = btn.textContent;
+    btn.textContent = 'Eliminando...';
+    btn.disabled = true;
+
+    try {
+      const r = await fetch(`/usuarios/eliminar/${targetEliminarId}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF }
+      });
+      const d = await r.json();
+      btn.textContent = oldText;
+      btn.disabled = false;
+
+      if (d.ok) {
+        cerrarModalEliminar();
+        const fila = document.getElementById(`fila-${targetEliminarId}`);
+        if (fila) {
+          fila.style.transition = 'all 0.5s ease';
+          fila.style.opacity = '0';
+          fila.style.transform = 'translateX(20px)';
+          setTimeout(() => fila.remove(), 500);
+        }
+      } else {
+        alert(d.error || 'Error al eliminar el usuario.');
+        cerrarModalEliminar();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Ocurrió un error al procesar la solicitud.');
+      btn.textContent = oldText;
+      btn.disabled = false;
+      cerrarModalEliminar();
+    }
+  }
+
+  let sortDirections = [false, false, false, false, false];
+  function sortTable(n) {
+    const tableBody = document.getElementById("tabla-body");
+    let rows = Array.from(tableBody.querySelectorAll("tr"));
+    
+    // Toggle direction for this column
+    sortDirections[n] = !sortDirections[n];
+    const isAscending = sortDirections[n];
+    
+    // Update icons
+    const headers = document.querySelectorAll("th span.sort-icon");
+    headers.forEach((icon, index) => {
+        if (index === n) {
+            icon.textContent = isAscending ? '▼' : '▲';
+            icon.classList.remove('opacity-50');
+            icon.classList.add('text-primary');
+        } else {
+            icon.textContent = '▲';
+            icon.classList.add('opacity-50');
+            icon.classList.remove('text-primary');
+        }
+    });
+
+    rows.sort((a, b) => {
+        let textA = a.cells[n].textContent.trim().toLowerCase();
+        let textB = b.cells[n].textContent.trim().toLowerCase();
+        
+        if (textA < textB) return isAscending ? -1 : 1;
+        if (textA > textB) return isAscending ? 1 : -1;
+        return 0;
+    });
+
+    // Re-append sorted rows
+    rows.forEach(row => tableBody.appendChild(row));
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,1013 @@
+{% extends "base.html" %}
+{% block title %}Notas Certificadas | Intranet{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Layout ── */
+  .nc-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── Drop Zone ── */
+  .drop-zone {
+    border: 2px dashed rgba(139, 92, 246, .4);
+    background: rgba(139, 92, 246, .05);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .3s cubic-bezier(.4, 0, .2, 1);
+    position: relative;
+  }
+
+  .drop-zone:hover,
+  .drop-zone.drag-over {
+    background: rgba(139, 92, 246, .1);
+    border-color: #d946ef;
+    box-shadow: 0 0 28px rgba(139, 92, 246, .2);
+  }
+
+  /* ── Estado de la fila seleccionada ── */
+  .nc-row.selected {
+    background: rgba(139, 92, 246, .07);
+  }
+
+  .nc-row.selected td:first-child {
+    color: #8b5cf6;
+  }
+
+  /* ── Checkbox columna ── */
+  .col-check {
+    display: none;
+  }
+
+  .select-mode .col-check {
+    display: table-cell;
+  }
+
+  /* ── Toast ── */
+  .nc-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    min-width: 280px;
+    max-width: 400px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+    animation: slideUp .35s cubic-bezier(.16, 1, .3, 1) forwards;
+    pointer-events: none;
+  }
+
+  .nc-toast.success {
+    border-left: 4px solid #10B981;
+  }
+
+  .nc-toast.error {
+    border-left: 4px solid #EF4444;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Spinner ── */
+  .nc-spinner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+    background: rgba(0, 0, 0, .7);
+    backdrop-filter: blur(6px);
+  }
+
+  .nc-spinner {
+    width: 52px;
+    height: 52px;
+    border: 5px solid rgba(255, 255, 255, .1);
+    border-top-color: #8b5cf6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ── Badge de selección ── */
+  #sel-badge {
+    display: none;
+    background: rgba(139, 92, 246, .15);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, .3);
+    padding: .25rem .75rem;
+    border-radius: 99px;
+    font-size: .75rem;
+    font-weight: 700;
+  }
+
+  #sel-badge.show {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+</style>
+
+<div class="block md:hidden text-center py-20 px-6 bg-white rounded-2xl shadow-sm border border-gray-100 my-8">
+  <div class="w-16 h-16 mx-auto bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 mb-4">
+    <ion-icon name="desktop-outline" class="text-3xl"></ion-icon>
+  </div>
+  <h3 class="text-lg font-bold text-gray-800 mb-2">Modo Escritorio Requerido</h3>
+  <p class="text-sm text-gray-500">Para ir a la carga masiva te recomendamos ir a una Computadora de Escritorio (PC)</p>
+</div>
+
+<div class="nc-wrap pb-16 hidden md:block">
+  {% csrf_token %}
+
+  <!-- ════════ HEADER ════════ -->
+  <div class="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span
+          class="px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-full uppercase" style="color: var(--color-accent); background: var(--color-accent-subtle);">Módulo Académico</span>
+      </div>
+      <h1 class="text-2xl font-extrabold tracking-tight" style="color: var(--color-text-primary);">Carga de Notas</h1>
+      <p class="text-text-muted text-sm mt-1" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        Carga, validación y unificación de expedientes Excel individuales.
+        <button type="button" onclick="toggleNotasCertHelp()" style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;cursor:pointer;color:var(--color-accent);font-size:.8rem;font-weight:700;padding:0;">
+          <span class="material-symbols-outlined" style="font-size:15px;">help</span> ¿Cómo usar esta sección?
+        </button>
+      </p>
+    </div>
+
+    <!-- Botones de acción masiva -->
+    <div class="flex items-center gap-3 flex-wrap" id="action-bar">
+      <span id="sel-badge">
+        <ion-icon name="checkmark-circle-outline" class="text-sm"></ion-icon>
+        <span id="sel-count">0</span> seleccionados
+      </span>
+      <button id="btn-select" onclick="toggleSelectMode()"
+        class="flex items-center gap-2 px-4 py-2 bg-surface-element border border-white/5 text-text-muted text-sm font-semibold rounded-xl hover:text-text-main hover:border-primary/30 transition-all">
+        <ion-icon name="checkbox-outline" class="text-base"></ion-icon>
+        Seleccionar
+      </button>
+      {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+      <button id="btn-delete-mass" onclick="eliminarSeleccionados()"
+        class="hidden items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-500 text-sm font-bold rounded-xl hover:bg-red-500/20 transition-all">
+        <ion-icon name="trash-outline" class="text-base"></ion-icon>
+        Eliminar
+      </button>
+      {% endif %}
+      <button id="btn-unify" onclick="unificarSeleccionados()"
+        class="hidden items-center gap-2 px-4 py-2 bg-primary/15 border border-primary/30 text-primary text-sm font-bold rounded-xl hover:bg-primary/25 transition-all">
+        <ion-icon name="layers-outline" class="text-base"></ion-icon>
+        Descargar y unir todo
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════ ZONA DE CARGA ════════ -->
+  <div class="bg-surface-container border border-white/5 rounded-2xl p-6 mb-8 shadow-glass">
+    <h2 class="text-sm font-bold text-text-main mb-4 flex items-center gap-2">
+      <ion-icon name="cloud-upload-outline" class="text-primary text-base"></ion-icon>
+      Cargar nuevo expediente Excel (.xlsx)
+    </h2>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" accept=".xlsx" style="display:none;">
+
+      <div class="space-y-3">
+        <div class="w-14 h-14 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+          <ion-icon name="document-attach-outline" class="text-3xl"></ion-icon>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-text-main">Arrastra el archivo .xlsx aquí</h3>
+          <p class="text-xs text-text-muted mt-0.5">Asegúrese de que el nombre del archivo sea la cédula del estudiante (ej: <code class="bg-white/5 px-1 rounded">36077673.xlsx</code>)</p>
+        </div>
+        <div id="file-name-display" class="hidden">
+          <span
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 border border-secondary/20 text-secondary text-xs font-bold rounded-xl">
+            <ion-icon name="document-outline" class="text-sm"></ion-icon>
+            <span id="file-name-text"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado del motor de carga -->
+    <div id="ready-panel"
+      class="hidden mt-4 flex items-center justify-between gap-4 p-4 bg-secondary/5 border border-secondary/15 rounded-xl">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-secondary/10 rounded-lg text-secondary">
+          <ion-icon name="sparkles-outline" class="text-xl block"></ion-icon>
+        </div>
+        <div>
+          <p class="text-sm font-bold text-text-main">Archivo listo para procesar</p>
+          <p class="text-xs text-text-muted mt-0.5">El sistema tomará la cédula del nombre del archivo y lo guardará inalterado.
+          </p>
+        </div>
+      </div>
+      <button id="btn-upload" onclick="subirArchivo()"
+        class="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary text-white text-sm font-bold rounded-xl hover:shadow-neon-primary hover:-translate-y-0.5 transition-all">
+        <ion-icon name="cloud-upload"></ion-icon>
+        Cargar Expediente
+      </button>
+    </div>
+
+    <!-- Guía de Nombrado de Archivos -->
+    <div class="mt-5 p-4 bg-white/[0.01] border border-white/5 rounded-2xl space-y-3">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+          <ion-icon name="document-text-outline" class="text-sm"></ion-icon>
+        </div>
+        <h4 class="text-xs font-bold text-text-main">Guía para el Nombrado de Archivos Excel</h4>
+      </div>
+      
+      <p class="text-[11px] text-text-muted leading-relaxed">
+        El sistema identificará automáticamente al estudiante extrayendo únicamente los dígitos numéricos del nombre del archivo subido. A continuación se muestran ejemplos prácticos de cómo nombrarlos:
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+        <!-- Formatos Recomendados -->
+        <div class="p-3 bg-emerald-500/[0.03] border border-emerald-500/10 rounded-xl space-y-2">
+          <div class="flex items-center gap-1.5 text-emerald-400 text-xs font-bold">
+            <ion-icon name="checkmark-circle-outline" class="text-base"></ion-icon>
+            Nombres recomendados y válidos
+          </div>
+          <ul class="space-y-1.5 text-[11px] text-text-muted">
+            <li class="flex items-center justify-between gap-2 p-1 bg-white/[0.02] rounded">
+              <span class="font-mono text-emerald-400 font-semibold">36077673.xlsx</span>
+              <span class="text-[10px] text-text-muted">(Cédula exacta - Recomendado)</span>
+            </li>
+            <li class="flex items-center justify-between gap-2 p-1 bg-white/[0.02] rounded">
+              <span class="font-mono text-text-main">V-36077673.xlsx</span>
+              <span class="text-[10px] text-text-muted">(Extrae: 36077673)</span>
+            </li>
+            <li class="flex items-center justify-between gap-2 p-1 bg-white/[0.02] rounded">
+              <span class="font-mono text-text-main">expediente_36077673.xlsx</span>
+              <span class="text-[10px] text-text-muted">(Extrae: 36077673)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Formatos No Recomendados / Inválidos -->
+        <div class="p-3 bg-rose-500/[0.03] border border-rose-500/10 rounded-xl space-y-2">
+          <div class="flex items-center gap-1.5 text-rose-400 text-xs font-bold">
+            <ion-icon name="close-circle-outline" class="text-base"></ion-icon>
+            Nombres inválidos (No funcionarán)
+          </div>
+          <ul class="space-y-1.5 text-[11px] text-text-muted">
+            <li class="flex items-center justify-between gap-2 p-1 bg-white/[0.02] rounded">
+              <span class="font-mono text-rose-400 font-semibold">NotasJuan.xlsx</span>
+              <span class="text-[10px] text-rose-400">(Sin números: Cero dígitos)</span>
+            </li>
+            <li class="flex items-center justify-between gap-2 p-1 bg-white/[0.02] rounded">
+              <span class="font-mono text-text-main">3607-76-73.xlsx</span>
+              <span class="text-[10px] text-rose-400">(Guiones internos: Evitar)</span>
+            </li>
+            <li class="flex items-center justify-between gap-2 p-1 bg-white/[0.02] rounded">
+              <span class="font-mono text-text-main">Notas_12_34_56.xlsx</span>
+              <span class="text-[10px] text-rose-400">(Dígitos incorrectos)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <p class="text-[10px] text-text-muted italic">
+        * Recuerde: El sistema busca los números resultantes en la base de datos de Estudiantes registrados. Asegúrese de que el estudiante ya esté registrado en la sección de "Expedientes" antes de subir sus notas certificadas.
+      </p>
+    </div>
+  </div>
+
+  <!-- ════════ TABLA DE EXPEDIENTES ════════ -->
+  <div class="bg-surface-container border border-white/5 rounded-2xl shadow-glass overflow-hidden">
+
+    <!-- Header de la tabla -->
+    <div class="px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <h2 class="text-sm font-bold text-text-main flex items-center gap-2">
+        <ion-icon name="folder-open-outline" class="text-primary text-base"></ion-icon>
+        Expedientes Cargados
+        <span class="px-2 py-0.5 text-[10px] bg-white/5 text-text-muted border border-white/5 rounded-full font-bold"
+          id="total-badge">
+          {{ expedientes|length }} total
+        </span>
+      </h2>
+      <div class="relative w-full sm:w-64">
+        <ion-icon name="search-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"></ion-icon>
+        <input type="text" id="search-input" oninput="filtrarExpedientes()" placeholder="Buscar cédula o nombre... (Esc)" class="w-full bg-black/20 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-xs text-text-main focus:outline-none focus:border-primary/50 transition-colors">
+      </div>
+    </div>
+
+    {% if expedientes %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" id="exp-table">
+        <thead>
+          <tr class="bg-white/[0.02] text-text-muted text-xs font-bold tracking-wide uppercase">
+            <th class="col-check pl-6 py-3 w-10 text-left">
+              <input type="checkbox" id="chk-all" onchange="toggleAll(this)"
+                class="w-3.5 h-3.5 rounded accent-primary cursor-pointer">
+            </th>
+            <th class="pl-4 pr-4 py-3 text-left">Nombre Completo</th>
+            <th class="px-4 py-3 text-left">Apellido</th>
+            <th class="px-4 py-3 text-left">Cédula</th>
+            <th class="px-4 py-3 text-left">Fecha Carga</th>
+            <th class="px-6 py-3 text-right">Descargar</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/[0.04]" id="exp-tbody">
+          {% for exp in expedientes %}
+          <tr class="nc-row hover:bg-white/[0.02] transition-colors" data-id="{{ exp.pk }}">
+            <td class="col-check pl-6 py-3.5 w-10">
+              <input type="checkbox" class="chk-row w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                data-id="{{ exp.pk }}" onchange="onCheckChange()">
+            </td>
+            <td class="pl-4 pr-4 py-3.5 font-semibold text-text-main">{{ exp.nombre_completo }}</td>
+            <td class="px-4 py-3.5 text-text-muted">{{ exp.apellidos }}</td>
+            <td class="px-4 py-3.5">
+              <span class="font-mono text-xs bg-white/5 px-2 py-1 rounded text-text-main">
+                {{ exp.estudiante.cedula }}
+              </span>
+            </td>
+            <td class="px-4 py-3.5 text-text-muted text-xs">{{ exp.fecha_carga|date:"d/m/Y h:i A" }}</td>
+            <td class="px-6 py-3.5 text-right flex items-center justify-end gap-2">
+              <a href="{% url 'notas_certificadas_download' exp.pk %}"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-all" title="Descargar Excel">
+                <ion-icon name="download-outline" class="text-sm"></ion-icon>
+              </a>
+              {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+              <button onclick="eliminarExpediente({{ exp.pk }})"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold rounded-lg hover:bg-red-500/20 transition-all" title="Eliminar Expediente">
+                <ion-icon name="trash-outline" class="text-sm"></ion-icon>
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <!-- Estado vacío -->
+    <div class="py-20 text-center space-y-3">
+      <div
+        class="w-16 h-16 mx-auto bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-center text-text-muted">
+        <ion-icon name="document-outline" class="text-3xl"></ion-icon>
+      </div>
+      <p class="text-text-muted text-sm">Aún no hay expedientes cargados.</p>
+      <p class="text-text-muted text-xs">Sube un archivo .xlsx usando la zona de carga de arriba.</p>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Filas inyectadas por JS (nuevos registros sin recargar) -->
+  <template id="row-template">
+    <tr class="nc-row hover:bg-white/[0.02] transition-colors" data-id="__ID__">
+      <td class="col-check pl-6 py-3.5 w-10">
+        <input type="checkbox" class="chk-row w-3.5 h-3.5 rounded accent-primary cursor-pointer" data-id="__ID__"
+          onchange="onCheckChange()">
+      </td>
+      <td class="pl-4 pr-4 py-3.5 font-semibold text-text-main">__NOMBRE_COMPLETO__</td>
+      <td class="px-4 py-3.5 text-text-muted">__APELLIDOS__</td>
+      <td class="px-4 py-3.5">
+        <span class="font-mono text-xs bg-white/5 px-2 py-1 rounded text-text-main">__CEDULA__</span>
+      </td>
+      <td class="px-4 py-3.5 text-text-muted text-xs">__FECHA__</td>
+      <td class="px-6 py-3.5 text-right flex items-center justify-end gap-2">
+        <a href="/calificaciones/notas-certificadas/download/__ID__/"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-all" title="Descargar Excel">
+          <ion-icon name="download-outline" class="text-sm"></ion-icon>
+        </a>
+        {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+        <button onclick="eliminarExpediente(__ID__)"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold rounded-lg hover:bg-red-500/20 transition-all" title="Eliminar Expediente">
+          <ion-icon name="trash-outline" class="text-sm"></ion-icon>
+        </button>
+        {% endif %}
+      </td>
+    </tr>
+  </template>
+
+</div>
+
+<!-- Botón Flotante para el Log de Errores -->
+<div id="tech-log-trigger" class="fixed bottom-6 left-6 z-50">
+  <button onclick="toggleTechLog()" class="relative flex items-center justify-center w-12 h-12 rounded-full bg-[#1A1D21] border border-white/10 hover:border-red-500/50 hover:bg-red-500/10 text-text-muted hover:text-red-400 shadow-lg hover:shadow-red-500/10 hover:scale-105 transition-all duration-300">
+    <ion-icon name="bug-outline" class="text-xl"></ion-icon>
+    <span id="tech-log-badge" class="absolute -top-1 -right-1 hidden items-center justify-center min-w-5 h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full border border-[#111417]">0</span>
+  </button>
+</div>
+
+<!-- Panel Deslizable del Log de Errores -->
+<div id="tech-log-panel" class="fixed inset-y-0 left-0 w-full sm:w-[450px] z-[60] bg-[#111417] border-r border-white/10 shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <!-- Cabecera del Panel -->
+  <div class="px-5 py-4 border-b border-white/15 flex items-center justify-between bg-[#15191C]">
+    <div class="flex items-center gap-2 bg-transparent">
+      <ion-icon name="terminal-outline" class="text-red-400 text-lg"></ion-icon>
+      <span class="text-sm font-bold text-text-main">Log de Errores Técnicos</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="clearTechLog()" class="text-xs text-text-muted hover:text-text-main px-2.5 py-1 bg-white/5 rounded-md hover:bg-white/10 transition-colors">
+        Limpiar
+      </button>
+      <button onclick="toggleTechLog()" class="text-text-muted hover:text-text-main p-1 rounded-md hover:bg-white/5 transition-colors">
+        <ion-icon name="close-outline" class="text-xl block"></ion-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenedor de la lista de logs -->
+  <div id="tech-log-list" class="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-xs">
+    <!-- Estado vacío -->
+    <div id="tech-log-empty" class="h-full flex flex-col items-center justify-center text-center text-text-muted space-y-2 py-20 bg-transparent">
+      <ion-icon name="shield-checkmark-outline" class="text-3xl text-emerald-400/80"></ion-icon>
+      <p class="font-sans font-semibold text-text-main">Sin errores técnicos registrados</p>
+      <p class="font-sans text-[11px]">Las excepciones y fallos de subida/unificación aparecerán aquí en detalle.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Fondo oscuro (backdrop) para el log -->
+<div id="tech-log-overlay" onclick="toggleTechLog()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity duration-355"></div>
+
+<!-- ════════ SPINNER OVERLAY ════════ -->
+<div class="nc-spinner-overlay" id="nc-spinner">
+  <div class="nc-spinner"></div>
+  <p class="text-text-main text-sm font-bold" id="spinner-msg">Procesando expediente…</p>
+  <p class="text-text-muted text-xs">Leyendo hoja NCF, validando cédula y guardando archivo</p>
+</div>
+
+<script>
+{
+  const CSRF = (function () {
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === 'csrftoken') return decodeURIComponent(v);
+    }
+    return '';
+  })();
+
+  // ── Archivo ────────────────────────────────────────────────────────────────────
+  const fileInput = document.getElementById('file-input');
+  const dropZone = document.getElementById('drop-zone');
+  const fileNameDiv = document.getElementById('file-name-display');
+  const fileNameTxt = document.getElementById('file-name-text');
+  const readyPanel = document.getElementById('ready-panel');
+
+  let archivoSeleccionado = null;
+
+  function onFileSelected(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+      showToast('Solo se aceptan archivos .xlsx', 'error');
+      return;
+    }
+    archivoSeleccionado = file;
+    fileNameTxt.textContent = file.name;
+    fileNameDiv.classList.remove('hidden');
+    readyPanel.classList.remove('hidden');
+  }
+
+  fileInput.addEventListener('change', e => onFileSelected(e.target.files[0]));
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) { fileInput.files = e.dataTransfer.files; onFileSelected(file); }
+  });
+
+  // ── Log de Errores Técnicos ──────────────────────────────────────────────────
+  let techErrors = [];
+
+  function toggleTechLog() {
+    const panel = document.getElementById('tech-log-panel');
+    const overlay = document.getElementById('tech-log-overlay');
+    const isOpen = !panel.classList.contains('-translate-x-full');
+
+    if (isOpen) {
+      panel.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+    } else {
+      panel.classList.remove('-translate-x-full');
+      overlay.classList.remove('hidden');
+    }
+  }
+
+  function addTechLog(summary, details) {
+    const timestamp = new Date().toLocaleTimeString();
+    techErrors.push({ timestamp, summary, details });
+
+    // Actualizar badge
+    const badge = document.getElementById('tech-log-badge');
+    badge.textContent = techErrors.length;
+    badge.classList.remove('hidden');
+    badge.classList.add('inline-flex');
+
+    // Ocultar placeholder de "sin errores"
+    const emptyEl = document.getElementById('tech-log-empty');
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    // Generar el HTML de la entrada
+    const listEl = document.getElementById('tech-log-list');
+    const entryEl = document.createElement('div');
+    entryEl.className = 'p-3 bg-red-950/20 border border-red-500/20 rounded-xl space-y-1.5 text-left';
+    
+    // Convertir detalles en cadena si es objeto
+    let detailStr = '';
+    if (typeof details === 'object') {
+      detailStr = JSON.stringify(details, null, 2);
+    } else {
+      detailStr = String(details);
+    }
+
+    entryEl.innerHTML = `
+      <div class="flex items-center justify-between text-[10px] text-red-400 font-bold border-b border-red-500/10 pb-1">
+        <span>ERROR [${timestamp}]</span>
+        <button class="text-text-muted hover:text-text-main underline cursor-pointer" onclick="copiarDetalleLog(this)">Copiar</button>
+      </div>
+      <p class="font-sans font-bold text-text-main text-[11px] leading-tight">${escHtml(summary)}</p>
+      <pre class="bg-black/40 p-2 rounded-lg text-[10px] text-red-300/90 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed select-all" style="max-height: 180px;">${escHtml(detailStr)}</pre>
+    `;
+
+    // Insertar al inicio de la lista
+    listEl.insertBefore(entryEl, listEl.firstChild);
+
+    // Reproducir un sutil efecto de micro-animación en el botón flotante
+    const trigger = document.querySelector('#tech-log-trigger button');
+    trigger.classList.add('scale-110', 'border-red-500', 'text-red-400');
+    setTimeout(() => {
+      trigger.classList.remove('scale-110');
+    }, 300);
+  }
+
+  function copiarDetalleLog(btn) {
+    const pre = btn.closest('div').nextElementSibling.nextElementSibling;
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+      showToast('✅ Copiado al portapapeles', 'success');
+    }).catch(() => {
+      showToast('❌ No se pudo copiar', 'error');
+    });
+  }
+
+  function clearTechLog() {
+    techErrors = [];
+    const badge = document.getElementById('tech-log-badge');
+    badge.textContent = '0';
+    badge.classList.add('hidden');
+    badge.classList.remove('inline-flex');
+
+    const listEl = document.getElementById('tech-log-list');
+    listEl.innerHTML = `
+      <div id="tech-log-empty" class="h-full flex flex-col items-center justify-center text-center text-text-muted space-y-2 py-20 bg-transparent">
+        <ion-icon name="shield-checkmark-outline" class="text-3xl text-emerald-400/80"></ion-icon>
+        <p class="font-sans font-semibold text-text-main">Sin errores técnicos registrados</p>
+        <p class="font-sans text-[11px]">Las excepciones y fallos de subida/unificación aparecerán aquí en detalle.</p>
+      </div>
+    `;
+  }
+
+  // ── Subida AJAX ────────────────────────────────────────────────────────────────
+  async function subirArchivo() {
+    if (!archivoSeleccionado) return;
+
+    setSpinner(true, 'Cargando expediente…');
+
+    const fd = new FormData();
+    fd.append('archivo_xlsx', archivoSeleccionado);
+    fd.append('csrfmiddlewaretoken', CSRF);
+
+    try {
+      const resp = await fetch("{% url 'notas_certificadas_upload' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+        body: fd,
+      });
+
+      let data;
+      const contentType = resp.headers.get('content-type') || '';
+      
+      if (contentType.includes('application/json')) {
+        data = await resp.json();
+      } else {
+        const text = await resp.text();
+        const errorMsg = `Error del Servidor (${resp.status} ${resp.statusText})`;
+        addTechLog(errorMsg, text);
+        setSpinner(false);
+        showToast(`❌ ${errorMsg}. Revisa el log de errores.`, 'error');
+        return;
+      }
+
+      setSpinner(false);
+
+      if (data.ok) {
+        showToast(`✅ Expediente cargado: ${data.expediente.nombre_completo}`, 'success');
+        insertarFila(data.expediente);
+        resetUploadZone();
+        actualizarTotalBadge(1);
+      } else {
+        showToast(`❌ ${data.error}`, 'error');
+        addTechLog(`Fallo al cargar archivo: ${data.error}`, data);
+      }
+    } catch (err) {
+      setSpinner(false);
+      showToast('❌ Error de conexión al subir el archivo.', 'error');
+      addTechLog('Error de Conexión (fetch exception)', err.stack || err.message || err);
+    }
+  }
+
+  function resetUploadZone() {
+    fileInput.value = '';
+    archivoSeleccionado = null;
+    fileNameDiv.classList.add('hidden');
+    readyPanel.classList.add('hidden');
+  }
+
+  // ── Insertar nueva fila sin recargar ──────────────────────────────────────────
+  function insertarFila(exp) {
+    const tpl = document.getElementById('row-template').innerHTML;
+    
+    // Aquí usamos exp.cedula directo, ya que tu API JSON sí lo envía con este nombre
+    const html = tpl
+      .replaceAll('__ID__', exp.id)
+      .replaceAll('__NOMBRE_COMPLETO__', escHtml(exp.nombre_completo))
+      .replaceAll('__APELLIDOS__', escHtml(exp.apellidos))
+      .replaceAll('__CEDULA__', escHtml(exp.cedula))
+      .replaceAll('__FECHA__', escHtml(exp.fecha_carga));
+
+    const tbody = document.getElementById('exp-tbody');
+    if (!tbody) {
+      window.location.reload();
+      return;
+    }
+    tbody.insertAdjacentHTML('afterbegin', html);
+
+    if (selectMode) {
+      tbody.querySelector('.col-check').style.display = 'table-cell';
+    }
+  }
+
+  function actualizarTotalBadge(delta) {
+    const badge = document.getElementById('total-badge');
+    if (!badge) return;
+    const match = badge.textContent.match(/\d+/);
+    const actual = match ? parseInt(match[0]) : 0;
+    badge.textContent = `${actual + delta} total`;
+  }
+
+  function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  // ── Modo selección ─────────────────────────────────────────────────────────────
+  let selectMode = false;
+
+  function toggleSelectMode() {
+    selectMode = !selectMode;
+    const table = document.getElementById('exp-table');
+    const btnSel = document.getElementById('btn-select');
+    const btnUnify = document.getElementById('btn-unify');
+    const btnDeleteMass = document.getElementById('btn-delete-mass');
+
+    if (selectMode) {
+      table && table.classList.add('select-mode');
+      btnSel.innerHTML = '<ion-icon name="close-outline" class="text-base"></ion-icon> Cancelar';
+      btnSel.classList.replace('text-text-muted', 'text-red-400');
+    } else {
+      table && table.classList.remove('select-mode');
+      btnSel.innerHTML = '<ion-icon name="checkbox-outline" class="text-base"></ion-icon> Seleccionar';
+      btnSel.classList.replace('text-red-400', 'text-text-muted');
+      document.querySelectorAll('.chk-row').forEach(c => c.checked = false);
+      document.getElementById('chk-all').checked = false;
+      if (btnUnify) { btnUnify.classList.add('hidden'); btnUnify.classList.remove('flex'); }
+      if (btnDeleteMass) { btnDeleteMass.classList.add('hidden'); btnDeleteMass.classList.remove('flex'); }
+      document.getElementById('sel-badge').classList.remove('show');
+    }
+  }
+
+  function toggleAll(chkAll) {
+    document.querySelectorAll('.chk-row').forEach(c => {
+      c.checked = chkAll.checked;
+      c.closest('tr').classList.toggle('selected', chkAll.checked);
+    });
+    onCheckChange();
+  }
+
+  function onCheckChange() {
+    const checked = [...document.querySelectorAll('.chk-row:checked')];
+    const btnUnify = document.getElementById('btn-unify');
+    const btnDeleteMass = document.getElementById('btn-delete-mass');
+    const badge = document.getElementById('sel-badge');
+    const count = document.getElementById('sel-count');
+
+    document.querySelectorAll('.chk-row').forEach(c => {
+      c.closest('tr').classList.toggle('selected', c.checked);
+    });
+
+    if (checked.length > 0) {
+      if (btnUnify) { btnUnify.classList.remove('hidden'); btnUnify.classList.add('flex'); }
+      if (btnDeleteMass) { btnDeleteMass.classList.remove('hidden'); btnDeleteMass.classList.add('flex'); }
+      badge.classList.add('show');
+      count.textContent = checked.length;
+    } else {
+      if (btnUnify) { btnUnify.classList.add('hidden'); btnUnify.classList.remove('flex'); }
+      if (btnDeleteMass) { btnDeleteMass.classList.add('hidden'); btnDeleteMass.classList.remove('flex'); }
+      badge.classList.remove('show');
+    }
+  }
+
+  // ── Unificación masiva ─────────────────────────────────────────────────────────
+  async function unificarSeleccionados() {
+    const ids = [...document.querySelectorAll('.chk-row:checked')].map(c => parseInt(c.dataset.id));
+    if (!ids.length) return;
+
+    setSpinner(true, `Unificando ${ids.length} expediente(s)…`);
+
+    try {
+      const resp = await fetch("{% url 'notas_certificadas_unificar' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF,
+        },
+        body: JSON.stringify({ ids }),
+      });
+
+      const contentType = resp.headers.get('content-type') || '';
+
+      if (resp.ok && contentType.includes('spreadsheetml')) {
+        setSpinner(false);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Notas_Certificadas_Unificadas.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast(`✅ ${ids.length} expediente(s) unificados y descargados correctamente.`, 'success');
+      } else {
+        setSpinner(false);
+        if (contentType.includes('application/json')) {
+          const data = await resp.json();
+          showToast(`❌ ${data.error || 'Error al unificar.'}`, 'error');
+          addTechLog(`Fallo al unificar expedientes: ${data.error || 'Error desconocido'}`, data);
+        } else {
+          const text = await resp.text();
+          const errorMsg = `Error del Servidor al Unificar (${resp.status} ${resp.statusText})`;
+          showToast(`❌ ${errorMsg}`, 'error');
+          addTechLog(errorMsg, text);
+        }
+      }
+    } catch (err) {
+      setSpinner(false);
+      showToast('❌ Error de conexión al unificar.', 'error');
+      addTechLog('Error de Conexión al Unificar (fetch exception)', err.stack || err.message || err);
+    }
+  }
+
+  // ── Spinner ────────────────────────────────────────────────────────────────────
+  function setSpinner(show, msg = '') {
+    const overlay = document.getElementById('nc-spinner');
+    const msgEl = document.getElementById('spinner-msg');
+    overlay.style.display = show ? 'flex' : 'none';
+    if (msg) msgEl.textContent = msg;
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'success') {
+    const icon = type === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline';
+    const color = type === 'success' ? '#10B981' : '#EF4444';
+    const toast = document.createElement('div');
+    toast.className = `nc-toast ${type}`;
+    toast.innerHTML = `
+    <ion-icon name="${icon}" style="font-size:1.4rem;color:${color};flex-shrink:0;margin-top:1px;"></ion-icon>
+    <div>
+      <p style="font-size:.85rem;font-weight:700;color:#E1E2E7;">${type === 'success' ? 'Operación exitosa' : 'Error del sistema'}</p>
+      <p style="font-size:.75rem;color:#8A8D98;margin-top:.15rem;">${msg}</p>
+    </div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = 'opacity .4s';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 400);
+    }, 5000);
+  }
+  // ── Buscador ───────────────────────────────────────────────────────────────────
+  function filtrarExpedientes() {
+    const term = document.getElementById('search-input').value.toLowerCase();
+    const rows = document.querySelectorAll('.nc-row');
+    rows.forEach(row => {
+      const textContent = row.textContent.toLowerCase();
+      if (textContent.includes(term)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  // Escuchar la tecla Escape para limpiar búsqueda
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = '';
+        filtrarExpedientes();
+        searchInput.blur();
+      }
+    }
+  });
+
+  // ── Eliminación Individual / Masiva ──────────────────────────────────────────
+  async function apiEliminar(ids) {
+    if (!confirm(`¿Estás seguro de que deseas eliminar ${ids.length} expediente(s)? Esta acción borrará el registro y el archivo Excel físicamente.`)) return;
+
+    setSpinner(true, `Eliminando ${ids.length} expediente(s)…`);
+    try {
+      const resp = await fetch("{% url 'notas_certificadas_delete' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await resp.json();
+      setSpinner(false);
+      if (data.ok) {
+        showToast(data.mensaje, 'success');
+        data.eliminados_ids.forEach(id => {
+          const row = document.querySelector(`.nc-row[data-id="${id}"]`);
+          if (row) row.remove();
+        });
+        actualizarTotalBadge(-data.eliminados_ids.length);
+        if (selectMode) onCheckChange();
+      } else {
+        showToast(`❌ ${data.error}`, 'error');
+        addTechLog('Error al eliminar', data);
+      }
+    } catch (err) {
+      setSpinner(false);
+      showToast('❌ Error de conexión al eliminar.', 'error');
+      addTechLog('Error de Conexión (fetch exception)', err.stack || err.message || err);
+    }
+  }
+
+  function eliminarExpediente(id) {
+    apiEliminar([parseInt(id)]);
+  }
+
+  function eliminarSeleccionados() {
+    const ids = [...document.querySelectorAll('.chk-row:checked')].map(c => parseInt(c.dataset.id));
+    if (!ids.length) return;
+    apiEliminar(ids);
+  }
+
+  // Exportar funciones globales necesarias para onclick inline attributes
+  window.toggleSelectMode = toggleSelectMode;
+  window.eliminarSeleccionados = eliminarSeleccionados;
+  window.unificarSeleccionados = unificarSeleccionados;
+  window.subirArchivo = subirArchivo;
+  window.eliminarExpediente = eliminarExpediente;
+  window.toggleTechLog = toggleTechLog;
+  window.clearTechLog = clearTechLog;
+  window.copiarDetalleLog = copiarDetalleLog;
+}
+</script>
+
+<!-- Modal de Ayuda (Guía de Notas Certificadas) -->
+<div id="notasCertHelpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+      <div class="flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined">verified</span>
+        <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Notas Certificadas</h3>
+      </div>
+      <button type="button" onclick="toggleNotasCertHelp()" class="text-text-muted hover:text-text-main cursor-pointer bg-transparent border-none">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+
+      <!-- Sección 1: ¿Qué es este módulo? -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">info</span>
+          1. ¿Qué son las Notas Certificadas?
+        </h4>
+        <p class="text-xs">
+          Este módulo permite cargar archivos Excel individuales con el histórico oficial de calificaciones de un alumno (notas certificadas de años anteriores). Cada archivo se almacena vinculado al estudiante correspondiente, y puede descargarse o unificarse con otros expedientes en un solo archivo consolidado.
+        </p>
+      </div>
+
+      <!-- Sección 2: Nombre del archivo -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">badge</span>
+          2. Regla Clave: Nombre del Archivo = Cédula
+        </h4>
+        <p class="text-xs mb-2">
+          El sistema extrae automáticamente la cédula del alumno a partir de los dígitos numéricos del nombre del archivo. El estudiante debe estar registrado previamente en Expedientes.
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-xl">
+            <span class="font-bold text-emerald-400 block mb-1">✓ Válidos</span>
+            <code class="block text-emerald-300">36077673.xlsx</code>
+            <code class="block text-text-muted">V-36077673.xlsx</code>
+            <code class="block text-text-muted">expediente_36077673.xlsx</code>
+          </div>
+          <div class="bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl">
+            <span class="font-bold text-red-400 block mb-1">✗ Inválidos</span>
+            <code class="block text-red-300">NotasJuan.xlsx</code>
+            <code class="block text-text-muted">3607-76-73.xlsx</code>
+            <code class="block text-text-muted">Notas_12_34.xlsx</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 3: Cargar y Descargar -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">cloud_upload</span>
+          3. Cómo Cargar y Descargar
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>Arrastra el archivo <strong>.xlsx</strong> a la zona de carga, o haz clic en ella para seleccionarlo desde tu equipo.</li>
+          <li>Tras seleccionarlo, aparece el botón <strong>"Cargar Expediente"</strong>. Presíona para subirlo sin recargar la página.</li>
+          <li>El expediente cargado aparece instantáneamente en la tabla inferior.</li>
+          <li>Usa el botón de <strong>descarga</strong> (icono de flecha) en cada fila para descargar el .xlsx original de ese alumno.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 4: Unificación masiva -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">layers</span>
+          4. Unificar y Descargar Todo
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>Haz clic en <strong>"Seleccionar"</strong> para activar el modo de selección múltiple.</li>
+          <li>Marca los expedientes que deseas combinar usando los checkboxes.</li>
+          <li>Haz clic en <strong>"Descargar y unir todo"</strong> para generar un solo archivo Excel con todas las hojas unificadas.</li>
+          <li>El archivo resultante se descarga automáticamente como <code class="bg-white/5 px-1 rounded">Notas_Certificadas_Unificadas.xlsx</code>.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 5: Log de errores técnicos -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">bug_report</span>
+          5. Log de Errores Técnicos
+        </h4>
+        <p class="text-xs">
+          El botón flotante de <strong>insecto (🐛)</strong> en la esquina inferior izquierda abre un panel con el registro detallado de cualquier error que haya ocurrido durante la carga o unificación. Útil para diagnosticar problemas sin salir de la página.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+      <button type="button" onclick="toggleNotasCertHelp()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleNotasCertHelp() {
+  const modal = document.getElementById('notasCertHelpModal');
+  if (modal) modal.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

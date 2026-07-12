@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Listado de Horarios | Intranet{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6 max-w-5xl mx-auto">
+    <!-- Encabezado -->
+    <div class="bg-surface-container rounded-3xl p-6 md:p-8 border border-border shadow-md">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-2xl md:text-3xl font-bold text-text-main font-headline">Biblioteca de Horarios</h1>
+                <p class="text-text-muted mt-1 text-sm" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    Navega por todos los horarios guardados en el sistema organizados por grado y sección.
+                    <button type="button" onclick="toggleHorariosListaHelp()" style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;cursor:pointer;color:var(--color-accent);font-size:.8rem;font-weight:700;padding:0;">
+                        <span class="material-symbols-outlined" style="font-size:15px;">help</span> ¿Cómo usar esta sección?
+                    </button>
+                </p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'PERSONAL' or request.user.rol == 'DESARROLLADOR' %}
+                <button id="btnModoRestablecer" onclick="toggleModoRestablecer()"
+                    class="px-4 py-2.5 bg-error/10 hover:bg-error/20 text-error dark:text-white border border-error/20 font-bold rounded-xl transition-all flex items-center gap-2 text-sm whitespace-nowrap">
+                    <ion-icon name="trash-outline" class="text-lg"></ion-icon> Borrar Horario
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Grupos de Niveles Académicos -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-8 pb-10">
+        {% for grado, lista in agrupados.items %}
+        <div class="space-y-4">
+            <h2 class="text-xl font-extrabold text-primary border-b border-border pb-2">
+                {{ grado }}° AÑO
+            </h2>
+
+            {% if lista %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for h in lista %}
+                <div class="relative horario-card transition-all" data-id="{{ h.id }}">
+                    <div class="absolute top-6 right-6 z-20 hidden checkbox-eliminar">
+                        <input type="checkbox" class="horario-checkbox w-5 h-5 rounded border-border bg-black/50 text-error focus:ring-error cursor-pointer" value="{{ h.id }}" onclick="event.stopPropagation(); checkSelection()">
+                    </div>
+                    
+                    <a href="{% url 'horarios_dashboard_id' h.id %}" data-turbo="false"
+                        class="horario-link bg-surface-element border border-border rounded-2xl p-6 hover:border-primary/50 hover:bg-surface-element transition-all group flex flex-col justify-between hover:shadow-neon-primary h-45 block relative">
+                        <div>
+                            <div class="flex justify-between items-start mb-2 pr-6">
+                                <h3
+                                    class="text-2xl font-headline font-black text-text-main group-hover:text-primary transition-colors flex items-center gap-2">
+                                    {{ h.ano_grado }}-{{ h.seccion }}
+                                </h3>
+                                <ion-icon name="arrow-forward-outline"
+                                    class="text-xl text-text-muted group-hover:text-primary transition-colors flecha-ir"></ion-icon>
+                            </div>
+                            <p class="text-sm text-text-muted flex items-center gap-1"><ion-icon name="calendar-outline"
+                                    class="text-base"></ion-icon> Período: {{ h.periodo.nombre }}</p>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-border flex gap-2">
+                            <span
+                                class="text-[10px] uppercase font-bold tracking-widest text-[#c6c6cb] bg-surface-element px-2 py-1 rounded">Ver
+                                / Exportar</span>
+                        </div>
+                    </a>
+                    
+                    <!-- Overlay para interceptar el clic cuando el modo eliminar está activo -->
+                    <div class="absolute inset-0 z-10 cursor-pointer hidden overlay-eliminar rounded-2xl" onclick="toggleCardSelection(this, {{ h.id }})"></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div
+                class="bg-surface-element/30 border border-border border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                <ion-icon name="document-text-outline" class="text-3xl text-text-muted/50 mb-2"></ion-icon>
+                <p class="text-sm text-text-muted">No existen horarios registrados para {{ grado }}° Año.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Footer Flotante Eliminación -->
+<div id="footerEliminar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-surface border border-border shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-2xl px-6 py-4 flex items-center gap-6 z-[100] transform translate-y-32 transition-transform duration-300">
+    <div class="text-text-main font-semibold">
+        <span id="contadorSeleccion" class="text-error font-bold text-lg">0</span> seleccionados
+    </div>
+    <div class="flex gap-3">
+        <button onclick="toggleModoRestablecer()" class="px-4 py-2 bg-surface-element hover:bg-surface-element text-text-main rounded-lg text-sm font-semibold transition-all">Cancelar</button>
+        <button onclick="eliminarSeleccionados()" id="btnEliminarSeleccionados" class="px-4 py-2 bg-error hover:bg-error/80 text-text-main rounded-lg text-sm font-bold shadow-neon-error transition-all flex items-center gap-2 opacity-50 cursor-not-allowed" disabled>
+            <ion-icon name="trash-outline"></ion-icon> Eliminar
+        </button>
+    </div>
+</div>
+
+<script>
+    let modoEliminar = false;
+
+    function toggleModoRestablecer() {
+        modoEliminar = !modoEliminar;
+        
+        const btnModo = document.getElementById('btnModoRestablecer');
+        const footer = document.getElementById('footerEliminar');
+        const cards = document.querySelectorAll('.horario-card');
+        const checkboxes = document.querySelectorAll('.checkbox-eliminar');
+        const overlays = document.querySelectorAll('.overlay-eliminar');
+        const flechas = document.querySelectorAll('.flecha-ir');
+        const links = document.querySelectorAll('.horario-link');
+
+        if (modoEliminar) {
+            btnModo.classList.add('bg-error', 'text-text-main');
+            btnModo.classList.remove('bg-error/10', 'text-error', 'dark:text-white');
+            footer.classList.remove('translate-y-32');
+            
+            // Mostrar checkboxes y overlays
+            checkboxes.forEach(cb => cb.classList.remove('hidden'));
+            overlays.forEach(ov => ov.classList.remove('hidden'));
+            flechas.forEach(f => f.classList.add('opacity-0'));
+            
+            // Cambiar bordes
+            links.forEach(l => l.classList.add('border-border'));
+        } else {
+            btnModo.classList.remove('bg-error', 'text-text-main');
+            btnModo.classList.add('bg-error/10', 'text-error', 'dark:text-white');
+            footer.classList.add('translate-y-32');
+            
+            // Ocultar checkboxes y overlays
+            checkboxes.forEach(cb => {
+                cb.classList.add('hidden');
+                cb.querySelector('input').checked = false;
+            });
+            overlays.forEach(ov => ov.classList.add('hidden'));
+            flechas.forEach(f => f.classList.remove('opacity-0'));
+            
+            // Restaurar bordes
+            links.forEach(l => {
+                l.classList.remove('border-error');
+                l.classList.add('border-border');
+            });
+            
+            checkSelection();
+        }
+    }
+
+    function toggleCardSelection(overlayElement, id) {
+        const card = overlayElement.closest('.horario-card');
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        const link = card.querySelector('.horario-link');
+        
+        checkbox.checked = !checkbox.checked;
+        
+        if (checkbox.checked) {
+            link.classList.remove('border-border');
+            link.classList.add('border-error');
+            link.classList.add('bg-error/5');
+        } else {
+            link.classList.remove('border-error');
+            link.classList.add('border-border');
+            link.classList.remove('bg-error/5');
+        }
+        
+        checkSelection();
+    }
+
+    function checkSelection() {
+        const seleccionados = document.querySelectorAll('.horario-checkbox:checked').length;
+        document.getElementById('contadorSeleccion').textContent = seleccionados;
+        
+        const btnEliminar = document.getElementById('btnEliminarSeleccionados');
+        if (seleccionados > 0) {
+            btnEliminar.disabled = false;
+            btnEliminar.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            btnEliminar.disabled = true;
+            btnEliminar.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    async function eliminarSeleccionados() {
+        const seleccionados = Array.from(document.querySelectorAll('.horario-checkbox:checked')).map(cb => parseInt(cb.value));
+        
+        if (seleccionados.length === 0) return;
+        
+        if (!confirm(`¡ATENCIÓN!\n\n¿Estás completamente seguro de que deseas ELIMINAR FÍSICAMENTE los ${seleccionados.length} horarios seleccionados?\n\nEsta acción es irreversible y todos los datos, clases y asignaciones de horas se perderán para siempre.`)) {
+            return;
+        }
+
+        const btnEliminar = document.getElementById('btnEliminarSeleccionados');
+        const textoOriginal = btnEliminar.innerHTML;
+        btnEliminar.innerHTML = '<ion-icon name="sync-outline" class="animate-spin"></ion-icon> Eliminando...';
+        btnEliminar.disabled = true;
+
+        try {
+            const response = await fetch("{% url 'api_restablecer_horarios' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ horarios_ids: seleccionados })
+            });
+
+            const data = await response.json();
+            
+            if (data.ok) {
+                // Crear y mostrar toast de éxito
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all bg-secondary/10 border border-secondary/20 text-secondary';
+                toast.innerHTML = `<ion-icon name="checkmark-circle-outline" class="text-base"></ion-icon>${data.mensaje}`;
+                document.body.appendChild(toast);
+                
+                // Recargar la página después de 1 segundo
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                alert('Error: ' + data.error);
+                btnEliminar.innerHTML = textoOriginal;
+                btnEliminar.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión al eliminar los horarios.');
+            btnEliminar.innerHTML = textoOriginal;
+            btnEliminar.disabled = false;
+        }
+    }
+</script>
+
+<!-- Modal de Ayuda (Guía de Biblioteca de Horarios) -->
+<div id="horariosListaHelpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+      <div class="flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined">calendar_month</span>
+        <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Biblioteca de Horarios</h3>
+      </div>
+      <button type="button" onclick="toggleHorariosListaHelp()" class="text-text-muted hover:text-text-main cursor-pointer bg-transparent border-none">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+
+      <!-- Sección 1: ¿Qué es esta sección? -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">info</span>
+          1. ¿Qué es la Biblioteca de Horarios?
+        </h4>
+        <p class="text-xs">
+          Es una vista de <strong>solo consulta</strong> que reúne todos los horarios de clases guardados en el sistema, organizados automáticamente por año académico (de 1° a 5°). Desde aquí puedes localizar rápidamente cualquier horario para revisarlo o exportarlo.
+        </p>
+      </div>
+
+      <!-- Sección 2: Navegar y consultar -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">visibility</span>
+          2. Navegar y Consultar
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>Los horarios se agrupan en secciones por <strong>año cursante</strong>. Cada tarjeta muestra el <strong>año-sección</strong> y el <strong>período académico</strong> al que pertenece.</li>
+          <li>Haz clic en cualquier tarjeta para abrir ese horario en el <strong>Gestor</strong> (en modo lectura), donde podrás verlo en detalle y <strong>exportarlo a Excel</strong>.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 3: Borrar horarios -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">delete</span>
+          3. Borrar Horarios
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>El botón <strong>"Borrar Horario"</strong> (disponible solo para roles autorizados) activa el <strong>modo selección</strong>.</li>
+          <li>Aparecerá un checkbox en cada tarjeta: marca los horarios que deseas eliminar y confirma la acción.</li>
+        </ul>
+        <p class="text-xs mt-2 text-red-400 flex items-center gap-1">
+          <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+          <span>La eliminación es <strong>permanente</strong> e incluye todos los bloques de clase de ese horario.</span>
+        </p>
+      </div>
+
+      <!-- Sección 4: Crear o editar -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">edit_calendar</span>
+          4. ¿Cómo Crear o Editar un Horario?
+        </h4>
+        <p class="text-xs">
+          Esta biblioteca es solo para consultar y borrar. Para <strong>crear un horario nuevo</strong> o <strong>modificar</strong> uno existente, usa la sección <strong>"Gestor"</strong> del menú de Horarios.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+      <button type="button" onclick="toggleHorariosListaHelp()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleHorariosListaHelp() {
+  const modal = document.getElementById('horariosListaHelpModal');
+  if (modal) modal.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

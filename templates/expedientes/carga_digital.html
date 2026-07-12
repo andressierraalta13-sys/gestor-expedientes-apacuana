@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Subida de Archivos Masivos | IA Documental{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-text-main mb-2 tracking-tight">Carga Masiva de Imagenes</h1>
+    <p class="text-text-muted text-sm">Carga y Clasificación de Archivos</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl">
+    <!-- Panel de Subida -->
+    <div
+        class="bg-surface-container/60 backdrop-blur-xl border border-white/5 shadow-glass rounded-2xl border border-white/5 p-8 shadow-glass h-fit">
+        <h2
+            class="text-lg font-bold text-text-main mb-6 uppercase tracking-widest text-center border-b border-white/10 pb-4">
+            Drop Zone Segura (.ZIP)</h2>
+
+        <form method="POST" enctype="multipart/form-data" data-turbo="false" class="flex flex-col gap-6 items-center">
+            {% csrf_token %}
+            <div class="w-full relative">
+                <input type="file" id="archivo_zip" name="archivo_zip" accept=".zip"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onchange="if(this.files[0]) document.getElementById('file-status').innerText = this.files[0].name;">
+                <div
+                    class="w-full border border-border rounded-xl bg-surface-element h-48 flex flex-col items-center justify-center gap-4 group-hover:border-primary group-hover:bg-primary/10 transition-colors pointer-events-none">
+                    <ion-icon name="cloud-upload-outline" class="text-5xl text-primary animate-bounce"></ion-icon>
+                    <p id="file-status" class="text-text-main font-medium text-sm text-center">Arrastra el paquete
+                        original o haz clic para montarlo</p>
+                    <p class="text-[10px] text-text-muted uppercase tracking-widest">Contenedor .ZIP requerido.</p>
+                </div>
+            </div>
+            <button type="submit"
+                class="w-full bg-primary hover:bg-[#20b2b5] text-[#111417] font-extrabold py-3 rounded-lg shadow-[0_0_15px_rgba(45,219,222,0.3)] transition-colors flex items-center justify-center gap-2 uppercase tracking-wide">
+                <ion-icon name="search-outline" class="text-xl"></ion-icon> INICIAR BUSQUEDA
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <button onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold flex items-center justify-center gap-1.5 mx-auto bg-transparent border-none cursor-pointer">
+                <ion-icon name="help-circle-outline" class="text-sm"></ion-icon> ¿Tienes duda de cómo subir imágenes al sistema?
+            </button>
+        </div>
+
+        {% if success %}
+        <div class="mt-8 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+            <p class="text-emerald-400 text-sm font-bold flex items-center gap-2"><ion-icon
+                    name="checkmark-circle"></ion-icon> Operación Exitosa</p>
+            <p class="text-xs text-text-main mt-1">Se han clasificado y anclado <strong>{{ procesados }} documentos
+                    visuales</strong>.</p>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="mt-8 p-4 bg-error/10 border border-error/20 rounded-xl">
+            <p class="text-error text-sm font-bold flex items-center gap-2"><ion-icon name="alert-circle"></ion-icon>
+                Operación Rechazada</p>
+            <p class="text-xs text-text-main mt-1">{{ error }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Panel de Reglas e Información -->
+    <div class="flex flex-col gap-6">
+        <div
+            class="bg-surface-container/60 backdrop-blur-xl border border-white/5 shadow-glass rounded-2xl border border-white/5 p-8 shadow-glass flex flex-col">
+            {% if errores %}
+            <h2
+                class="text-lg font-bold text-error mb-4 uppercase tracking-widest border-b border-error/20 pb-4 flex items-center gap-2">
+                <ion-icon name="bug-outline"></ion-icon> Conflictos de Integración Detectados
+            </h2>
+            <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3 max-h-[300px]">
+                {% for err in errores %}
+                <p class="text-xs font-mono text-error bg-error/5 p-2 rounded border border-error/20">{{
+                    err }}</p>
+                {% endfor %}
+            </div>
+            {% else %}
+            <h2 class="text-lg font-bold text-text-main mb-6 uppercase tracking-widest">¿CÓMO FUNCIONA EL ORGANIZADOR
+                AUTOMÁTICO?</h2>
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div
+                        class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                        1</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-text-main uppercase tracking-tight">Identificación por Cédula
+                        </h4>
+                        <p class="text-xs text-text-muted mt-2 leading-relaxed">El sistema es capaz de reconocer a qué
+                            alumno le pertenece cada foto de forma automática. Solo necesita leer el número de cédula
+                            que escribas en el nombre del archivo (ej. <code
+                                class="bg-white/5 px-1 rounded text-primary">Cedula22041426.jpg</code>) o el nombre del
+                            paquete ZIP que subas. Al detectar el número, lo envía directo al expediente correcto.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div
+                        class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                        2</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-text-main uppercase tracking-tight">Ordenado Inteligente de
+                            Documentos</h4>
+                        <p class="text-xs text-text-muted mt-2 leading-relaxed">No hace falta que tú clasifiques qué
+                            foto es una cédula y cuál es una nota. El sistema lee palabras clave en el nombre del
+                            archivo para saber dónde guardarlo: Si el nombre incluye la palabra <span
+                                class="text-secondary font-medium italic">nacimiento</span>, lo guarda como Partida de
+                            Nacimiento. Si detecta las letras <span class="text-secondary font-medium italic">nc</span>
+                            o la palabra <span class="text-secondary font-medium italic">nota</span>, lo guarda en la
+                            sección de Notas Certificadas.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 bg-white/5 p-4 rounded-xl border border-white/10">
+                <p class="text-[10px] text-center text-text-muted font-bold uppercase tracking-widest"><ion-icon
+                        name="information-circle"></ion-icon> Formatos Admitidos: JPG, JPEG y PNG</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Nuevo Panel SOBRE NUESTRO MOTOR DE IA -->
+        <div
+            class="bg-surface-container/40 backdrop-blur-md border border-white/5 shadow-glass rounded-2xl p-6 border border-white/5">
+            <h3 class="text-xs font-bold text-primary mb-3 uppercase tracking-[0.2em] flex items-center gap-2">
+                <ion-icon name="sparkles-outline"></ion-icon> SOBRE NUESTRO MOTOR DE IA
+            </h3>
+            <p class="text-[11px] text-text-muted leading-relaxed text-justify">
+                Este sistema utiliza algoritmos de Inteligencia Artificial
+                basados en el reconocimiento de patrones y procesamiento de lenguaje natural
+                (NLP) para analizar los nombres de los archivos en tiempo real. La IA actúa como un filtro inteligente
+                que vincula cada documento digitalizado con la base de datos de inscripciones del instituto: Al
+                operar bajo reglas del mismo, el motor garantiza que la información no se pierda, eliminando el error
+                humano en el archivado y asegurando que cada expediente esté siempre al día y organizado de forma
+                lógica.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Ayuda (Guía de Carga Masiva) -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <ion-icon name="help-circle-outline" class="text-2xl"></ion-icon>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía detallada de Carga</h3>
+            </div>
+            <button onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <ion-icon name="close-outline"></ion-icon>
+            </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <!-- Sección Formato -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <ion-icon name="folder-zip-outline" class="text-primary"></ion-icon> 1. Formato Requerido (.ZIP)
+                </h4>
+                <p class="text-xs">
+                    El sistema <strong>solo admite archivos en formato comprimido (.ZIP)</strong>. No se pueden subir imágenes sueltas de forma directa. Debes seleccionar las imágenes de tus documentos, hacer clic derecho y comprimirlas en un archivo con extensión <code>.zip</code> antes de subirlas.
+                </p>
+            </div>
+
+            <!-- Sección Cédulas -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <ion-icon name="card-outline" class="text-primary"></ion-icon> 2. Vinculación de Cédulas
+                </h4>
+                <p class="text-xs">
+                    La IA necesita identificar a qué alumno le pertenece cada documento. Existen dos formas de hacerlo:
+                </p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Método Global:</strong> Si todo el archivo <code>.zip</code> pertenece a un único estudiante, puedes nombrar el archivo ZIP con su cédula (ej: <code>22041426.zip</code>).</li>
+                    <li><strong>Método Individual:</strong> Si el ZIP contiene documentos de varios alumnos, incluye el número de cédula en el nombre de cada imagen (ej: <code>cedula_22041426.jpg</code>, <code>carnet_15822369.png</code>).</li>
+                </ul>
+            </div>
+
+            <!-- Sección Palabras Clave -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <ion-icon name="pricetags-outline" class="text-primary"></ion-icon> 3. Nombres de Archivo y Palabras Clave
+                </h4>
+                <p class="text-xs mb-2">
+                    El sistema clasifica el tipo de documento automáticamente buscando palabras clave en el nombre de la imagen (ignorando números o símbolos). Nombra tus archivos usando estas referencias:
+                </p>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-surface-element p-2.5 rounded border border-border">
+                        <span class="font-bold text-text-main block">Copia de Cédula</span>
+                        <span>Palabras clave: <code>cedula</code>, <code>ced</code>, <code>ci</code></span>
+                    </div>
+                    <div class="bg-surface-element p-2.5 rounded border border-border">
+                        <span class="font-bold text-text-main block">Partida de Nacimiento</span>
+                        <span>Palabras clave: <code>nacimiento</code>, <code>partida</code></span>
+                    </div>
+                    <div class="bg-surface-element p-2.5 rounded border border-border">
+                        <span class="font-bold text-text-main block">Notas Certificadas</span>
+                        <span>Palabras clave: <code>nota</code>, <code>certific</code>, <code>nc</code></span>
+                    </div>
+                    <div class="bg-surface-element p-2.5 rounded border border-border">
+                        <span class="font-bold text-text-main block">Foto tipo Carnet</span>
+                        <span>Palabras clave: <code>carnet</code>, <code>foto</code></span>
+                    </div>
+                </div>
+                <p class="text-[11px] text-amber-400 mt-2 flex items-center gap-1">
+                    <ion-icon name="sparkles-outline"></ion-icon>
+                    Las fotos tipo carnet se optimizan y convierten automáticamente al moderno formato <strong>WEBP</strong>.
+                </p>
+            </div>
+
+            <!-- Sección Reglas -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <ion-icon name="shield-checkmark-outline" class="text-primary"></ion-icon> 4. Restricciones e Integridad
+                </h4>
+                <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+                    <li>Solo se procesan imágenes con formato <strong>.jpg</strong>, <strong>.jpeg</strong> y <strong>.png</strong> dentro del archivo ZIP.</li>
+                    <li>El estudiante ya debe estar ingresado en el sistema con su Cédula.</li>
+                    <li>El estudiante debe tener un expediente activo creado.</li>
+                    <li>Al procesar correctamente un documento, el sistema recalcula su estatus y verifica si el expediente pasa a estar <strong>Solvente</strong> automáticamente.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+                Entendido
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleHelpModal() {
+    const modal = document.getElementById('helpModal');
+    modal.classList.toggle('hidden');
+}
+
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('archivo_zip');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Por favor, selecciona un archivo .zip para procesar.');
+    }
+});
+</script>
+{% endblock %}

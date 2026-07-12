@@ -1,0 +1,79 @@
+/* ============================================
+   Gestión de Estudio - DARK MODE
+   Default stylesheet: main.css
+   ============================================ */
+
+:root {
+  color-scheme: dark;
+}
+
+/* Transitions disabled globally for immediate UI response */
+* {
+  transition: none !important;
+  transition-duration: 0s !important;
+  animation: none !important;
+  animation-duration: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---- Scrollbars ---- */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-accent-hover); }
+
+/* ---- Material Symbols ---- */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ---- Nebulous Glows ---- */
+.nebulous-glow-primary {
+  background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+}
+.nebulous-glow-tertiary {
+  background: radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%);
+}
+
+/* ---- Forms & Selects (Dark Mode) ---- */
+input, textarea {
+  background-color: #1E232D;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #E1E2E7;
+  border-radius: 8px;
+}
+input::placeholder, textarea::placeholder {
+  color: #5A5F70;
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: rgba(99,102,241,0.5);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+/* Native <select> — black background + white text */
+select {
+  background-color: #0B0E11;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #E1E2E7;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  appearance: auto;
+}
+select:focus {
+  outline: none;
+  border-color: rgba(99,102,241,0.5);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+/* Dropdown options — force black text since OS sometimes forces a white background */
+option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+}
+option:hover,
+option:focus,
+option:checked {
+  background-color: #6366F1;
+  color: #FFFFFF;
+}

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Mis Notificaciones | Intranet{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Encabezado -->
+  <div class="flex flex-col gap-1">
+    <h2 class="font-headline font-extrabold text-2xl text-text-main flex items-center gap-3">
+      <ion-icon name="notifications-outline" class="text-primary"></ion-icon> Mis Notificaciones
+    </h2>
+    <p class="text-sm text-text-muted">Estado de tus solicitudes enviadas al Administrativo.</p>
+  </div>
+
+  {% if no_leidas > 0 %}
+  <div class="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-3">
+    <ion-icon name="mail-unread-outline" class="text-primary text-xl flex-shrink-0"></ion-icon>
+    <p class="text-sm text-primary font-semibold">Tienes {{ no_leidas }} respuesta{{ no_leidas|pluralize:"s" }} nueva{{ no_leidas|pluralize:"s" }} sin leer.</p>
+  </div>
+  {% endif %}
+
+  <!-- Lista de Solicitudes -->
+  <div class="space-y-4">
+    {% for sol in solicitudes %}
+    <div class="bg-surface-container/60 backdrop-blur-md border {% if sol.estado == 'APROBADA' %}border-secondary/20{% elif sol.estado == 'RECHAZADA' %}border-error/20{% elif sol.estado == 'EXPIRADA' %}border-border{% else %}border-primary/20{% endif %} rounded-2xl shadow-md overflow-hidden cursor-pointer hover:bg-white/2 transition-all"
+         onclick="verDetalle({{ sol.id }})" id="notif-card-{{ sol.id }}">
+      <div class="p-5 flex items-start gap-4">
+
+        <!-- Icono de Estado -->
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl
+          {% if sol.estado == 'APROBADA' %}bg-secondary/10 text-secondary border border-secondary/20
+          {% elif sol.estado == 'RECHAZADA' %}bg-error/10 text-error border border-error/20
+          {% elif sol.estado == 'EXPIRADA' %}bg-surface-element text-text-muted border border-border
+          {% else %}bg-primary/10 text-primary border border-primary/20{% endif %}">
+          {% if sol.estado == 'APROBADA' %}<ion-icon name="checkmark-circle"></ion-icon>
+          {% elif sol.estado == 'RECHAZADA' %}<ion-icon name="close-circle"></ion-icon>
+          {% elif sol.estado == 'EXPIRADA' %}<ion-icon name="time"></ion-icon>
+          {% else %}<ion-icon name="hourglass-outline"></ion-icon>{% endif %}
+        </div>
+
+        <!-- Contenido -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-surface-element text-text-muted border border-border">{{ sol.get_accion_display }}</span>
+              <span class="text-[10px] text-text-muted">{{ sol.modulo }}</span>
+            </div>
+            {% if sol.estado == 'PENDIENTE' and not sol.leida_por_personal %}
+            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            {% endif %}
+          </div>
+          <p class="text-sm font-semibold text-text-main mt-1 truncate">{{ sol.descripcion }}</p>
+          <div class="flex items-center gap-3 mt-2">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold
+              {% if sol.estado == 'APROBADA' %}bg-secondary/10 text-secondary border border-secondary/20
+              {% elif sol.estado == 'RECHAZADA' %}bg-error/10 text-error border border-error/20
+              {% elif sol.estado == 'EXPIRADA' %}bg-surface-element text-text-muted border border-border
+              {% else %}bg-primary/10 text-primary border border-primary/20{% endif %}">
+              {{ sol.get_estado_display }}
+            </span>
+            <span class="text-[10px] text-text-muted">{{ sol.fecha_solicitud|date:"d/m/Y h:i A" }}</span>
+            {% if sol.estado == 'PENDIENTE' %}
+            <span class="text-[10px] text-tertiary font-semibold">⏰ Expira {{ sol.fecha_expiracion|date:"d/m/Y h:i A" }}</span>
+            {% endif %}
+          </div>
+          {% if sol.comentario_admin %}
+          <div class="mt-3 bg-white/3 border border-border rounded-lg px-3 py-2">
+            <p class="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Comentario del Administrativo:</p>
+            <p class="text-xs text-text-main italic">{{ sol.comentario_admin }}</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <ion-icon name="chevron-forward-outline" class="text-text-muted flex-shrink-0 mt-1"></ion-icon>
+      </div>
+    </div>
+    {% empty %}
+    <div class="flex flex-col items-center justify-center py-20 text-center bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md">
+      <ion-icon name="notifications-off-outline" class="text-5xl text-text-muted/20 mb-4"></ion-icon>
+      <h4 class="text-text-main font-bold mb-1">Sin notificaciones</h4>
+      <p class="text-sm text-text-muted max-w-sm">Aquí aparecerán las respuestas del Administrativo cuando solicites acciones críticas.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ─── Modal Detalle de Solicitud ─────────────────────────────────────────── -->
+<dialog id="modalDetalleSolicitud" class="bg-transparent p-0 w-[90%] max-w-xl border-none outline-none focus:outline-none m-auto">
+  <div class="bg-surface-element border border-border/80 rounded-3xl shadow-2xl overflow-hidden">
+    <div class="px-8 py-6 border-b border-border flex items-center justify-between">
+      <h3 class="text-lg font-headline font-bold text-text-main">Detalle de la Solicitud</h3>
+      <button onclick="document.getElementById('modalDetalleSolicitud').close()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-element text-text-muted transition-colors">
+        <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+      </button>
+    </div>
+    <div class="p-8 space-y-4" id="modal-detalle-body">
+      <!-- Inyectado por JS -->
+    </div>
+    <div class="px-8 pb-6 flex justify-end">
+      <button onclick="document.getElementById('modalDetalleSolicitud').close()" class="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold transition-all">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); }
+</style>
+
+<script>
+  const _solicitudesData = {
+    {% for sol in solicitudes %}
+    {{ sol.id }}: {
+      id: {{ sol.id }},
+      accion_display: "{{ sol.get_accion_display }}",
+      modulo: "{{ sol.modulo }}",
+      descripcion: `{{ sol.descripcion|escapejs }}`,
+      estado: "{{ sol.estado }}",
+      estado_display: "{{ sol.get_estado_display }}",
+      fecha_solicitud: "{{ sol.fecha_solicitud|date:'d/m/Y h:i A' }}",
+      fecha_expiracion: "{{ sol.fecha_expiracion|date:'d/m/Y h:i A' }}",
+      fecha_respuesta: "{{ sol.fecha_respuesta|date:'d/m/Y h:i A'|default:'' }}",
+      procesado_por: "{{ sol.procesado_por.username|default:'' }}",
+      comentario_admin: `{{ sol.comentario_admin|escapejs }}`,
+      leida_por_personal: {{ sol.leida_por_personal|yesno:"true,false" }},
+    },
+    {% endfor %}
+  };
+
+  async function verDetalle(id) {
+    const sol = _solicitudesData[id];
+    if (!sol) return;
+
+    // Marcar como leída si corresponde
+    if (!sol.leida_por_personal && (sol.estado === 'APROBADA' || sol.estado === 'RECHAZADA')) {
+      fetch(`/auditoria/api/solicitudes/${id}/marcar-leida/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+      const card = document.getElementById(`notif-card-${id}`);
+      if (card) {
+        // Quitar indicador visual de no leída
+        const dot = card.querySelector('.bg-primary.animate-pulse');
+        if (dot) dot.remove();
+      }
+    }
+
+    const estadoColor = sol.estado === 'APROBADA' ? 'secondary' : sol.estado === 'RECHAZADA' ? 'error' : sol.estado === 'PENDIENTE' ? 'primary' : 'text-muted';
+    const body = document.getElementById('modal-detalle-body');
+    body.innerHTML = `
+      <div class="grid grid-cols-2 gap-4 text-xs">
+        <div>
+          <p class="text-text-muted font-semibold uppercase tracking-widest mb-0.5">Tipo de Acción</p>
+          <p class="text-text-main font-bold">${sol.accion_display}</p>
+        </div>
+        <div>
+          <p class="text-text-muted font-semibold uppercase tracking-widest mb-0.5">Módulo</p>
+          <p class="text-text-main font-bold">${sol.modulo}</p>
+        </div>
+        <div>
+          <p class="text-text-muted font-semibold uppercase tracking-widest mb-0.5">Solicitado el</p>
+          <p class="text-text-main">${sol.fecha_solicitud}</p>
+        </div>
+        <div>
+          <p class="text-text-muted font-semibold uppercase tracking-widest mb-0.5">Estado</p>
+          <p class="font-bold">${sol.estado_display}</p>
+        </div>
+        ${sol.fecha_respuesta ? `<div class="col-span-2"><p class="text-text-muted font-semibold uppercase tracking-widest mb-0.5">Respondido el</p><p class="text-text-main">${sol.fecha_respuesta} por ${sol.procesado_por}</p></div>` : ''}
+      </div>
+      <div class="bg-white/3 border border-border rounded-xl p-4">
+        <p class="text-[10px] text-text-muted font-semibold uppercase tracking-widest mb-2">Descripción de la Solicitud</p>
+        <p class="text-sm text-text-main">${sol.descripcion}</p>
+      </div>
+      ${sol.comentario_admin ? `
+      <div class="bg-primary/5 border border-primary/15 rounded-xl p-4">
+        <p class="text-[10px] text-primary font-semibold uppercase tracking-widest mb-2">💬 Comentario del Administrativo</p>
+        <p class="text-sm text-text-main italic">${sol.comentario_admin}</p>
+      </div>` : sol.estado !== 'PENDIENTE' ? '<p class="text-xs text-text-muted text-center">El Administrativo no añadió comentarios.</p>' : ''}
+    `;
+    document.getElementById('modalDetalleSolicitud').showModal();
+  }
+</script>
+{% endblock %}

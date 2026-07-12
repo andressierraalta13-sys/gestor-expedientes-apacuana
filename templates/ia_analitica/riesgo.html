@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Motor de Riesgo Estudiantil (IA){% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2 style="color: var(--primary);"><ion-icon name="analytics-outline" style="vertical-align: middle;"></ion-icon> Motor de Inferencia & Riesgos</h2>
+        <p class="text-text-muted text-sm mt-1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Análisis predictivo que detecta estudiantes en riesgo de repitencia o deserción.
+            <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+                <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+            </button>
+        </p>
+    </div>
+    <div style="background: var(--bg-surface); padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Promedio de la Cohorte</span>
+        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-main);">{{ metrics.promedio_global }} pts</div>
+    </div>
+</div>
+
+<div class="riesgo-grid" style="display: grid; gap: 1.5rem;">
+<style>
+    .riesgo-grid { grid-template-columns: 1fr; }
+    @media (min-width: 768px) { .riesgo-grid { grid-template-columns: 2fr 1fr; } }
+</style>
+    <!-- Alumnos Críticos -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading);">Banderas Rojas (Top Riesgo)</h3>
+        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1.5rem;">Alumnos con riesgo crítico o moderado determinado por el modelo multifactorial de la IA (Académico, Documental, Conductual y Asistencia).</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for estudiante in riesgos %}
+            <div style="border-left: 4px solid {% if estudiante.riesgo > 80 %}var(--accent){% elif estudiante.riesgo > 50 %}var(--stat-missing){% else %}var(--secondary){% endif %}; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0 8px 8px 0; border-top: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <strong>{{ estudiante.nombres }} {{ estudiante.apellidos }} (V-{{estudiante.cedula|formato_cedula}})</strong>
+                    <span style="color: {% if estudiante.riesgo > 80 %}var(--accent){% else %}var(--stat-missing){% endif %}; font-weight: 700;">{{ estudiante.riesgo }}% Riesgo</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    <p><ion-icon name="warning-outline"></ion-icon> Materias reprobadas detectadas: {{ estudiante.materias_reprobadas }}</p>
+                    <p><ion-icon name="folder-open-outline"></ion-icon> Documentos faltantes: {{ estudiante.faltas_documentales }}</p>
+                    <p><ion-icon name="alert-circle-outline"></ion-icon> Faltas conductuales: {{ estudiante.observaciones }}</p>
+                    <p><ion-icon name="calendar-outline"></ion-icon> Inasistencias totales: {{ estudiante.inasistencias }}</p>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 2rem; color: var(--secondary);">
+                <ion-icon name="shield-checkmark" style="font-size: 3rem; margin-bottom: 1rem;"></ion-icon>
+                <p>Matriz de riesgo limpia. No se encontraron estudiantes en zona crítica según las heurísticas de la base de datos actual.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Insights Generales -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; font-family: var(--font-heading);">Insights del Motor Lógico</h3>
+        
+        <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                <span>Eficacia Registral (Solvencias)</span>
+                <span>{{ metrics.porcentaje_solventes }}%</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                <div style="height: 100%; background: var(--secondary); border-radius: 4px; width: {{ metrics.porcentaje_solventes }}%;"></div>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                <span>Densidad de Reprobación Global</span>
+                <span>{{ metrics.tasa_reprobacion }}%</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                <div style="height: 100%; background: var(--accent); border-radius: 4px; width: {{ metrics.tasa_reprobacion }}%;"></div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem; padding: 1rem; background: rgba(79, 70, 229, 0.1); border-left: 2px solid var(--primary); border-radius: 0 8px 8px 0; font-size: 0.8rem;">
+            <ion-icon name="information-circle"></ion-icon> El motor logístico evalúa 4 dimensiones: Rendimiento Académico (50%), Estatus Documental (25%), Comportamiento (15%) e Inasistencias (10%). Usa comparaciones heurísticas contra toda la cohorte para detectar riesgo crítico de repitencia o deserción.
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Motor de Inferencia & Riesgos</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">monitoring</span> 1. ¿Qué es esta sección?
+                </h4>
+                <p class="text-xs">El <strong>Motor de Inferencia & Riesgos</strong> es un sistema de inteligencia artificial analítica que evalúa de forma automática a toda la cohorte estudiantil. Detecta de manera anticipada a los alumnos con mayor probabilidad de <strong>repitencia o deserción</strong>, comparando su desempeño con el resto de la institución mediante heurísticas predictivas.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">flag</span> 2. Banderas Rojas (Top Riesgo)
+                </h4>
+                <p class="text-xs">Lista los estudiantes con mayor riesgo, ordenados de mayor a menor. El color del borde indica la gravedad:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Rojo (más de 80%):</strong> Riesgo crítico, requiere atención inmediata.</li>
+                    <li><strong>Naranja (50% a 80%):</strong> Riesgo moderado, amerita seguimiento.</li>
+                    <li><strong>Verde (menos de 50%):</strong> Situación estable.</li>
+                </ul>
+                <p class="text-xs mt-2">Cada tarjeta detalla las causas detectadas: materias reprobadas, documentos faltantes, faltas conductuales e inasistencias.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">calculate</span> 3. ¿Cómo calcula el riesgo?
+                </h4>
+                <p class="text-xs">El modelo es <strong>multifactorial</strong> y pondera cuatro dimensiones para obtener el porcentaje de riesgo:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Rendimiento Académico (50%):</strong> Notas y materias reprobadas.</li>
+                    <li><strong>Estatus Documental (25%):</strong> Documentos faltantes en el expediente.</li>
+                    <li><strong>Comportamiento (15%):</strong> Observaciones y faltas conductuales.</li>
+                    <li><strong>Inasistencias (10%):</strong> Ausencias acumuladas.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">insights</span> 4. Insights del Motor Lógico
+                </h4>
+                <p class="text-xs">El panel lateral resume métricas globales de la cohorte, como la <strong>Eficacia Registral (Solvencias)</strong> y la <strong>Densidad de Reprobación Global</strong>, junto al promedio general. Úselos como termómetro institucional para orientar decisiones académicas y de acompañamiento.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'docentes/base_docente.html' %}
+{% block title %}Dashboard Docente{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Bienvenida -->
+    <div class="bg-surface-element border border-border rounded-2xl p-6 md:p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="relative z-10">
+            <h1 class="font-headline font-extrabold text-2xl md:text-3xl text-text-main">
+                Bienvenido/a, <span class="text-primary">{{ request.user.nombre_completo|default:request.user.username }}</span>
+            </h1>
+            <p class="text-text-muted mt-2 text-sm md:text-base max-w-2xl">
+                Este es tu panel principal. Desde aquí puedes acceder rápidamente a tus calificaciones, planificar tus clases y revisar las materias que tienes asignadas para el período actual.
+            </p>
+        </div>
+    </div>
+
+    <!-- Accesos Rápidos -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <a href="{% url 'calificaciones_docente' %}" class="group block bg-surface-container/60 hover:bg-surface-element border border-border hover:border-primary/50 rounded-2xl p-6 transition-all shadow-sm">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <ion-icon name="document-text" class="text-2xl"></ion-icon>
+            </div>
+            <h3 class="font-bold text-lg text-text-main mb-1 group-hover:text-primary transition-colors">Calificaciones</h3>
+            <p class="text-xs text-text-muted">Gestiona las notas de tus estudiantes por período y sección.</p>
+        </a>
+        <a href="{% url 'planificacion_docente' %}" class="group block bg-surface-container/60 hover:bg-surface-element border border-border hover:border-secondary/50 rounded-2xl p-6 transition-all shadow-sm">
+            <div class="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <ion-icon name="calendar" class="text-2xl"></ion-icon>
+            </div>
+            <h3 class="font-bold text-lg text-text-main mb-1 group-hover:text-secondary transition-colors">Planificación</h3>
+            <p class="text-xs text-text-muted">Organiza tus temas de clase, materiales de apoyo y tareas.</p>
+        </a>
+    </div>
+
+    <!-- Mis Materias Asignadas -->
+    <div>
+        <h2 class="font-headline font-bold text-xl text-text-main mb-4 flex items-center gap-2">
+            <ion-icon name="bookmarks-outline" class="text-primary"></ion-icon> Mis Materias Asignadas
+        </h2>
+        
+        {% if asignaciones %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for asig in asignaciones %}
+            <div class="bg-surface-container/60 border border-border rounded-xl p-5 relative overflow-hidden hover:bg-surface-element transition-colors">
+                <div class="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full blur-xl translate-x-1/2 -translate-y-1/2"></div>
+                <div class="flex items-start justify-between mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">{{ asig.periodo.nombre }}</span>
+                    <span class="text-xs font-semibold text-text-muted bg-surface-element px-2 py-0.5 rounded border border-border">{{ asig.ano_grado }}º "{{ asig.seccion }}"</span>
+                </div>
+                <h4 class="font-bold text-base text-text-main mb-1">{{ asig.asignatura.nombre }}</h4>
+                <p class="text-[11px] text-text-muted">Código: {{ asig.asignatura.codigo|default:"N/A" }}</p>
+                <div class="flex items-center gap-3 mt-2 pt-2 border-t border-border/50">
+                    <span class="text-[11px] text-text-muted flex items-center gap-1" title="Cantidad de Alumnos">
+                        <ion-icon name="people-outline"></ion-icon> {{ asig.cantidad_alumnos }} alumnos
+                    </span>
+                    {% if asig.aula %}
+                    <span class="text-[11px] text-text-muted flex items-center gap-1" title="Aula Asignada">
+                        <ion-icon name="business-outline"></ion-icon> Aula: {{ asig.aula }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-surface-container/60 border border-border rounded-2xl p-8 text-center">
+            <ion-icon name="sad-outline" class="text-4xl text-text-muted/50 mb-3"></ion-icon>
+            <p class="text-text-muted text-sm">No tienes materias asignadas actualmente. Contacta con la administración.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

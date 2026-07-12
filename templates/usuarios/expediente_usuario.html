@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Expediente: {{ usuario.username }} | Intranet{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-sm text-text-muted">
+    <a href="{% url 'usuarios' %}" class="hover:text-primary transition-colors">Usuarios</a>
+    <ion-icon name="chevron-forward-outline" class="text-xs"></ion-icon>
+    <span class="text-text-main">{{ usuario.username }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+    <!-- Panel izquierdo: avatar + datos básicos -->
+    <div class="lg:col-span-1 space-y-4">
+      <div class="bg-surface-container/60 border border-border rounded-2xl p-6 shadow-md text-center">
+        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 border-2 border-primary/30 flex items-center justify-center text-primary text-3xl font-bold mx-auto mb-4">
+          {{ usuario.username|first|upper }}
+        </div>
+        <h2 id="display-nombres" class="font-headline font-bold text-base text-text-main">
+          {{ perfil.nombres|default:usuario.nombre_completo|default:usuario.username }}
+          {{ perfil.apellidos }}
+        </h2>
+        <p id="display-username" class="text-xs text-text-muted mt-1">@{{ usuario.username }}</p>
+        <div class="mt-3 flex flex-col gap-2 items-center">
+          <span id="display-role-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">
+            <ion-icon name="briefcase-outline" class="text-xs"></ion-icon> {{ usuario.get_rol_display }}
+          </span>
+          {% if usuario.is_active %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Activo
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-error/10 text-error border border-error/20 uppercase">
+            <span class="w-1.5 h-1.5 rounded-full bg-error"></span> Bloqueado
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Info del sistema -->
+      <div class="bg-surface-container/60 border border-border rounded-2xl p-5 shadow-md space-y-3">
+        <h3 class="font-headline font-bold text-sm text-text-main flex items-center gap-2">
+          <ion-icon name="shield-outline" class="text-primary"></ion-icon> Sistema
+        </h3>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-text-muted">Usuario</span>
+            <span id="display-sys-username" class="text-text-main font-mono">{{ usuario.username }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-text-muted">Rol</span>
+            <span id="display-sys-rol" class="text-text-main">{{ usuario.get_rol_display }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-text-muted">Último Acceso</span>
+            <span class="text-text-main">{{ usuario.last_login|date:"d/m/Y"|default:"Nunca" }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-text-muted">Actualizado</span>
+            <span class="text-text-main">{{ perfil.fecha_actualizacion|date:"d/m/Y"|default:"—" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel derecho: formulario -->
+    <div class="lg:col-span-3 space-y-6">
+
+      <!-- Datos Personales -->
+      <div class="bg-surface-container/60 border border-border rounded-2xl p-6 shadow-md">
+        <h3 class="font-headline font-bold text-base text-text-main mb-5 flex items-center gap-2">
+          <ion-icon name="person-circle-outline" class="text-primary"></ion-icon> Datos del Personal Administrativo
+        </h3>
+        <div id="msg-perfil" class="hidden mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' or request.user.rol == 'COORDINADOR' %}
+          <div class="sm:col-span-2">
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Nombre de Usuario (Username) <span class="text-error">*</span></label>
+            <input id="pf-username" type="text" value="{{ usuario.username }}" placeholder="Ej: andres12"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"
+                   oninput="this.value = this.value.replace(/\s+/g, '').toLowerCase()" />
+            <p class="text-[10px] text-text-muted mt-1">Este identificador sirve para iniciar sesión y mantener compatibilidad.</p>
+          </div>
+          {% endif %}
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Nombres</label>
+            <input id="pf-nombres" type="text" value="{{ perfil.nombres }}" placeholder="Ej: María Alejandra"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"
+                   oninput="this.value = this.value.replace(/[0-9]/g, '')" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Apellidos</label>
+            <input id="pf-apellidos" type="text" value="{{ perfil.apellidos }}" placeholder="Ej: González Pérez"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"
+                   oninput="this.value = this.value.replace(/[0-9]/g, '')" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Cédula de Identidad</label>
+            <div style="display: flex; border: 1px solid var(--color-border); border-radius: 0.75rem; overflow: hidden; background: var(--color-surface-element); transition: all 0.2s;">
+                <span style="padding: 0 12px; font-weight: 600; color: var(--color-text-muted); background: rgba(0,0,0,0.05); border-right: 1px solid var(--color-border); display: flex; align-items: center;">V-</span>
+                <input id="pf-cedula" type="text" value="{{ perfil.cedula|default:'' }}" placeholder="Solo números"
+                       class="w-full bg-transparent py-2.5 px-3 text-sm text-text-main focus:outline-none" style="border: none; border-radius: 0; flex: 1; outline: none; width: 100%;"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Cargo Institucional</label>
+            <input id="pf-cargo" type="text" value="{{ perfil.cargo }}" placeholder="Ej: Directora, Secretaria..."
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Cargo en el Sistema <span class="text-error">*</span></label>
+            {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' or request.user.rol == 'COORDINADOR' %}
+            <select id="pf-cargo-sistema"
+                    class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+              <option value="PERSONAL" {% if usuario.rol == 'PERSONAL' %}selected{% endif %}>Administrativo</option>
+              <option value="ADMINISTRATIVO" {% if usuario.rol == 'ADMINISTRATIVO' %}selected{% endif %}>Directora</option>
+              <option value="COORDINADOR" {% if usuario.rol == 'COORDINADOR' %}selected{% endif %}>Coordinador Académico</option>
+              <option value="DOCENTE" {% if usuario.rol == 'DOCENTE' %}selected{% endif %}>Docente</option>
+              {% if request.user.rol == 'DESARROLLADOR' %}
+              <option value="DESARROLLADOR" {% if usuario.rol == 'DESARROLLADOR' %}selected{% endif %}>Desarrollador</option>
+              {% endif %}
+            </select>
+            <p class="text-[10px] text-text-muted mt-1">Habilitado para Directora y Desarrollador.</p>
+            {% else %}
+            <input id="pf-cargo-sistema" type="text" value="{{ usuario.get_rol_display }}" disabled
+                   class="w-full bg-surface-element/30 border border-border rounded-xl py-2.5 px-3 text-sm text-text-muted cursor-not-allowed" />
+            <p class="text-[10px] text-text-muted mt-1">Este campo lo determina el rol del usuario.</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Teléfono</label>
+            <div class="flex gap-2">
+                <select id="tel_prefijo" class="w-1/3 bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all" onchange="updateTelefono()">
+                    <option value="0414">0414</option>
+                    <option value="0412">0412</option>
+                    <option value="0416">0416</option>
+                    <option value="0424">0424</option>
+                    <option value="0422">0422</option>
+                    <option value="0426">0426</option>
+                </select>
+                <input type="text" id="tel_numero" placeholder="1234567" maxlength="7" pattern="\d{7}" class="w-2/3 bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all" oninput="this.value = this.value.replace(/\D/g, ''); updateTelefono()">
+                <input type="hidden" id="pf-telefono" value="{{ perfil.telefono|default:'' }}">
+            </div>
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    const fullTel = document.getElementById('pf-telefono').value.replace(/\D/g, '');
+                    if(fullTel && fullTel.length >= 11) {
+                        document.getElementById('tel_prefijo').value = fullTel.substring(0,4);
+                        document.getElementById('tel_numero').value = fullTel.substring(4);
+                    }
+                });
+                function updateTelefono() {
+                    const pref = document.getElementById('tel_prefijo').value;
+                    const num = document.getElementById('tel_numero').value;
+                    document.getElementById('pf-telefono').value = pref + num;
+                }
+            </script>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Correo Electrónico</label>
+            <input id="pf-email" type="email" value="{{ perfil.email }}" placeholder="correo@ejemplo.com"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all" />
+          </div>
+        </div>
+        <div class="mt-5 flex justify-end">
+          <button onclick="guardarPerfil()"
+                   class="flex items-center gap-2 bg-primary hover:bg-primary/80 text-text-main px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-neon-primary">
+            <ion-icon name="save-outline"></ion-icon> Guardar Datos
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const CSRF = '{{ csrf_token }}';
+  const USUARIO_ID = {{ usuario.id }};
+
+  window.guardarPerfil = async function() {
+    const usernameInput = document.getElementById('pf-username');
+    const cargoSistemaSelect = document.getElementById('pf-cargo-sistema');
+    const payload = {
+      nombres:   document.getElementById('pf-nombres').value.trim(),
+      apellidos: document.getElementById('pf-apellidos').value.trim(),
+      cedula:    document.getElementById('pf-cedula').value.trim(),
+      cargo:     document.getElementById('pf-cargo').value.trim(),
+      telefono:  document.getElementById('pf-telefono').value.trim(),
+      email:     document.getElementById('pf-email').value.trim(),
+    };
+    if (usernameInput) {
+      payload.username = usernameInput.value.trim().toLowerCase();
+    }
+    if (cargoSistemaSelect && cargoSistemaSelect.tagName === 'SELECT') {
+      payload.rol = cargoSistemaSelect.value;
+    }
+
+    const msg = document.getElementById('msg-perfil');
+    msg.className = 'mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold';
+
+    try {
+      const resp = await fetch(`/usuarios/expediente/${USUARIO_ID}/guardar/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        msg.classList.add('bg-secondary/10', 'border', 'border-secondary/20', 'text-secondary');
+        msg.textContent = '✓ Datos guardados correctamente. El nombre completo se ha sincronizado.';
+        if (typeof Toast !== 'undefined') {
+          Toast.success('Datos guardados correctamente.');
+        }
+        
+        // Actualización dinámica del DOM (sin recargar la página)
+        document.getElementById('display-nombres').textContent = `${payload.nombres} ${payload.apellidos}`.trim() || document.getElementById('display-sys-username').textContent;
+        
+        if (payload.username) {
+          document.getElementById('display-username').textContent = `@${payload.username}`;
+          document.getElementById('display-sys-username').textContent = payload.username;
+        }
+        
+        if (cargoSistemaSelect && cargoSistemaSelect.tagName === 'SELECT') {
+          const selectedText = cargoSistemaSelect.options[cargoSistemaSelect.selectedIndex].text;
+          document.getElementById('display-sys-rol').textContent = selectedText;
+          document.getElementById('display-role-badge').innerHTML = `<ion-icon name="briefcase-outline" class="text-xs"></ion-icon> ${selectedText}`;
+        }
+      } else {
+        msg.classList.add('bg-error/10', 'border', 'border-error/20', 'text-error');
+        msg.textContent = data.error || 'Error al guardar los datos.';
+        if (typeof Toast !== 'undefined') {
+          Toast.error(data.error || 'Error al guardar los datos.');
+        }
+      }
+    } catch(e) {
+      msg.classList.add('bg-error/10', 'border', 'border-error/20', 'text-error');
+      msg.textContent = 'Error de conexión. Intenta nuevamente.';
+      if (typeof Toast !== 'undefined') {
+        Toast.error('Error de conexión. Intenta nuevamente.');
+      }
+    }
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 5000);
+  }
+})();
+</script>
+{% endblock %}

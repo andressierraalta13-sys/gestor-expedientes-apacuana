@@ -1,0 +1,368 @@
+/* ============================================
+   Gestión de Estudio - LIGHT MODE
+   Loaded dynamically when user toggles theme.
+   ============================================ */
+
+/* ---- Legacy CSS Variables (used by older templates via var(--...)) ---- */
+:root {
+  --primary: #6366F1;
+  --secondary: #10B981;
+  --tertiary: #F59E0B;
+  --error: #EF4444;
+  --accent: #EF4444;
+  --stat-missing: #F59E0B;
+  --text-muted: #64748B;
+  --text-main: #0F172A;
+  --text-color: #0F172A;
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --font-heading: 'Manrope', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+}
+
+/* Smooth transitions */
+* { transition: background-color 0.25s ease, color 0.2s ease, border-color 0.25s ease; }
+
+/* ---- Material Symbols ---- */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ---- Scrollbars (light style) ---- */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.03); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--color-accent-hover); }
+
+/* ---- No neon glows in light mode ---- */
+.nebulous-glow-primary,
+.nebulous-glow-tertiary { display: none; }
+
+/* ====================================================
+   FULL LIGHT MODE — Override all dark Tailwind classes
+   ==================================================== */
+
+/* Page background */
+body {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+/* Sidebar */
+aside {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-right-color: rgba(0, 0, 0, 0.07) !important;
+  backdrop-filter: blur(20px);
+}
+
+/* Sidebar brand section border */
+aside > div:first-child {
+  border-bottom-color: rgba(0,0,0,0.07) !important;
+}
+
+/* Sidebar brand text */
+aside h1 {
+  color: #0F172A !important;
+}
+
+/* Sidebar nav links (inactive) */
+nav a {
+  color: #475569 !important;
+}
+nav a:hover {
+  background-color: rgba(99,102,241,0.08) !important;
+  color: #6366F1 !important;
+}
+
+/* Active nav item */
+nav a.text-primary {
+  color: #6366F1 !important;
+  background-color: rgba(99,102,241,0.08) !important;
+}
+
+/* Sidebar section heading */
+nav span.uppercase {
+  color: #94A3B8 !important;
+}
+
+/* Sidebar user footer */
+aside .border-t {
+  border-top-color: rgba(0,0,0,0.07) !important;
+}
+aside .border-t p {
+  color: #0F172A !important;
+}
+aside .border-t p.uppercase {
+  color: #64748B !important;
+}
+aside .border-t ion-icon {
+  color: #64748B !important;
+}
+
+/* Header */
+header {
+  background-color: rgba(248, 250, 252, 0.85) !important;
+  border-bottom-color: rgba(0,0,0,0.07) !important;
+  backdrop-filter: blur(12px);
+}
+
+/* Search input */
+#searchInput {
+  background-color: #F8FAFC !important;
+  border-color: rgba(0,0,0,0.1) !important;
+  color: #0F172A !important;
+}
+#searchInput::placeholder { color: #94A3B8 !important; }
+#searchInput:focus {
+  border-color: #6366F1 !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+}
+
+/* Search dropdown */
+#searchDropdown {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.1) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+}
+
+/* Header action buttons — high specificity to beat [class*='bg-surface-element'] */
+header button[class*="rounded"],
+header button[class*="w-11"],
+header button[class*="w-10"],
+header .theme-toggle {
+  background-color: #E2E8F0 !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #475569 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+}
+header button[class*="rounded"]:hover,
+header button[class*="w-11"]:hover,
+header button[class*="w-10"]:hover,
+header .theme-toggle:hover {
+  color: #6366F1 !important;
+  background-color: rgba(99,102,241,0.1) !important;
+  border-color: rgba(99,102,241,0.3) !important;
+}
+
+/* ---- Generic plain buttons anywhere in page ---- */
+/* Catch buttons that have no explicit bg e.g. icon action buttons */
+button:not([style*="background"]):not([class*="bg-"]) {
+  background-color: #F1F5F9 !important;
+  border: 1px solid rgba(0,0,0,0.12) !important;
+  color: #374151 !important;
+}
+button:not([style*="background"]):not([class*="bg-"]):hover {
+  background-color: rgba(99,102,241,0.08) !important;
+  border-color: #6366F1 !important;
+  color: #6366F1 !important;
+}
+
+/* Main content area */
+main {
+  background-color: #F1F5F9 !important;
+}
+
+/* Cards & surface containers */
+[class*="bg-surface-container"],
+[class*="bg-surface-element"],
+[class*="bg-\\[\\#181C25\\]"],
+[class*="bg-\\[\\#1e232d\\]"],
+[class*="bg-\\[\\#1E232D\\]"],
+[class*="bg-\\[\\#111417\\]"] {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+/* Glass cards */
+.backdrop-blur-xl,
+.backdrop-blur-2xl {
+  background-color: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(16px);
+}
+
+/* All text overrides */
+[class*="text-text-main"],
+.text-white { color: #0F172A !important; }
+
+[class*="text-text-muted"],
+.text-slate-400,
+.text-slate-500 { color: #64748B !important; }
+
+/* Border overrides */
+[class*="border-white"],
+.border-white\/5,
+.border-white\/10 {
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+/* Status badges */
+.bg-emerald-500\/10 { background-color: rgba(16,185,129,0.12) !important; }
+.bg-amber-500\/10  { background-color: rgba(245,158,11,0.12) !important; }
+.bg-red-500\/10    { background-color: rgba(239,68,68,0.12) !important; }
+.bg-blue-500\/10   { background-color: rgba(59,130,246,0.12) !important; }
+
+/* Dashed placeholder box */
+.border-dashed {
+  border-color: rgba(0,0,0,0.15) !important;
+  background-color: rgba(0,0,0,0.02) !important;
+}
+
+/* Hover states */
+.hover\:bg-white\/5:hover  { background-color: rgba(0,0,0,0.04) !important; }
+.hover\:bg-white\/10:hover { background-color: rgba(0,0,0,0.07) !important; }
+
+/* Shadows */
+.shadow-glass {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08) !important;
+}
+
+/* ====================================================
+   BUTTONS — Fix white text on colored buttons
+   Buttons using bg-primary, var(--primary), indigo keep their dark bg
+   but need white text explicitly enforced
+   ==================================================== */
+
+/* Secondary / outline buttons (e.g. "Subir Archivos .ZIP") */
+button[style*="var(--glass-border)"] {
+  background-color: #F1F5F9 !important;
+  color: #374151 !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+}
+button[style*="var(--glass-border)"]:hover {
+  background-color: rgba(99,102,241,0.08) !important;
+  color: #6366F1 !important;
+  border-color: #6366F1 !important;
+}
+
+/* Primary / indigo buttons — only those that explicitly use var(--primary) as background */
+button[style*="background: var(--primary)"],
+button[style*="var(--primary)"],
+button[style*="background: #6366"],
+button.bg-primary,
+[class*="bg-primary"] > button {
+  color: #FFFFFF !important;
+}
+
+/* Generic Tailwind indigo/primary CTA buttons */
+.bg-indigo-500, .bg-indigo-600, .bg-indigo-700 {
+  color: #FFFFFF !important;
+}
+
+/* "Nuevo Integrante" and similar buttons that use var(--primary) inline */
+button[style*="var(--primary)"] {
+  color: #FFFFFF !important;
+}
+
+/* Buttons with bg-white/5 or similar translucent utilities in dark */
+[class*="bg-white/5"],
+[class*="bg-white\/5"] {
+  background-color: rgba(0,0,0,0.04) !important;
+  color: #475569 !important;
+}
+[class*="bg-white/10"],
+[class*="bg-white\/10"] {
+  background-color: rgba(0,0,0,0.07) !important;
+  color: #475569 !important;
+}
+
+/* ====================================================
+   FORMS — inputs, selects, textareas
+   ==================================================== */
+
+input, select, textarea {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: #0F172A !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #94A3B8 !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #6366F1 !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important;
+  outline: none;
+}
+/* Read-only / disabled fields */
+input[readonly], input[disabled] {
+  background-color: #F1F5F9 !important;
+  color: #475569 !important;
+}
+label {
+  color: #374151 !important;
+}
+
+/* ====================================================
+   LEGACY PANEL CLASSES (older templates)
+   ==================================================== */
+
+/* .glass-panel used in emision_titulos and calificaciones */
+.glass-panel {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.07) !important;
+}
+
+/* .page-header text */
+.page-header h1,
+.page-header h2,
+.page-header h3,
+.page-header p {
+  color: #0F172A !important;
+}
+
+/* .text-muted legacy class */
+.text-muted {
+  color: #64748B !important;
+}
+
+/* Drop zone heading (Calificaciones upload area) */
+.drop-zone-title {
+  color: #374151 !important;
+}
+
+/* Drop zone container text in light mode */
+#dropZone {
+  background: rgba(99, 102, 241, 0.04) !important;
+}
+
+/* ====================================================
+   TABLES — used in Calificaciones, Expedientes list
+   ==================================================== */
+
+table {
+  background-color: #FFFFFF !important;
+}
+th {
+  background-color: #F8FAFC !important;
+  color: #374151 !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+td {
+  color: #0F172A !important;
+  border-color: rgba(0,0,0,0.06) !important;
+}
+tr:hover td {
+  background-color: rgba(99,102,241,0.04) !important;
+}
+
+/* ====================================================
+   GENERIC CATCH-ALL — any text that's still white
+   ==================================================== */
+
+/* This ensures NO text is invisible in light mode */
+p, span, h1, h2, h3, h4, h5, h6, li, td, th, div, a:not([class*="text-primary"]):not([class*="text-secondary"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-red"]) {
+  color: inherit;
+}
+
+/* Force all text-white to go dark */
+.text-white {
+  color: #0F172A !important;
+}
+
+/* But keep colored text tokens as-is */
+.text-primary    { color: #6366F1 !important; }
+.text-secondary  { color: #10B981 !important; }
+.text-emerald-400 { color: #10B981 !important; }
+.text-amber-400   { color: #D97706 !important; }
+.text-red-400, .text-error { color: #DC2626 !important; }
+.text-blue-400  { color: #3B82F6 !important; }

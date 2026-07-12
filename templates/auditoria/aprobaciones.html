@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Aprobaciones | Intranet{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Encabezado -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h2 class="font-headline font-extrabold text-2xl text-text-main flex items-center gap-3">
+        <ion-icon name="checkmark-circle-outline" class="text-tertiary"></ion-icon> Centro de Aprobaciones
+      </h2>
+      <p class="text-sm text-text-muted mt-1">Gestiona las solicitudes de acción enviadas por el personal operativo.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      {% if total_pendientes > 0 %}
+      <span class="px-4 py-2 rounded-xl bg-tertiary/10 border border-tertiary/20 text-tertiary text-sm font-bold">
+        {{ total_pendientes }} pendiente{{ total_pendientes|pluralize:"s" }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ─── Solicitudes Pendientes ─────────────────────────────────────────── -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md overflow-hidden">
+    <div class="px-6 py-4 border-b border-border flex items-center gap-3">
+      <div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+      <h3 class="font-headline font-bold text-base text-text-main">Solicitudes Pendientes</h3>
+    </div>
+
+    {% if pendientes %}
+    <div class="divide-y divide-white/5">
+      {% for sol in pendientes %}
+      <div class="p-6 flex flex-col md:flex-row md:items-start gap-5 hover:bg-white/2 transition-colors" id="sol-{{ sol.id }}">
+        <!-- Info -->
+        <div class="flex-1 space-y-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-tertiary/10 text-tertiary border border-tertiary/20 rounded">{{ sol.get_accion_display }}</span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 bg-surface-element text-text-muted rounded">{{ sol.modulo }}</span>
+            <span class="text-[10px] text-text-muted ml-auto">⏰ Expira: {{ sol.fecha_expiracion|date:"d/m/Y h:i A" }}</span>
+          </div>
+          <p class="text-sm text-text-main font-medium">{{ sol.descripcion }}</p>
+          <p class="text-xs text-text-muted">
+            Solicitado por <span class="text-primary font-semibold">{{ sol.solicitante.username }}</span>
+            {% if sol.solicitante.nombre_completo %} ({{ sol.solicitante.nombre_completo }}){% endif %}
+            · {{ sol.fecha_solicitud|date:"d/m/Y h:i A" }}
+          </p>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex gap-3 flex-shrink-0 flex-wrap">
+          <button onclick="procesarSolicitud({{ sol.id }}, 'rechazar')"
+            class="flex items-center gap-2 px-4 py-2 bg-error/10 hover:bg-error/20 text-error border border-error/20 rounded-xl text-xs font-bold transition-all">
+            <ion-icon name="close-circle-outline" class="text-base"></ion-icon> Rechazar
+          </button>
+          <button onclick="procesarSolicitud({{ sol.id }}, 'aprobar')"
+            class="flex items-center gap-2 px-4 py-2 bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 rounded-xl text-xs font-bold transition-all">
+            <ion-icon name="checkmark-circle-outline" class="text-base"></ion-icon> Aprobar
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center">
+      <ion-icon name="checkmark-done-circle-outline" class="text-5xl text-secondary/30 mb-4"></ion-icon>
+      <h4 class="text-text-main font-bold mb-1">Sin solicitudes pendientes</h4>
+      <p class="text-sm text-text-muted max-w-sm">No hay acciones esperando tu aprobación. ¡Todo está al día!</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ─── Historial ─────────────────────────────────────────────────────── -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md overflow-hidden">
+    <div class="px-6 py-4 border-b border-border flex items-center justify-between">
+      <h3 class="font-headline font-bold text-base text-text-main">Historial de Solicitudes</h3>
+      <div class="flex gap-2">
+        <button onclick="filtrarHistorial('')" class="filtro-btn active px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all" data-estado="">Todas</button>
+        <button onclick="filtrarHistorial('APROBADA')" class="filtro-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all" data-estado="APROBADA">✅ Aprobadas</button>
+        <button onclick="filtrarHistorial('RECHAZADA')" class="filtro-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all" data-estado="RECHAZADA">❌ Rechazadas</button>
+        <button onclick="filtrarHistorial('EXPIRADA')" class="filtro-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all" data-estado="EXPIRADA">⏰ Expiradas</button>
+      </div>
+    </div>
+    <div id="historial-container" class="divide-y divide-white/5 overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead>
+          <tr class="bg-surface-element/50 text-[10px] text-text-muted uppercase tracking-wider border-b border-border">
+            <th class="px-5 py-3">Solicitante</th>
+            <th class="px-5 py-3">Acción</th>
+            <th class="px-5 py-3">Descripción</th>
+            <th class="px-5 py-3">Estado</th>
+            <th class="px-5 py-3">Procesado por</th>
+            <th class="px-5 py-3">Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="historial-tbody" class="divide-y divide-white/5">
+          {% for sol in historial %}
+          <tr class="hover:bg-white/2 transition-colors historial-row" data-estado="{{ sol.estado }}">
+            <td class="px-5 py-3">
+              <p class="font-semibold text-text-main">{{ sol.solicitante.username }}</p>
+              <p class="text-[10px] text-text-muted">{{ sol.solicitante.nombre_completo|default:"" }}</p>
+            </td>
+            <td class="px-5 py-3">
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-surface-element text-text-muted">{{ sol.get_accion_display }}</span>
+            </td>
+            <td class="px-5 py-3 text-xs text-text-muted max-w-xs truncate" title="{{ sol.descripcion }}">{{ sol.descripcion }}</td>
+            <td class="px-5 py-3">
+              {% if sol.estado == 'APROBADA' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20">✅ Aprobada</span>
+              {% elif sol.estado == 'RECHAZADA' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-error/10 text-error border border-error/20">❌ Rechazada</span>
+              {% elif sol.estado == 'EXPIRADA' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-element text-text-muted border border-border">⏰ Expirada</span>
+              {% endif %}
+              {% if sol.comentario_admin %}
+              <p class="text-[9px] text-text-muted mt-0.5 italic truncate max-w-[120px]" title="{{ sol.comentario_admin }}">💬 {{ sol.comentario_admin }}</p>
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-xs text-text-muted">{{ sol.procesado_por.username|default:"—" }}</td>
+            <td class="px-5 py-3 text-xs text-text-muted">{{ sol.fecha_solicitud|date:"d/m/Y h:i A" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center py-10 text-text-muted text-xs">Sin historial aún.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Confirmar Acción ─────────────────────────────────────────────── -->
+<dialog id="modalConfirmar" class="bg-transparent p-0 w-[90%] max-w-lg border-none outline-none focus:outline-none m-auto">
+  <div class="bg-surface-element border border-border/80 rounded-3xl shadow-2xl overflow-hidden">
+    <div class="px-8 py-6 border-b border-border flex items-center gap-3" id="modal-header">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl border" id="modal-icon-wrap">
+        <ion-icon name="help-circle-outline"></ion-icon>
+      </div>
+      <div>
+        <h3 class="text-lg font-headline font-bold text-text-main" id="modal-titulo">Confirmar acción</h3>
+        <p class="text-xs text-text-muted" id="modal-sub">Revisa los detalles antes de confirmar.</p>
+      </div>
+    </div>
+    <div class="p-8 space-y-4">
+      <p class="text-sm text-text-muted" id="modal-descripcion-text"></p>
+      <div>
+        <label class="block text-xs font-semibold text-text-muted mb-2">Comentario para el Personal <span class="text-text-muted/50">(opcional, máx. 1000 caracteres)</span></label>
+        <textarea id="modal-comentario" rows="3" maxlength="1000"
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 transition-all resize-none placeholder:text-text-muted"
+          placeholder="Escribe un comentario explicando tu decisión..."></textarea>
+      </div>
+    </div>
+    <div class="px-8 pb-6 flex gap-3 justify-end">
+      <button onclick="document.getElementById('modalConfirmar').close()" class="px-5 py-2.5 rounded-xl text-xs font-bold text-text-muted hover:text-text-main transition-colors">Cancelar</button>
+      <button id="modal-confirm-btn" onclick="confirmarAccion()"
+        class="px-6 py-2.5 rounded-xl text-xs font-bold text-text-main transition-all flex items-center gap-2" style="">
+        <ion-icon name="checkmark-outline" class="text-sm"></ion-icon> <span id="modal-confirm-label">Confirmar</span>
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .filtro-btn { background: rgba(255,255,255,0.05); color: var(--color-text-muted, #8A8D98); border: 1px solid rgba(255,255,255,0.05); }
+  .filtro-btn.active { background: rgba(99,102,241,0.15); color: #6366F1; border-color: rgba(99,102,241,0.3); }
+  dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); }
+</style>
+
+<script>
+  let _accionActual = null;
+  let _solicitudIdActual = null;
+
+  function procesarSolicitud(id, accion) {
+    _accionActual = accion;
+    _solicitudIdActual = id;
+
+    const modal = document.getElementById('modalConfirmar');
+    const iconWrap = document.getElementById('modal-icon-wrap');
+    const titulo = document.getElementById('modal-titulo');
+    const sub = document.getElementById('modal-sub');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    const confirmLabel = document.getElementById('modal-confirm-label');
+
+    document.getElementById('modal-comentario').value = '';
+
+    if (accion === 'aprobar') {
+      iconWrap.className = 'w-10 h-10 rounded-xl flex items-center justify-center text-xl border bg-secondary/10 text-secondary border-secondary/20';
+      iconWrap.innerHTML = '<ion-icon name="checkmark-circle-outline"></ion-icon>';
+      titulo.textContent = 'Aprobar Solicitud';
+      sub.textContent = 'La acción se ejecutará de inmediato al confirmar.';
+      confirmBtn.className = 'px-6 py-2.5 bg-secondary text-text-main rounded-xl text-xs font-bold shadow-neon-secondary hover:bg-secondary/80 transition-all flex items-center gap-2';
+      confirmLabel.textContent = 'Aprobar y Ejecutar';
+    } else {
+      iconWrap.className = 'w-10 h-10 rounded-xl flex items-center justify-center text-xl border bg-error/10 text-error border-error/20';
+      iconWrap.innerHTML = '<ion-icon name="close-circle-outline"></ion-icon>';
+      titulo.textContent = 'Rechazar Solicitud';
+      sub.textContent = 'La acción no se ejecutará. El Personal recibirá una notificación.';
+      confirmBtn.className = 'px-6 py-2.5 bg-error text-text-main rounded-xl text-xs font-bold hover:bg-error/80 transition-all flex items-center gap-2';
+      confirmLabel.textContent = 'Rechazar';
+    }
+    modal.showModal();
+  }
+
+  async function confirmarAccion() {
+    const comentario = document.getElementById('modal-comentario').value.trim();
+    const btn = document.getElementById('modal-confirm-btn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<ion-icon name="sync-outline" class="animate-spin text-sm"></ion-icon> Procesando...';
+    btn.disabled = true;
+
+    try {
+      const url = `/auditoria/api/solicitudes/${_solicitudIdActual}/${_accionActual}/`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ comentario })
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        document.getElementById('modalConfirmar').close();
+        // Eliminar la fila de pendientes
+        const fila = document.getElementById(`sol-${_solicitudIdActual}`);
+        if (fila) { fila.style.opacity = '0'; fila.style.transform = 'translateX(20px)'; setTimeout(() => fila.remove(), 300); }
+        // Mostrar toast
+        mostrarToast(data.mensaje || 'Solicitud procesada.', _accionActual === 'aprobar' ? 'secondary' : 'error');
+        // Recargar historial
+        setTimeout(() => filtrarHistorial(''), 600);
+      } else {
+        alert('Error: ' + (data.error || 'Error desconocido.'));
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      alert('Error de conexión.');
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
+    }
+  }
+
+  function mostrarToast(msg, color) {
+    const t = document.createElement('div');
+    t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 bg-${color}/20 border border-${color}/30 text-${color} text-sm font-bold rounded-2xl shadow-md backdrop-blur-xl transition-all`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+  }
+
+  async function filtrarHistorial(estado) {
+    // Actualizar botones
+    document.querySelectorAll('.filtro-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.estado === estado);
+    });
+    // Filtrar filas localmente
+    document.querySelectorAll('.historial-row').forEach(row => {
+      row.style.display = (!estado || row.dataset.estado === estado) ? '' : 'none';
+    });
+  }
+</script>
+{% endblock %}

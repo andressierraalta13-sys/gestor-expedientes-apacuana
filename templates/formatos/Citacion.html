@@ -1,0 +1,123 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+  <meta charset='utf-8'>
+  <title>Citación</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin-top: 0.5in;
+      margin-bottom: 0.5in;
+      margin-left: 0.7in;
+      margin-right: 0.7in;
+    }
+
+    body {
+      font-family: "Times New Roman", serif;
+      background-color: #ffffff;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+
+    .logo-cell { width: 20%; vertical-align: middle; text-align: left; }
+    .logo-img { width: 90px; height: auto; }
+    .header-text-cell { width: 60%; vertical-align: middle; text-align: center; }
+    .empty-cell { width: 20%; }
+
+    .header-title {
+      font-size: 10.5pt;
+      font-weight: bold;
+      line-height: 1.2;
+      margin: 0;
+      text-align: center;
+    }
+
+    .header-subtitle {
+      font-size: 9pt;
+      font-weight: normal;
+      line-height: 1.2;
+      margin: 0;
+      text-align: center;
+    }
+
+    /* Estructura para centrar perfectamente las 3 firmas */
+    .signature-table {
+      width: 100%;
+      margin-top: 50px;
+      border-collapse: collapse;
+    }
+
+    .signature-cell {
+      width: 33.33%; /* Divide el espacio exactamente en 3 partes iguales */
+      text-align: center;
+      vertical-align: bottom;
+    }
+  </style>
+</head>
+<body>
+  <table class="header-table">
+    <tr>
+      <td class="logo-cell">
+        <img src="{{ logo_path }}" class="logo-img" alt="Logo" />
+      </td>
+      <td class="header-text-cell">
+        <div class="header-title">
+          REPÚBLICA BOLIVARIANA DE VENEZUELA<br/>
+          MINISTERIO DEL PODER POPULAR PARA LA EDUCACIÓN<br/>
+          UEN. APACUANA
+        </div>
+        <div class="header-subtitle">
+          CHARALLAVE – ESTADO MIRANDA<br/>
+          CÓDIGO DEA: OD24061508
+        </div>
+      </td>
+      <td class="empty-cell"></td>
+    </tr>
+  </table>
+
+  <p style='text-align: center;'><strong>CITACIÓN</strong></p>
+  <div style='height: 10px;'></div>
+  <p style='text-align: right;'>Charallave, <strong>{{ dia_emision }}</strong> de <strong>{{ mes_emision }}</strong> de <strong>{{ ano_emision }}</strong></p>
+  
+  <div style='height: 15px;'></div>
+  
+  <p style='text-align: justify;'>
+    Estimado(a) representante del(la) estudiante <strong>{{ nombres }} {{ apellidos }}</strong>, por medio de la presente comunicación, la Dirección y el cuerpo docente de la U.E.N. Apacuana le extienden una convocatoria formal para asistir a una reunión relacionada con <strong>{{ motivo|default:"asuntos de interés" }}</strong> de su representado(a). Reunión establecida para el día <strong>{{ dia_reunion }}</strong> a las <strong>{{ hora_reunion }} {% if am_pm %}{{ am_pm }}{% endif %}</strong> con el (la) director(a)/docente <strong>{{ docente_directivo }}</strong>.
+  </p>
+  
+  <p style='text-align: justify;'>
+    Le recordamos que la integración familia-escuela es fundamental para el éxito formativo de nuestros jóvenes, por lo que agradecemos de antemano su puntual asistencia a este llamado.
+  </p>
+
+  <table class="signature-table">
+    <tr>
+      <td class="signature-cell">
+        <p>_____________________________</p>
+        <p><strong>PROF. DORCA DIAZ</strong></p>
+      </td>
+      <td class="signature-cell">
+        <p>_____________________________</p>
+        <p><strong>SELLO</strong></p>
+      </td>
+      <td class="signature-cell">
+        <p>_____________________________</p>
+        <p><strong>DOCENTE DE GRADO</strong></p>
+      </td>
+    </tr>
+  </table>
+
+  <div style='height: 50px;'></div>
+  <p style='text-align: center; font-size: 12px;'>Nota: esta citación se expide sin errores ni enmiendas.</p>
+
+</body>
+</html>

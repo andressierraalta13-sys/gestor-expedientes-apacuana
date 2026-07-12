@@ -1,0 +1,40 @@
+{# Ancho de columna EXPLÍCITO en cada celda (no solo en la cabecera).           #}
+{# xhtml2pdf calcula el ancho de columna a partir del contenido cuando falta un  #}
+{# ancho; al fijarlo en todas las celdas el bloque de cada año queda idéntico y  #}
+{# alineado en cualquier entorno (local o servidor), evitando que las columnas   #}
+{# se desalineen o se desborden cuando un año tiene notas y otro está vacío.      #}
+<table class="box grades {{ margen }}">
+    <colgroup>
+        <col style="width: 39%;"><col style="width: 7%;"><col style="width: 20%;"><col style="width: 6%;"><col style="width: 10%;"><col style="width: 9%;"><col style="width: 9%;">
+    </colgroup>
+    <tr><td colspan="7" class="b c anio-tit">{{ anio.nombre }} AÑO</td></tr>
+    <tr>
+        <td rowspan="2" width="39%" class="b c">ÁREAS DE FORMACIÓN</td>
+        <td colspan="2" width="27%" class="b c">CALIFICACIÓN</td>
+        <td rowspan="2" width="6%" class="b c">T-E</td>
+        <td colspan="2" width="19%" class="b c">FECHA</td>
+        <td rowspan="2" width="9%" class="b c">PLANTEL</td>
+    </tr>
+    <tr>
+        <td width="7%" class="b c">Nº</td>
+        <td width="20%" class="b c">LETRAS</td>
+        <td width="10%" class="b c">Mes</td>
+        <td width="9%" class="b c">Año</td>
+    </tr>
+    {% comment %}
+    Materia CON nota: se rellenan sus datos y la columna T-E lleva la marca "F".
+    Materia SIN nota (año/materia no cursado): cada casilla se marca con un ÚNICO
+    asterisco "*", tal como el formato oficial de referencia (pero un solo "*").
+    {% endcomment %}
+    {% for fila in anio.filas %}
+    <tr>
+        <td width="39%" class="area">{{ fila.area }}</td>
+        <td width="7%" class="c">{% if fila.num != '' %}{{ fila.num }}{% else %}*{% endif %}</td>
+        <td width="20%" class="c letras">{% if fila.num != '' %}{{ fila.letras }}{% else %}*{% endif %}</td>
+        <td width="6%" class="c">{% if fila.num != '' %}F{% else %}*{% endif %}</td>
+        <td width="10%" class="c">{% if fila.num != '' %}{{ anio.mes }}{% else %}*{% endif %}</td>
+        <td width="9%" class="c">{% if fila.num != '' %}{{ anio.ano }}{% else %}*{% endif %}</td>
+        <td width="9%" class="c">{% if fila.num != '' %}1{% else %}*{% endif %}</td>
+    </tr>
+    {% endfor %}
+</table>

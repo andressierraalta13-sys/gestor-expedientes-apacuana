@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Emitir Notificación Global{% endblock %}
+
+{% block content %}
+<div class="py-12">
+    <div class="bg-surface border border-border rounded-3xl p-6 shadow-md max-w-lg mx-auto">
+        <h3 class="text-xl font-black text-text-main font-headline mb-4">📢 Emitir Notificación Global</h3>
+        <form action="{% url 'enviar_notificacion_dev' %}" method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-bold text-text-muted mb-1">Tipo de Alerta</label>
+                <select name="tipo" class="w-full p-3 bg-surface-container border border-border rounded-xl text-text-main focus:outline-none focus:border-primary">
+                    <option value="ACTUALIZACION">🚀 Nota de Actualización</option>
+                    <option value="SISTEMA">⚠️ Aviso del Sistema</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-text-muted mb-1">Título</label>
+                <input type="text" name="titulo" required class="w-full p-3 bg-surface-container border border-border rounded-xl text-text-main focus:outline-none focus:border-primary" placeholder="Ej: Versión 5.0 Lanzada">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-text-muted mb-1">Mensaje / Cambios</label>
+                <textarea name="mensaje" rows="4" required class="w-full p-3 bg-surface-container border border-border rounded-xl text-text-main focus:outline-none focus:border-primary" placeholder="Escribe los detalles aquí..."></textarea>
+            </div>
+            <button type="submit" class="w-full py-3 bg-primary hover:bg-primary/80 text-white font-bold rounded-xl transition-colors shadow-neon-primary">
+                Distribuir Notificación
+            </button>
+            <div class="mt-4 text-center">
+                <a href="{% url 'dev_panel' %}" class="text-sm text-text-muted hover:text-text-main transition-colors">← Volver al Panel Dev</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}Vista General | Intranet{% endblock %}
+
+{% block content %}
+<!-- ==========================================
+     DESKTOP VIEW (Untouched, strictly for PC)
+     ========================================== -->
+<div class="desktop-home hidden lg:block">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Vista General</h1>
+            <p class="page-subtitle">
+                Buenos días{% if request.user.is_authenticated %}, {{ request.user.nombre_completo|default:request.user.username|title }}{% endif %}.
+                Aquí tienes un resumen de la actividad del sistema.
+            </p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'nuevo_expediente' %}" class="btn btn-primary">
+                <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                Nuevo Expediente
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:24px">
+
+        <!-- Expedientes Solventes -->
+        <a href="{% url 'lista_solventes' %}" style="text-decoration:none">
+            <div class="kpi-card card-interactive">
+                <div class="kpi-header">
+                    <span class="kpi-label">Expedientes Solventes</span>
+                    <div class="kpi-icon" style="background:var(--color-success-subtle);color:var(--color-success)">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </div>
+                </div>
+                <div class="kpi-value">{{ solventes }}</div>
+                <div class="kpi-trend up">
+                    <span class="material-symbols-outlined" style="font-size:14px">trending_up</span>
+                    Documentación completa
+                </div>
+            </div>
+        </a>
+
+        <!-- Casos Incompletos -->
+        <a href="{% url 'lista_incompletos' %}" style="text-decoration:none">
+            <div class="kpi-card card-interactive">
+                <div class="kpi-header">
+                    <span class="kpi-label">Casos Incompletos</span>
+                    <div class="kpi-icon" style="background:var(--color-warning-subtle);color:var(--color-warning)">
+                        <span class="material-symbols-outlined">warning</span>
+                    </div>
+                </div>
+                <div class="kpi-value">{{ incompletos }}</div>
+                <div class="kpi-trend down">
+                    <span class="material-symbols-outlined" style="font-size:14px">trending_down</span>
+                    Faltantes por resolver
+                </div>
+            </div>
+        </a>
+
+        <!-- Actas Digitalizadas -->
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-label">Actas Digitalizadas</span>
+                <div class="kpi-icon" style="background:var(--color-info-subtle);color:var(--color-info)">
+                    <span class="material-symbols-outlined">description</span>
+                </div>
+            </div>
+            <div class="kpi-value">0</div>
+            <div class="kpi-trend neutral">
+                <span class="material-symbols-outlined" style="font-size:14px">remove</span>
+                Sin cambios recientes
+            </div>
+        </div>
+
+        <!-- Tasa de Solvencia -->
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <span class="kpi-label">Tasa de Solvencia</span>
+                <div class="kpi-icon" style="background:var(--color-accent-subtle);color:var(--color-accent)">
+                    <span class="material-symbols-outlined">percent</span>
+                </div>
+            </div>
+            <div class="kpi-value">
+                {% widthratio solventes solventes|add:incompletos 100 as tasa %}
+                {% if solventes or incompletos %}
+                    {% widthratio solventes solventes|add:incompletos 100 %}%
+                {% else %}
+                    0%
+                {% endif %}
+            </div>
+            <div class="kpi-trend up">
+                <span class="material-symbols-outlined" style="font-size:14px">trending_up</span>
+                Porcentaje global
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div style="display:grid;grid-template-columns:7fr 5fr;gap:20px">
+
+        <!-- Recent Activity -->
+        <div class="card" style="display:flex;flex-direction:column;height:100%">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Actividad Reciente</div>
+                    <div class="card-subtitle">Últimas acciones registradas en el sistema</div>
+                </div>
+                <a href="{% url 'auditoria' %}" class="btn btn-ghost btn-sm">Ver todo →</a>
+            </div>
+            <div style="flex:1;overflow-y:auto;max-height:380px;padding-right:8px">
+                <div style="display:flex;flex-direction:column;gap:0">
+                    {% for log in audit_logs %}
+                    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;{% if not forloop.last %}border-bottom:1px solid var(--color-border-subtle);{% endif %}">
+                        <div style="width:32px;height:32px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;flex-shrink:0;{% if 'elimin' in log.titulo %}background:var(--color-error-subtle);color:var(--color-error){% elif 'modific' in log.titulo %}background:var(--color-info-subtle);color:var(--color-info){% else %}background:var(--color-success-subtle);color:var(--color-success){% endif %}">
+                            <span class="material-symbols-outlined" style="font-size:16px">
+                                {% if "elimin" in log.titulo %}delete{% elif "modific" in log.titulo %}edit{% else %}add_circle{% endif %}
+                            </span>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:14px;font-weight:500;color:var(--color-text-primary)">{{ log.titulo }}</div>
+                            <div style="font-size:13px;color:var(--color-text-tertiary);margin-top:2px">
+                                {{ log.detalle }} &bull; {{ log.fecha|timesince }} atrás
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state" style="padding:40px 20px">
+                        <span class="material-symbols-outlined empty-state-icon">inbox</span>
+                        <div class="empty-state-title">Sin actividad reciente</div>
+                        <div class="empty-state-text">No hay movimientos registrados en el sistema.</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions + Stats -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Acciones Rápidas</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <a href="{% url 'nuevo_expediente' %}" class="btn btn-secondary" style="justify-content:flex-start;width:100%">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-accent)">person_add</span>
+                        Registrar nuevo estudiante
+                    </a>
+                    <a href="{% url 'calificaciones' %}" class="btn btn-secondary" style="justify-content:flex-start;width:100%">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-info)">upload_file</span>
+                        Carga masiva de notas
+                    </a>
+                    <a href="{% url 'notas_certificadas' %}" class="btn btn-secondary" style="justify-content:flex-start;width:100%">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-success)">verified</span>
+                        Emitir notas certificadas
+                    </a>
+                    <a href="{% url 'ia_riesgos' %}" class="btn btn-secondary" style="justify-content:flex-start;width:100%">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-warning)">monitoring</span>
+                        Rendimiento estudiantil
+                    </a>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="card" style="flex:1;display:flex;flex-direction:column">
+                <div class="card-header" style="margin-bottom:16px">
+                    <div class="card-title">Resumen del Sistema</div>
+                </div>
+                <div class="summary-grid">
+                    <!-- Total Expedientes -->
+                    <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;justify-content:center;gap:4px">
+                        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-secondary)">Total</span>
+                        <span style="font-size:24px;font-weight:700;color:var(--color-text-primary);line-height:1">{{ solventes|add:incompletos }}</span>
+                    </div>
+                    
+                    <!-- Expedientes Solventes -->
+                    <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-left:4px solid var(--color-success)">
+                        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-secondary)">Solventes</span>
+                        <span style="font-size:24px;font-weight:700;color:var(--color-success);line-height:1">{{ solventes }}</span>
+                    </div>
+
+                    <!-- Casos Incompletos -->
+                    <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-left:4px solid var(--color-warning)">
+                        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-secondary)">Incompletos</span>
+                        <span style="font-size:24px;font-weight:700;color:var(--color-warning);line-height:1">{{ incompletos }}</span>
+                    </div>
+
+                    <!-- Títulos en Proceso -->
+                    <div style="background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-left:4px solid var(--color-info)">
+                        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-secondary)">Títulos</span>
+                        <span style="font-size:24px;font-weight:700;color:var(--color-info);line-height:1">{{ titulos|default:"0" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MOBILE VIEW (Redesigned & Smoother)
+     ========================================== -->
+<div class="mobile-home block lg:hidden pb-24 bg-[var(--color-bg)] min-h-screen font-sans">
+    
+
+
+    <!-- Greeting -->
+    <div class="px-5 mt-4 mb-8">
+        <h1 class="text-[28px] font-bold text-[var(--color-text-primary)] leading-tight tracking-tight">
+            Hola,<br>
+            <span class="text-[var(--color-accent)] font-normal text-[24px]">{{ request.user.nombre_completo|default:request.user.username|title|truncatechars:15 }}</span>
+        </h1>
+    </div>
+
+    <!-- Metrics Header -->
+    <div class="px-5 mb-4">
+        <h2 class="text-[13px] font-bold text-[var(--color-text-secondary)] tracking-widest uppercase">Métricas Generales</h2>
+    </div>
+
+    <!-- Rings (Circular Charts) -->
+    <div class="grid grid-cols-3 gap-3 px-5 mb-10">
+        <!-- Ring 1: Total -->
+        <div class="bg-[var(--color-surface)] rounded-3xl p-4 flex flex-col items-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] border border-[var(--color-border-subtle)] relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-[var(--color-success-subtle)] opacity-50 rounded-bl-full -z-10"></div>
+            <div class="relative w-[72px] h-[72px] mb-3">
+                <svg viewBox="0 0 36 36" class="w-full h-full drop-shadow-sm">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--color-success-subtle)" stroke-width="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--color-success)" stroke-width="3" stroke-dasharray="100, 100" stroke-linecap="round" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-[22px] font-bold text-[var(--color-text-primary)]">{{ solventes|add:incompletos }}</span>
+                </div>
+            </div>
+            <span class="text-[11px] font-semibold text-[var(--color-text-secondary)] tracking-wide uppercase text-center leading-tight">Total<br>Archivos</span>
+        </div>
+
+        <!-- Ring 2: Solventes -->
+        <div class="bg-[var(--color-surface)] rounded-3xl p-4 flex flex-col items-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] border border-[var(--color-border-subtle)] relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-[var(--color-info-subtle)] opacity-50 rounded-bl-full -z-10"></div>
+            <div class="relative w-[72px] h-[72px] mb-3">
+                <svg viewBox="0 0 36 36" class="w-full h-full drop-shadow-sm">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--color-info-subtle)" stroke-width="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--color-info)" stroke-width="3" stroke-dasharray="{% if solventes or incompletos %}{% widthratio solventes solventes|add:incompletos 100 %}{% else %}0{% endif %}, 100" stroke-linecap="round" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-[22px] font-bold text-[var(--color-text-primary)]">{{ solventes }}</span>
+                </div>
+            </div>
+            <span class="text-[11px] font-semibold text-[var(--color-text-secondary)] tracking-wide uppercase text-center leading-tight">Casos<br>Resueltos</span>
+        </div>
+
+        <!-- Ring 3: Incompletos -->
+        <div class="bg-[var(--color-surface)] rounded-3xl p-4 flex flex-col items-center shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.2)] border border-[var(--color-border-subtle)] relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-[var(--color-warning-subtle)] opacity-50 rounded-bl-full -z-10"></div>
+            <div class="relative w-[72px] h-[72px] mb-3">
+                <svg viewBox="0 0 36 36" class="w-full h-full drop-shadow-sm">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--color-warning-subtle)" stroke-width="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--color-warning)" stroke-width="3" stroke-dasharray="{% if solventes or incompletos %}{% widthratio incompletos solventes|add:incompletos 100 %}{% else %}0{% endif %}, 100" stroke-linecap="round" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-[22px] font-bold text-[var(--color-text-primary)]">{{ incompletos }}</span>
+                </div>
+            </div>
+            <span class="text-[11px] font-semibold text-[var(--color-text-secondary)] tracking-wide uppercase text-center leading-tight">Pendientes</span>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="px-5 mb-10">
+        <h2 class="text-[13px] font-bold text-[var(--color-text-secondary)] tracking-widest uppercase mb-4">Acciones Rápidas</h2>
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Nuevo Estudiante -->
+            <a href="{% url 'nuevo_expediente' %}" class="relative bg-[#fff0e6] dark:bg-[rgba(249,115,22,0.1)] rounded-2xl p-4 h-28 flex flex-col items-center justify-center overflow-hidden transition-transform active:scale-95">
+                <span class="material-symbols-outlined absolute text-[70px] text-[#fb923c] opacity-10">person_add</span>
+                <span class="relative z-10 text-[14px] font-bold text-[#ea580c] dark:text-[#fb923c] text-center leading-tight">Nuevo<br>Estudiante</span>
+            </a>
+            <!-- Carga de Notas -->
+            <a href="{% url 'calificaciones' %}" class="relative bg-[#eef2ff] dark:bg-[rgba(99,102,241,0.1)] rounded-2xl p-4 h-28 flex flex-col items-center justify-center overflow-hidden transition-transform active:scale-95">
+                <span class="material-symbols-outlined absolute text-[70px] text-[#818cf8] opacity-10">description</span>
+                <span class="relative z-10 text-[14px] font-bold text-[#4f46e5] dark:text-[#818cf8] text-center leading-tight">Carga de<br>Notas</span>
+            </a>
+            <!-- Notas Certificadas -->
+            <a href="{% url 'notas_certificadas' %}" class="relative bg-[#ecfdf5] dark:bg-[rgba(16,185,129,0.1)] rounded-2xl p-4 h-28 flex flex-col items-center justify-center overflow-hidden transition-transform active:scale-95">
+                <span class="material-symbols-outlined absolute text-[70px] text-[#34d399] opacity-10">workspace_premium</span>
+                <span class="relative z-10 text-[14px] font-bold text-[#059669] dark:text-[#34d399] text-center leading-tight">Notas<br>Certificadas</span>
+            </a>
+            <!-- IA & Riesgo -->
+            <a href="{% url 'ia_riesgos' %}" class="relative bg-[#fefce8] dark:bg-[rgba(234,179,8,0.1)] rounded-2xl p-4 h-28 flex flex-col items-center justify-center overflow-hidden transition-transform active:scale-95">
+                <span class="material-symbols-outlined absolute text-[70px] text-[#facc15] opacity-10">monitoring</span>
+                <span class="relative z-10 text-[14px] font-bold text-[#ca8a04] dark:text-[#facc15] text-center leading-tight">IA &<br>Riesgo</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="px-5 mb-10">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-[13px] font-bold text-[var(--color-text-secondary)] tracking-widest uppercase">Actividad Reciente</h2>
+            <a href="{% url 'auditoria' %}" class="text-[12px] font-bold text-[var(--color-accent)] bg-[var(--color-accent-subtle)] px-3 py-1 rounded-full">Ver todo</a>
+        </div>
+        
+        <div class="flex flex-col gap-3">
+            {% for log in audit_logs|slice:":3" %}
+            <div class="bg-[var(--color-surface)] rounded-2xl p-4 flex items-center gap-4 border border-[var(--color-border-subtle)] shadow-sm overflow-hidden">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 
+                    {% if 'elimin' in log.titulo %}bg-[var(--color-error-subtle)] text-[var(--color-error)]
+                    {% elif 'modific' in log.titulo %}bg-[var(--color-info-subtle)] text-[var(--color-info)]
+                    {% else %}bg-[var(--color-success-subtle)] text-[var(--color-success)]{% endif %}">
+                    <span class="material-symbols-outlined" style="font-size: 24px;">
+                        {% if "elimin" in log.titulo %}delete{% elif "modific" in log.titulo %}edit{% else %}add{% endif %}
+                    </span>
+                </div>
+                <div class="flex-1 min-w-0 break-words">
+                    <div class="text-[15px] font-bold text-[var(--color-text-primary)] whitespace-normal leading-tight mb-1">{{ log.titulo }}</div>
+                    <div class="text-[13px] text-[var(--color-text-tertiary)] whitespace-normal leading-snug">{{ log.detalle }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-6 text-sm text-[var(--color-text-tertiary)] bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border-subtle)]">
+                No hay actividad reciente.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Hide scrollbar for horizontal scroll area but keep functionality */
+    .hide-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scroll {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+
+</style>
+
+<style>
+    .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        flex: 1;
+    }
+    @media (max-width: 480px) {
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 1024px) {
+        [style*="grid-template-columns:repeat(4"] {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+        [style*="grid-template-columns:7fr 5fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    @media (max-width: 640px) {
+        [style*="grid-template-columns:repeat(4"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+{% endblock %}

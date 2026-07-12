@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Expedientes Solventes{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h2>Expedientes Solventes</h2>
+        <p class="text-muted">Lista de estudiantes con expediente completo.</p>
+    </div>
+    <div>
+        <a href="{% url 'home' %}" style="text-decoration: none;">
+            <button style="background: var(--glass-border); color: var(--text-color); border: 1px solid var(--text-muted); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.2s;"><ion-icon name="arrow-back-outline"></ion-icon> Volver al Dashboard</button>
+        </a>
+    </div>
+</div>
+
+<div class="glass-panel" style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+            <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                <th style="padding: 1.25rem 1.5rem;">Estudiante</th>
+                <th style="padding: 1.25rem 1.5rem;">Cédula</th>
+                <th style="padding: 1.25rem 1.5rem; text-align: center;">Estatus</th>
+                <th style="padding: 1.25rem 1.5rem;">Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for exp in expedientes %}
+            <tr style="border-bottom: 1px solid var(--glass-border); transition: background 0.2s ease;">
+                <td style="padding: 1rem 1.5rem; font-weight: 500;">
+                    <a href="{% url 'detalle_expediente' exp.estudiante.cedula_identidad %}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                        {{ exp.estudiante.nombres }} {{ exp.estudiante.apellidos }}
+                    </a>
+                </td>
+                <td style="padding: 1rem 1.5rem; color: var(--text-muted);">{{exp.estudiante.cedula_identidad|formato_cedula}}</td>
+                <td style="padding: 1rem 1.5rem; text-align: center;">
+                    <span style="background: rgba(16, 185, 129, 0.1); color: var(--secondary); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">SOLVENTE</span>
+                </td>
+                <td style="padding: 1rem 1.5rem;">
+                    <a href="{% url 'detalle_expediente' exp.estudiante.cedula_identidad %}" style="color: var(--primary); text-decoration: none; font-size: 1.25rem;" title="Ver Detalles">
+                        <ion-icon name="eye-outline"></ion-icon>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-muted);">No hay estudiantes solventes actualmente.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+    body.light-theme tbody tr:hover {
+        background: rgba(0, 0, 0, 0.02);
+    }
+</style>
+{% endblock %}

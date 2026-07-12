@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Modo Edición | {{ estudiante.nombres }} {% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-end">
+    <div>
+        <h1 class="text-3xl font-bold text-text-main mb-2 tracking-tight">Sobrescribir Datos Mátriz</h1>
+        <p class="text-error text-sm font-bold tracking-widest uppercase flex items-center gap-2"><ion-icon name="warning"></ion-icon> Operación Rastreada Vía Simple-History</p>
+    </div>
+    <a href="{% url 'expedientes' %}" class="btn btn-secondary">
+        <ion-icon name="arrow-back-outline"></ion-icon> Cancelar
+    </a>
+</div>
+
+<div class="card max-w-4xl p-8">
+    <form method="POST" action="{% url 'editar_expediente' estudiante.cedula_identidad %}" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {% csrf_token %}
+        
+        <!-- Identidad -->
+        <div class="flex flex-col gap-6">
+            <h3 class="text-lg font-bold text-text-main border-b border-border pb-2">1. Identidad Mátriz</h3>
+            
+            <div>
+                <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Nombres</label>
+                <input type="text" name="nombres" value="{{ estudiante.nombres }}" required class="form-input w-full">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Cédula de Identidad <span class="form-required">*</span></label>
+                <div style="display: flex; border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; background: var(--color-bg-secondary);">
+                    <span style="padding: 0 12px; font-weight: 600; color: var(--color-text-secondary); background: rgba(0,0,0,0.05); border-right: 1px solid var(--color-border); display: flex; align-items: center;">V-</span>
+                    <input type="text" id="cedulaInput" name="cedula" value="{{ estudiante.cedula_identidad }}" required pattern="[0-9]{8}" maxlength="8" class="form-input" style="border: none; border-radius: 0; background: transparent; flex: 1; outline: none;">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Apellidos</label>
+                <input type="text" name="apellidos" value="{{ estudiante.apellidos }}" required class="form-input w-full">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Fecha Nacimiento</label>
+                    <input type="date" name="fecha_nac" value="{{ estudiante.fecha_nacimiento|date:'Y-m-d' }}" required class="form-input w-full">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Género</label>
+                    <select name="sexo" class="form-input w-full">
+                        <option value="M" {% if estudiante.sexo == 'M' %}selected{% endif %}>Masculino</option>
+                        <option value="F" {% if estudiante.sexo == 'F' %}selected{% endif %}>Femenino</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Año Cursante</label>
+                    <select name="ano_cursando" required class="form-input w-full">
+                        <option value="1" {% if estudiante.ano_cursando == 1 %}selected{% endif %}>1er Año</option>
+                        <option value="2" {% if estudiante.ano_cursando == 2 %}selected{% endif %}>2do Año</option>
+                        <option value="3" {% if estudiante.ano_cursando == 3 %}selected{% endif %}>3er Año</option>
+                        <option value="4" {% if estudiante.ano_cursando == 4 %}selected{% endif %}>4to Año</option>
+                        <option value="5" {% if estudiante.ano_cursando == 5 %}selected{% endif %}>5to Año</option>
+                        <option value="6" {% if estudiante.ano_cursando == 6 %}selected{% endif %}>Egresado</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Sección</label>
+                    <input type="text" name="seccion" maxlength="1" pattern="[A-Za-z]" value="{{ estudiante.seccion|default:'' }}" title="Solo una letra (A-Z)" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase();" class="form-input w-full uppercase text-center">
+                </div>
+            </div>
+            
+            <!-- Lugar de nacimiento -->
+            <div class="space-y-4">
+                <h4 class="text-sm font-bold text-text-secondary uppercase tracking-widest border-b border-border pb-2">Lugar de nacimiento</h4>
+                
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">País de Nacimiento</label>
+                    <select name="pais_nacimiento" id="paisNacSelect" required class="form-input w-full">
+                        <option value="Venezuela" {% if estudiante.pais_nacimiento == 'Venezuela' or not estudiante.pais_nacimiento %}selected{% endif %}>Venezuela</option>
+                        <option value="Colombia" {% if estudiante.pais_nacimiento == 'Colombia' %}selected{% endif %}>Colombia</option>
+                        <option value="Ecuador" {% if estudiante.pais_nacimiento == 'Ecuador' %}selected{% endif %}>Ecuador</option>
+                        <option value="Perú" {% if estudiante.pais_nacimiento == 'Perú' %}selected{% endif %}>Perú</option>
+                        <option value="Chile" {% if estudiante.pais_nacimiento == 'Chile' %}selected{% endif %}>Chile</option>
+                        <option value="Argentina" {% if estudiante.pais_nacimiento == 'Argentina' %}selected{% endif %}>Argentina</option>
+                        <option value="Brasil" {% if estudiante.pais_nacimiento == 'Brasil' %}selected{% endif %}>Brasil</option>
+                        <option value="España" {% if estudiante.pais_nacimiento == 'España' %}selected{% endif %}>España</option>
+                        <option value="México" {% if estudiante.pais_nacimiento == 'México' %}selected{% endif %}>México</option>
+                        <option value="Estados Unidos" {% if estudiante.pais_nacimiento == 'Estados Unidos' %}selected{% endif %}>Estados Unidos</option>
+                        <option value="Otro" {% if estudiante.pais_nacimiento == 'Otro' %}selected{% endif %}>Otro</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Estado</label>
+                    <select name="estado_nacimiento" id="estadoNacSelect" required class="form-input w-full">
+                        <option value="">— Selecciona Estado —</option>
+                        <option value="Amazonas">Amazonas</option>
+                        <option value="Anzoátegui">Anzoátegui</option>
+                        <option value="Apure">Apure</option>
+                        <option value="Aragua">Aragua</option>
+                        <option value="Barinas">Barinas</option>
+                        <option value="Bolívar">Bolívar</option>
+                        <option value="Carabobo">Carabobo</option>
+                        <option value="Cojedes">Cojedes</option>
+                        <option value="Delta Amacuro">Delta Amacuro</option>
+                        <option value="Distrito Capital">Distrito Capital</option>
+                        <option value="Falcón">Falcón</option>
+                        <option value="Guárico">Guárico</option>
+                        <option value="Lara">Lara</option>
+                        <option value="Mérida">Mérida</option>
+                        <option value="Miranda">Miranda</option>
+                        <option value="Monagas">Monagas</option>
+                        <option value="Nueva Esparta">Nueva Esparta</option>
+                        <option value="Portuguesa">Portuguesa</option>
+                        <option value="Sucre">Sucre</option>
+                        <option value="Táchira">Táchira</option>
+                        <option value="Trujillo">Trujillo</option>
+                        <option value="La Guaira">La Guaira (Vargas)</option>
+                        <option value="Yaracuy">Yaracuy</option>
+                        <option value="Zulia">Zulia</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Municipio</label>
+                    <select name="municipio_nacimiento" id="municipioNacSelect" required class="form-input w-full">
+                        <option value="">— Selecciona Municipio —</option>
+                    </select>
+                </div>
+            </div>
+
+            <script>
+                (function() {
+                    function initBirthPlace() {
+                        const municipiosPorEstado = {
+                            "Amazonas": ["Atures", "Autana", "Atabapo", "Maroa", "Río Negro", "Manapiare", "Alto Orinoco"],
+                            "Anzoátegui": ["Anaco", "Aragua", "Bolívar", "Bruzual", "Cajigal", "Carvajal", "Freites", "Guanipa", "Guanta", "Independencia", "Libertad", "Lic. Diego Bautista Urbaneja", "Monagas", "Peñalver", "Píritu", "San Juan de Capistrano", "Santa Ana", "Simón Rodríguez", "Sir Arthur Mc Gregor", "Sotillo", "Turístico Diego Bautista Urbaneja"],
+                            "Apure": ["Achaguas", "Biruaca", "Muñoz", "Páez", "Pedro Camejo", "Rómulo Gallegos", "San Fernando"],
+                            "Aragua": ["Alcántara", "Bolívar", "Camatagua", "Girardot", "Iragorry", "Lamas", "Libertador", "Mariño", "Michelena", "Ocumare", "Revenga", "Ribas", "San Casimiro", "San Sebastián", "Santos Michelena", "Sucre", "Tovar", "Urdaneta", "Zamora"],
+                            "Barinas": ["Alberto Arvelo Torrealba", "Andrés Eloy Blanco", "Antonio José de Sucre", "Arismendi", "Barinas", "Bolívar", "Cruz Paredes", "Obispos", "Pedraza", "Rojas", "Sosa"],
+                            "Bolívar": ["Caroní", "Cedeño", "El Callao", "Gran Sabana", "Heres", "Angostura", "Piar", "Roscio", "Sifontes", "Sucre", "Padre Pedro Chien"],
+                            "Carabobo": ["Bejuma", "Carlos Arvelo", "Diego Ibarra", "Guacara", "Juan José Mora", "Libertador", "Los Guayos", "Miranda", "Montalbán", "Naguanagua", "Puerto Cabello", "San Diego", "San Joaquín", "Valencia"],
+                            "Cojedes": ["Anzoátegui", "Falcón", "Girardot", "Lima Blanco", "Pao de San Juan Bautista", "Ricaurte", "Rómulo Gallegos", "San Carlos", "Tinaco"],
+                            "Delta Amacuro": ["Antonio Díaz", "Casacoima", "Pedernales", "Tucupita"],
+                            "Distrito Capital": ["Libertador"],
+                            "Falcón": ["Acosta", "Bolívar", "Buchivacoa", "Cacique Manaure", "Carirubana", "Colina", "Dabajuro", "Democracia", "Falcón", "Federación", "Jacura", "Los Taques", "Mauroa", "Miranda", "Monseñor Iturriza", "Palmasola", "Petit", "Píritu", "San Francisco", "Silva", "Tocópero", "Unión", "Urumaco", "Zamora"],
+                            "Guárico": ["Camaguán", "Chaguaramas", "El Socorro", "Infante", "Las Mercedes", "Mellado", "Miranda", "Monagas", "Ortiz", "Ribas", "Roscio", "San Gerónimo de Guayabal", "San José de Guaribe", "Santa María de Ipire", "Zaraza"],
+                            "Lara": ["Andrés Eloy Blanco", "Crespo", "Iribarren", "Morán", "Palavecino", "Simón Planas", "Torres", "Urdaneta", "Jiménez"],
+                            "Mérida": ["Alberto Adriani", "Andrés Bello", "Antonio Pinto Salinas", "Aricagua", "Arzobispo Chacón", "Campo Elías", "Caracciolo Parra Olmedo", "Cardenal Quintero", "Guaraque", "Julio César Salas", "Justo Briceño", "Libertador", "Miranda", "Obispo Ramos de Lora", "Padre Noguera", "Pueblo Llano", "Rangel", "Rivas Dávila", "Santos Marquina", "Sucre", "Tovar", "Tulio Febres Cordero", "Zea"],
+                            "Miranda": ["Acevedo", "Andrés Bello", "Baruta", "Brión", "Buroz", "Carrizal", "Chacao", "Cristóbal Rojas", "El Hatillo", "Guaicaipuro", "Independencia", "Lander", "Los Salias", "Páez", "Paz Castillo", "Plaza", "Rómulo Gallegos", "Sucre", "Urdaneta", "Zamora"],
+                            "Monagas": ["Acosta", "Bolívar", "Caripe", "Cedeño", "Ezequiel Zamora", "Libertador", "Maturín", "Piar", "Punceres", "Santa Bárbara", "Sotillo", "Uracoa"],
+                            "Nueva Esparta": ["Antolín del Campo", "Arismendi", "Díaz", "García", "Gómez", "Maneiro", "Marcano", "Mariño", "Península de Macanao", "Tubores", "Villalba"],
+                            "Portuguesa": ["Araure", "Esteller", "Guanare", "Guanarito", "Monseñor Festler", "Ospino", "Páez", "Papelón", "San Genaro de Boconoíto", "San Rafael de Onoto", "Santa Rosalía", "Sucre", "Turén", "Agua Blanca"],
+                            "Sucre": ["Andrés Eloy Blanco", "Andrés Mata", "Arismendi", "Benítez", "Bermúdez", "Bolívar", "Cajigal", "Cruz Salmerón Acosta", "Libertador", "Mariño", "Mejía", "Montes", "Ribero", "Sucre", "Valdez"],
+                            "Táchira": ["Andrés Bello", "Antonio Rómulo Costa", "Ayacucho", "Bolívar", "Cárdenas", "Córdoba", "Fernández Feo", "Francisco de Miranda", "García de Hevia", "Guásimos", "Jáuregui", "José María Vargas", "Junín", "Libertad", "Libertador", "Lobatera", "Michelena", "Panamericano", "Pedro María Ureña", "Delicias", "Samuel Darío Maldonado", "San Cristóbal", "San Judas Tadeo", "Seboruco", "Simón Rodríguez", "Sucre", "Torbes", "Uribante"],
+                            "Trujillo": ["Andrés Bello", "Boconó", "Carache", "Carvajal", "Campo Elías", "Candelaria", "Cuicas", "Escuque", "José Felipe Márquez Cañizales", "Juan Vicente Campos Elías", "La Ceiba", "Miranda", "Monte Carmelo", "Motatán", "Pampán", "Pampanito", "Rafael Rangel", "San Rafael de Carvajal", "Sucre", "Trujillo", "Urdaneta", "Valera"],
+                            "La Guaira": ["Vargas"],
+                            "Yaracuy": ["Bastidas", "Bolívar", "Bruzual", "Cocorote", "Independencia", "José Joaquín Veroes", "La Trinidad", "Monge", "Peña", "San Felipe", "Sucre", "Urachiche", "José Antonio Páez", "Arístides Bastidas"],
+                            "Zulia": ["Almirante Padilla", "Baralt", "Cabimas", "Catatumbo", "Colón", "Francisco Javier Pulgar", "Jesús Enrique Lossada", "Jesús María Semprún", "La Cañada de Urdaneta", "Lagunillas", "Machiques de Perijá", "Mara", "Maracaibo", "Miranda", "Páez", "Rosario de Perijá", "San Francisco", "Santa Rita", "Simón Bolívar", "Sucre", "Valmore Rodríguez"]
+                        };
+
+                        const paisSel = document.getElementById('paisNacSelect');
+                        const estadoSel = document.getElementById('estadoNacSelect');
+                        const muniSel = document.getElementById('municipioNacSelect');
+
+                        if(!paisSel || !estadoSel || !muniSel) return;
+
+                        const dbEstado = "{{ estudiante.estado_nacimiento|default:'' }}";
+                        const dbMuni = "{{ estudiante.municipio_nacimiento|default:'' }}";
+
+                        function actualizarMunicipios(muniSeleccionado = '') {
+                            const est = estadoSel.value;
+                            muniSel.innerHTML = '<option value="">— Selecciona Municipio —</option>';
+                            if (municipiosPorEstado[est]) {
+                                municipiosPorEstado[est].forEach(m => {
+                                    const selected = m === muniSeleccionado ? 'selected' : '';
+                                    muniSel.innerHTML += `<option value="${m}" ${selected}>${m}</option>`;
+                                });
+                            }
+                        }
+
+                        function actualizarPais(estadoSeleccionado = '') {
+                            if (paisSel.value !== 'Venezuela') {
+                                estadoSel.innerHTML = '<option value="No aplica">No aplica</option>';
+                                muniSel.innerHTML = '<option value="No aplica">No aplica</option>';
+                                estadoSel.disabled = true;
+                                muniSel.disabled = true;
+                            } else {
+                                estadoSel.disabled = false;
+                                muniSel.disabled = false;
+                                estadoSel.innerHTML = `
+                                    <option value="">— Selecciona Estado —</option>
+                                    <option value="Amazonas">Amazonas</option>
+                                    <option value="Anzoátegui">Anzoátegui</option>
+                                    <option value="Apure">Apure</option>
+                                    <option value="Aragua">Aragua</option>
+                                    <option value="Barinas">Barinas</option>
+                                    <option value="Bolívar">Bolívar</option>
+                                    <option value="Carabobo">Carabobo</option>
+                                    <option value="Cojedes">Cojedes</option>
+                                    <option value="Delta Amacuro">Delta Amacuro</option>
+                                    <option value="Distrito Capital">Distrito Capital</option>
+                                    <option value="Falcón">Falcón</option>
+                                    <option value="Guárico">Guárico</option>
+                                    <option value="Lara">Lara</option>
+                                    <option value="Mérida">Mérida</option>
+                                    <option value="Miranda">Miranda</option>
+                                    <option value="Monagas">Monagas</option>
+                                    <option value="Nueva Esparta">Nueva Esparta</option>
+                                    <option value="Portuguesa">Portuguesa</option>
+                                    <option value="Sucre">Sucre</option>
+                                    <option value="Táchira">Táchira</option>
+                                    <option value="Trujillo">Trujillo</option>
+                                    <option value="La Guaira">La Guaira (Vargas)</option>
+                                    <option value="Yaracuy">Yaracuy</option>
+                                    <option value="Zulia">Zulia</option>
+                                `;
+                                if (estadoSeleccionado) {
+                                    estadoSel.value = estadoSeleccionado;
+                                }
+                                muniSel.innerHTML = '<option value="">— Selecciona Municipio —</option>';
+                            }
+                        }
+
+                        // Remover listeners antiguos
+                        paisSel.removeEventListener('change', window.fnActPais);
+                        estadoSel.removeEventListener('change', window.fnActMuni);
+                        
+                        window.fnActPais = () => actualizarPais();
+                        window.fnActMuni = () => actualizarMunicipios();
+
+                        paisSel.addEventListener('change', window.fnActPais);
+                        estadoSel.addEventListener('change', window.fnActMuni);
+
+                        // Precarga inicial
+                        if (paisSel.value === 'Venezuela') {
+                            actualizarPais(dbEstado);
+                            if (dbEstado) {
+                                actualizarMunicipios(dbMuni);
+                            }
+                        } else {
+                            actualizarPais();
+                        }
+                    }
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', initBirthPlace);
+                    } else {
+                        initBirthPlace();
+                    }
+                    document.addEventListener('turbo:load', initBirthPlace);
+                })();
+            </script>
+            
+            <div class="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                <p class="text-xs text-primary font-bold"><ion-icon name="lock-closed"></ion-icon> La Cédula de Identidad (V-{{estudiante.cedula_identidad|formato_cedula}}) es la Llave Maestra en la BD y no puede ser editada por medidas de seguridad.</p>
+            </div>
+
+            <div class="mt-4 flex flex-col gap-6">
+                <h3 class="text-sm font-bold text-text-secondary uppercase tracking-widest border-b border-border pb-2">2. Datos del Representante</h3>
+                
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Nombre del Representante</label>
+                    <input type="text" name="nombre_representante" value="{{ estudiante.nombre_representante|default:'' }}" class="form-input w-full">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Cédula del Representante</label>
+                    <div style="display: flex; border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; background: var(--color-bg-secondary);">
+                        <span style="padding: 0 12px; font-weight: 600; color: var(--color-text-secondary); background: rgba(0,0,0,0.05); border-right: 1px solid var(--color-border); display: flex; align-items: center;">V-</span>
+                        <input type="text" name="cedula_representante" value="{{ estudiante.cedula_representante|default:'' }}" pattern="[0-9]{8}" maxlength="8" placeholder="Ej: 12345678" class="form-input" style="border: none; border-radius: 0; background: transparent; flex: 1; outline: none; width: 100%;">
+                    </div>
+                    <p class="form-helper" style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">Sin puntos ni guiones. Exactamente 8 dígitos obligatorios.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Teléfono</label>
+                        <div class="flex gap-2">
+                            <select id="tel_prefijo_editar" class="form-input text-center" style="flex:1" onchange="updateTelefonoEditar()">
+                                <option value="0414">0414</option>
+                                <option value="0412">0412</option>
+                                <option value="0416">0416</option>
+                                <option value="0424">0424</option>
+                                <option value="0422">0422</option>
+                                <option value="0426">0426</option>
+                            </select>
+                            <input type="text" id="tel_numero_editar" placeholder="1234567" maxlength="7" pattern="\d{7}" required class="form-input" style="flex:2" oninput="this.value = this.value.replace(/\D/g, ''); updateTelefonoEditar()">
+                            <input type="hidden" name="telefono_representante" id="tel_hidden_editar" value="{{ estudiante.telefono_representante|default:'' }}">
+                        </div>
+                        <script>
+                            document.addEventListener("turbo:load", () => {
+                                const fullTel = document.getElementById('tel_hidden_editar').value.replace(/\D/g, '');
+                                if(fullTel && fullTel.length >= 11) {
+                                    document.getElementById('tel_prefijo_editar').value = fullTel.substring(0,4);
+                                    document.getElementById('tel_numero_editar').value = fullTel.substring(4,11);
+                                }
+                            });
+                            function updateTelefonoEditar() {
+                                const pref = document.getElementById('tel_prefijo_editar').value;
+                                const num = document.getElementById('tel_numero_editar').value;
+                                document.getElementById('tel_hidden_editar').value = pref + num;
+                            }
+                        </script>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Correo</label>
+                        <input type="email" name="email_representante" value="{{ estudiante.email_representante|default:'' }}" required class="form-input w-full">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex flex-col gap-6">
+                <h3 class="text-sm font-bold text-text-secondary uppercase tracking-widest border-b border-border pb-2">3. Culminación Académica (Notas Certificadas)</h3>
+                
+                <div class="space-y-4">
+                    <!-- 1er Año -->
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <label class="text-xs font-bold text-text-muted uppercase tracking-widest">1er Año</label>
+                        <input type="text" name="mes_culminacion_1er_ano" value="{{ estudiante.mes_culminacion_1er_ano|default:'' }}" placeholder="Mes (ej: 07)" maxlength="2" class="form-input text-center text-sm">
+                        <input type="text" name="ano_culminacion_1er_ano" value="{{ estudiante.ano_culminacion_1er_ano|default:'' }}" placeholder="Año (ej: 2020)" maxlength="4" class="form-input text-center text-sm">
+                    </div>
+                    <!-- 2do Año -->
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <label class="text-xs font-bold text-text-muted uppercase tracking-widest">2do Año</label>
+                        <input type="text" name="mes_culminacion_2do_ano" value="{{ estudiante.mes_culminacion_2do_ano|default:'' }}" placeholder="Mes (ej: 07)" maxlength="2" class="form-input text-center text-sm">
+                        <input type="text" name="ano_culminacion_2do_ano" value="{{ estudiante.ano_culminacion_2do_ano|default:'' }}" placeholder="Año (ej: 2021)" maxlength="4" class="form-input text-center text-sm">
+                    </div>
+                    <!-- 3er Año -->
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <label class="text-xs font-bold text-text-muted uppercase tracking-widest">3er Año</label>
+                        <input type="text" name="mes_culminacion_3er_ano" value="{{ estudiante.mes_culminacion_3er_ano|default:'' }}" placeholder="Mes (ej: 07)" maxlength="2" class="form-input text-center text-sm">
+                        <input type="text" name="ano_culminacion_3er_ano" value="{{ estudiante.ano_culminacion_3er_ano|default:'' }}" placeholder="Año (ej: 2022)" maxlength="4" class="form-input text-center text-sm">
+                    </div>
+                    <!-- 4to Año -->
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <label class="text-xs font-bold text-text-muted uppercase tracking-widest">4to Año</label>
+                        <input type="text" name="mes_culminacion_4to_ano" value="{{ estudiante.mes_culminacion_4to_ano|default:'' }}" placeholder="Mes (ej: 07)" maxlength="2" class="form-input text-center text-sm">
+                        <input type="text" name="ano_culminacion_4to_ano" value="{{ estudiante.ano_culminacion_4to_ano|default:'' }}" placeholder="Año (ej: 2023)" maxlength="4" class="form-input text-center text-sm">
+                    </div>
+                    <!-- 5to Año -->
+                    <div class="grid grid-cols-3 gap-2 items-center">
+                        <label class="text-xs font-bold text-text-muted uppercase tracking-widest">5to Año</label>
+                        <input type="text" name="mes_culminacion_5to_ano" value="{{ estudiante.mes_culminacion_5to_ano|default:'' }}" placeholder="Mes (ej: 07)" maxlength="2" class="form-input text-center text-sm">
+                        <input type="text" name="ano_culminacion_5to_ano" value="{{ estudiante.ano_culminacion_5to_ano|default:'' }}" placeholder="Año (ej: 2024)" maxlength="4" class="form-input text-center text-sm">
+                    </div>
+                </div>
+                <script>
+                    document.addEventListener("turbo:load", () => {
+                        const maxYear = new Date().getFullYear();
+                        const updateRequired = (row) => {
+                            const m = row.querySelector('input[name^="mes_"]');
+                            const a = row.querySelector('input[name^="ano_"]');
+                            if (m.value.trim() !== '' || a.value.trim() !== '') {
+                                m.setAttribute('required', 'required');
+                                a.setAttribute('required', 'required');
+                            } else {
+                                m.removeAttribute('required');
+                                a.removeAttribute('required');
+                            }
+                        };
+                        document.querySelectorAll('.space-y-4 .grid-cols-3').forEach(row => {
+                            const m = row.querySelector('input[name^="mes_"]');
+                            const a = row.querySelector('input[name^="ano_"]');
+                            if (!m || !a) return;
+                            m.setAttribute("pattern", "^(0[1-9]|1[0-2])$");
+                            m.setAttribute("title", "Mes en formato MM (01 a 12)");
+                            a.setAttribute("pattern", "^(19[8-9]\\d|20[0-9]\\d)$");
+                            a.setAttribute("title", "Año de 4 dígitos, máximo " + maxYear);
+                            
+                            m.addEventListener('input', function() {
+                                this.value = this.value.replace(/\\D/g, '');
+                                updateRequired(row);
+                            });
+                            a.addEventListener('input', function() {
+                                this.value = this.value.replace(/\\D/g, '');
+                                if (this.value.length === 4 && parseInt(this.value) > maxYear) {
+                                    this.setCustomValidity("El año no puede ser mayor a " + maxYear);
+                                } else {
+                                    this.setCustomValidity("");
+                                }
+                                updateRequired(row);
+                            });
+                            // init
+                            updateRequired(row);
+                        });
+                    });
+                </script>
+            </div>
+
+            <div class="mt-2 p-4 bg-bg-secondary border border-border rounded-xl space-y-4">
+                <h4 class="text-xs font-bold text-text-secondary uppercase tracking-widest border-b border-border pb-2">Datos Institucionales Intocables</h4>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Zona Educativa</label>
+                        <input type="text" value="{{ estudiante.zona_educativa }}" readonly class="form-input w-full bg-bg-secondary text-xs cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Fecha Ingreso</label>
+                        <input type="text" value="{{ estudiante.fecha_ingreso|date:'d/m/Y' }}" readonly class="form-input w-full bg-bg-secondary text-xs cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Cód. Plantel</label>
+                        <input type="text" value="{{ estudiante.codigo_plantel }}" readonly class="form-input w-full bg-bg-secondary text-xs cursor-not-allowed">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Plan Estudio (Código Random)</label>
+                        <input type="text" value="{{ estudiante.codigo_plan_estudio }}" readonly class="form-input w-full bg-bg-secondary text-primary font-mono font-bold text-sm cursor-not-allowed">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentos -->
+        <div class="flex flex-col gap-6">
+            <h3 class="text-lg font-bold text-text-main border-b border-border pb-2">2. Recepción de Entregables (Expediente)</h3>
+            
+            {% if expediente %}
+            <div class="space-y-4">
+                <label class="flex items-center gap-4 p-4 border border-border rounded-xl hover:bg-surface-hover cursor-pointer transition-colors">
+                    <input type="checkbox" name="copia_cedula" class="w-5 h-5 rounded border-border bg-transparent text-primary focus:ring-primary focus:ring-offset-0" {% if expediente.copia_cedula %}checked{% endif %}>
+                    <span class="text-sm font-medium text-text-main">Copia de Cédula (Legible, Centrada)</span>
+                </label>
+                
+                <label class="flex items-center gap-4 p-4 border border-border rounded-xl hover:bg-surface-hover cursor-pointer transition-colors">
+                    <input type="checkbox" name="partida_nacimiento" class="w-5 h-5 rounded border-border bg-transparent text-primary focus:ring-primary focus:ring-offset-0" {% if expediente.partida_nacimiento %}checked{% endif %}>
+                    <span class="text-sm font-medium text-text-main">Partida de Nacimiento en buen estado</span>
+                </label>
+
+                <label class="flex items-center gap-4 p-4 border border-border rounded-xl hover:bg-surface-hover cursor-pointer transition-colors">
+                    <input type="checkbox" name="notas_viejas" class="w-5 h-5 rounded border-border bg-transparent text-primary focus:ring-primary focus:ring-offset-0" {% if expediente.notas_certificadas_previas %}checked{% endif %}>
+                    <span class="text-sm font-medium text-text-main">Notas Certificadas de Bachillerato</span>
+                </label>
+
+                <label class="flex items-center gap-4 p-4 border border-border rounded-xl hover:bg-surface-hover cursor-pointer transition-colors">
+                    <input type="checkbox" name="fotosp" class="w-5 h-5 rounded border-border bg-transparent text-primary focus:ring-primary focus:ring-offset-0" {% if expediente.fotografias %}checked{% endif %}>
+                    <span class="text-sm font-medium text-text-main">4 Fotografías tamaño Carnet (Tipo Estudio)</span>
+                </label>
+            </div>
+            {% else %}
+            <p class="text-sm text-text-muted/80">Este estudiante no tiene carpeta física asignada.</p>
+            {% endif %}
+            
+            <div class="mt-auto pt-6 flex gap-4">
+                <button type="submit" class="btn btn-primary w-full py-3 text-sm font-bold shadow-sm">
+                    <ion-icon name="save-outline" class="text-xl"></ion-icon> EFECTUAR SOBREESCRITURA
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

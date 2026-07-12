@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block content %}
+<div class="p-6">
+    <div class="flex justify-between items-center mb-6 drop-shadow">
+        <div>
+            <h2 class="text-3xl font-black text-black dark:text-text-main drop-shadow-md pb-1">Cobranza y Deudas (Estudiantes)
+            </h2>
+            <p class="text-text-muted text-sm mt-1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Consulta el estatus de cobranza, registra pagos de mensualidades y revisa el historial de cada estudiante.
+                <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+                </button>
+            </p>
+        </div>
+        <input type="text" id="buscadorEstudiantes" onkeyup="buscarEnCobranza()"
+            placeholder="Buscar estudiante o cédula..."
+            class="px-4 py-2 rounded-lg border border-gray-300 dark:border-border bg-white/50 dark:bg-surface-element dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500 dark:placeholder-gray-400 w-80">
+    </div>
+
+    <div
+        class="bg-white/40 dark:bg-surface-element backdrop-blur-xl border border-border shadow-xl rounded-2xl p-6 overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-white/30 dark:bg-surface-element text-gray-700 dark:text-gray-300">
+                <tr>
+                    <th class="p-3 rounded-tl-lg">Estudiante</th>
+                    <th class="p-3">Nivel</th>
+                    <th class="p-3 text-center">Estatus</th>
+                    <th class="p-3">Acción</th>
+                    <th class="p-3 rounded-tr-lg text-center">Historial de pagos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for estudiante in estudiantes %}
+                <tr
+                    class="border-b border-border dark:border-border hover:bg-white/20 dark:hover:bg-surface-element transition text-gray-800 dark:text-gray-300">
+                    <td class="p-3 font-semibold">{{ estudiante.nombres }} {{ estudiante.apellidos }} <span
+                            class="text-xs text-gray-500 font-mono block">V-{{estudiante.cedula_identidad|formato_cedula}}</span>
+                    </td>
+                    <td class="p-3">{{ estudiante.get_ano_cursando_display }}</td>
+                    <td class="p-3 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400"><span
+                            class="bg-emerald-500/10 px-2 py-1 rounded">Activo</span></td>
+                    <td class="p-3">
+                        <button
+                            onclick="abrirModalPago({{ estudiante.id }}, '{{ estudiante.nombres }} {{ estudiante.apellidos }}')"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/30 transition">Pagado</button>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button
+                            onclick="verHistorial({{ estudiante.id }}, '{{ estudiante.nombres }} {{ estudiante.apellidos }}')"
+                            class="bg-slate-600 hover:bg-slate-700 dark:bg-surface-element dark:hover:bg-white/20 dark:hover:border-emerald-500 dark:hover:text-emerald-400 text-white dark:text-gray-300 px-3 py-1 rounded shadow transition text-sm flex items-center gap-1 mx-auto border border-slate-500 dark:border-border">
+                            <ion-icon name="time-outline"></ion-icon> Ver
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="p-6 text-center text-gray-800 dark:text-gray-300 text-lg font-semibold">No
+                        hay estudiantes registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Básico -->
+<dialog id="modalPago"
+    class="bg-[#111417]/90 backdrop-blur-xl p-6 rounded-2xl shadow-window w-[900px] border border-border text-text-main m-auto">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-4 border-b border-border gap-4">
+        <div>
+            <h3 class="font-bold text-xl text-emerald-400 mb-1">Registrar Pago a Estudiante</h3>
+            <p class="text-sm text-gray-400">Ajusta los saldos y calcula la tasa a (BCV) con el monto provisto en Bs.
+            </p>
+        </div>
+        <div id="tasasDelDiaEst"
+            class="px-4 py-2 bg-surface-element border border-border rounded-xl font-mono text-sm shadow-inner text-emerald-400 font-bold flex items-center gap-2 whitespace-nowrap">
+            <ion-icon name="sync-outline" class="animate-spin"></ion-icon> Cargando tasas...
+        </div>
+    </div>
+
+    <input type="hidden" id="deuda_id">
+
+    <div
+        class="grid grid-cols-1 sm:grid-cols-5 gap-3 sm:gap-2 items-start mb-2 p-3 bg-surface-element rounded border border-border payload-estudiante">
+        <div class="col-span-1 sm:col-span-2 text-sm font-bold truncate self-center uppercase text-center sm:text-left" id="nombreAbEstudiante"></div>
+
+        <div class="col-span-1 sm:col-span-1">
+            <input type="text" id="monto_pago"
+                class="w-full text-black p-1.5 rounded i-monto outline-none focus:ring-2 focus:ring-indigo-500 border border-blue-500"
+                placeholder="Monto (Bs)" oninput="window.maskCurrency(this); calcEquivEst()">
+            <div class="mt-1 text-xs text-emerald-400 font-semibold cont-equivalente"></div>
+        </div>
+
+        <div class="col-span-1 sm:col-span-1">
+            <select id="metodo_pago" class="w-full text-black p-1.5 rounded i-metodo outline-none"
+                onchange="toggleTasaSelectorEst()">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="PAGO_MOVIL">Pago Móvil</option>
+                <option value="ZELLE">Zelle</option>
+                <option value="BINANCE">Binance</option>
+                <option value="PAYPAL">PayPal</option>
+            </select>
+            <!-- Selector dinámico para la tasa -->
+            <select id="tasa_referencia_est" class="w-full text-black p-1.5 rounded mt-1 hidden i-tasa-ref outline-none"
+                onchange="calcEquivEst()">
+                <option value="Dolar">Ref: USD</option>
+                <option value="Euro">Ref: EUR</option>
+            </select>
+        </div>
+
+        <div class="col-span-1 sm:col-span-1">
+            <input type="text" id="comprobante" class="w-full text-black p-1.5 rounded i-ref outline-none"
+                placeholder="# Ref/Obs">
+        </div>
+    </div>
+
+    <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
+        <button onclick="document.getElementById('modalPago').close()"
+            class="px-5 py-2 text-gray-400 font-semibold hover:text-text-main transition">Cancelar</button>
+        <button onclick="enviarPago()"
+            class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-text-main rounded-lg font-bold shadow-lg shadow-emerald-500/20">Procesar
+            Abono</button>
+    </div>
+</dialog>
+
+<!-- Modal Historial -->
+<dialog id="modalHistorial"
+    class="bg-[#111417]/95 backdrop-blur-2xl p-6 rounded-2xl shadow-window w-[600px] border border-border text-text-main m-auto">
+    <div class="flex justify-between items-start mb-4 pb-2 border-b border-border">
+        <div>
+            <h3 class="font-bold text-xl text-primary" id="historialNombre">Estado de Cuenta</h3>
+            <p class="text-sm text-gray-400">Últimos 2 meses de cobranza.</p>
+        </div>
+        <button onclick="document.getElementById('modalHistorial').close()"
+            class="text-gray-400 hover:text-text-main transition">
+            <ion-icon name="close-circle-outline" class="text-3xl"></ion-icon>
+        </button>
+    </div>
+
+    <div class="max-h-80 overflow-y-auto custom-scrollbar" id="contenedorHistorial">
+        <!-- Renderizado Vía JS -->
+    </div>
+</dialog>
+
+<div style="display:none;">{% csrf_token %}</div>
+<script>
+    // Buscador de Cobranzas
+    function buscarEnCobranza() {
+        let input = document.getElementById('buscadorEstudiantes').value.toLowerCase();
+        let filas = document.querySelectorAll('tbody tr');
+        filas.forEach(fila => {
+            if (fila.children.length > 1) { // Previene que se oculte el alert de tabla vacia
+                let texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(input) ? '' : 'none';
+            }
+        });
+    }
+
+    // Variables Globales de Tasas
+    let tasasVigentesEst = { Dolar: null, Euro: null };
+
+    async function fetchTasasEst() {
+        if (tasasVigentesEst.Dolar) return; // Ya se buscaron
+        const divTasas = document.getElementById('tasasDelDiaEst');
+        try {
+            let rs = await fetch("https://ve.dolarapi.com/v1/cotizaciones");
+            let d = await rs.json();
+            if (Array.isArray(d)) {
+                d.forEach(i => {
+                    let n = (i.nombre || "").toLowerCase();
+                    let m = (i.moneda || "").toLowerCase();
+                    if (m.includes('usd') || n.includes('dolar') || n.includes('dólar')) {
+                        if (!tasasVigentesEst.Dolar) tasasVigentesEst.Dolar = i.promedio || i.precio;
+                    }
+                    if (m.includes('eur') || n.includes('euro')) {
+                        if (!tasasVigentesEst.Euro) tasasVigentesEst.Euro = i.promedio || i.precio;
+                    }
+                });
+            } else {
+                tasasVigentesEst.Dolar = (d.usd || d.dolar)?.promedio || (d.usd || d.dolar)?.precio;
+                tasasVigentesEst.Euro = (d.eur || d.euro)?.promedio || (d.eur || d.euro)?.precio;
+            }
+
+            if (tasasVigentesEst.Dolar) {
+                divTasas.innerHTML = `<ion-icon name="cash-outline" class="text-lg flex-shrink-0"></ion-icon> <span class="truncate">USD: ${tasasVigentesEst.Dolar} Bs &bull; EUR: ${tasasVigentesEst.Euro || 'N/A'} Bs</span>`;
+            } else {
+                divTasas.innerHTML = `⚠️ Error obteniendo tasa BCV`;
+            }
+        } catch (e) {
+            divTasas.innerHTML = `No se pudo obtener la tasa actual.`;
+        }
+    }
+
+    async function abrirModalPago(id, nombreEstudiante) {
+        document.getElementById('deuda_id').value = id;
+        document.getElementById('monto_pago').value = '';
+        document.getElementById('comprobante').value = '';
+
+        document.getElementById('nombreAbEstudiante').innerText = nombreEstudiante;
+        document.querySelector('.cont-equivalente').innerHTML = '';
+        document.getElementById('tasa_referencia_est').classList.add('hidden');
+        document.getElementById('metodo_pago').value = 'EFECTIVO';
+
+        document.getElementById('modalPago').showModal();
+        fetchTasasEst();
+    }
+
+    function toggleTasaSelectorEst() {
+        let selMetodo = document.getElementById('metodo_pago').value;
+        let selTasa = document.getElementById('tasa_referencia_est');
+
+        if (selMetodo === 'TRANSFERENCIA' || selMetodo === 'PAGO_MOVIL') {
+            selTasa.classList.remove('hidden');
+        } else {
+            selTasa.classList.add('hidden');
+        }
+        calcEquivEst();
+    }
+
+    function calcEquivEst() {
+        let inputMonto = document.getElementById('monto_pago').value;
+        let montoNum = window.unmaskCurrency(inputMonto);
+        let selMetodo = document.getElementById('metodo_pago').value;
+        let selTasaStr = document.getElementById('tasa_referencia_est').value;
+        let contEq = document.querySelector('.cont-equivalente');
+
+        if (!montoNum || (selMetodo !== 'TRANSFERENCIA' && selMetodo !== 'PAGO_MOVIL')) {
+            contEq.innerHTML = '';
+            return;
+        }
+
+        let tasaAUsar = selTasaStr === 'Dolar' ? tasasVigentesEst.Dolar : tasasVigentesEst.Euro;
+
+        if (!tasaAUsar) {
+            contEq.innerHTML = 'Sin acceso a tasa';
+            return;
+        }
+
+        let equiv = (montoNum / tasaAUsar);
+        let icon = selTasaStr === 'Dolar' ? 'USD' : 'EUR';
+        contEq.innerHTML = `Equivalente: ${window.formatCurrency(equiv)} ${icon}`;
+    }
+
+    async function enviarPago() {
+        const data = {
+            estudiante_id: document.getElementById('deuda_id').value,
+            monto_pagado: window.unmaskCurrency(document.getElementById('monto_pago').value),
+            metodo_pago: document.getElementById('metodo_pago').value,
+            comprobante: document.getElementById('comprobante').value,
+            observaciones: `Registro Manual Administrativo`
+        };
+
+        try {
+            let res = await fetch("{% url 'api_pagar_estudiante' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                location.reload();
+            } else {
+                let result = await res.json();
+                alert(result.error || "Ocurrió un error.");
+            }
+        } catch (err) {
+            alert("Error en sistema: " + err);
+        }
+    }
+
+    // Historial de Pagos Estudiantes
+    async function verHistorial(idEstudiante, nombre) {
+        document.getElementById('historialNombre').innerText = `Historial: ${nombre}`;
+        const cont = document.getElementById('contenedorHistorial');
+        cont.innerHTML = '<div class="text-center p-4 text-emerald-400">Cargando...</div>';
+        document.getElementById('modalHistorial').showModal();
+
+        try {
+            let res = await fetch(`/pagos/api/estudiantes/${idEstudiante}/historial/`);
+            if (!res.ok) {
+                cont.innerHTML = '<div class="text-center p-4 text-error">Error al cargar historial</div>';
+                return;
+            }
+            let data = await res.json();
+
+            if (!data.historial || data.historial.length === 0) {
+                cont.innerHTML = '<div class="text-center p-6 text-gray-500 italic">No hay pagos registrados.</div>';
+                return;
+            }
+
+            cont.innerHTML = '';
+            data.historial.forEach(p => {
+                const colorMonto = 'text-emerald-400';
+                const colorIcono = 'bg-emerald-500/20 text-emerald-400';
+
+                let htm = `
+            <div class="flex justify-between items-center bg-surface-element border border-border p-3 mb-2 rounded-xl hover:bg-surface-element transition">
+                <div class="flex gap-4 items-center">
+                    <div class="w-10 h-10 ${colorIcono} rounded-full flex items-center justify-center font-bold text-sm">
+                        Bs
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm tracking-wide text-text-main">${p.metodo}</div>
+                        <div class="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
+                            <ion-icon name="calendar-outline"></ion-icon> ${p.fecha} &bull; Ref: ${p.comprobante}
+                        </div>
+                        <div class="text-[10px] text-emerald-300 uppercase mt-0.5">${p.observaciones}</div>
+                    </div>
+                </div>
+                <div class="${colorMonto} font-bold tracking-wider">
+                    +${window.formatCurrency(p.monto)}
+                </div>
+            </div>`;
+                cont.innerHTML += htm;
+            });
+
+        } catch (err) {
+            cont.innerHTML = '<div class="text-center p-4 text-error">Error de red al consultar</div>';
+        }
+    }
+</script>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Cobranza de Estudiantes</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">groups</span> 1. ¿Qué muestra esta sección?
+                </h4>
+                <p class="text-xs">Aquí se gestiona la <strong>cobranza y las deudas de los estudiantes</strong>. La tabla lista a cada alumno con su <strong>nivel cursante</strong>, su <strong>estatus</strong> y las acciones disponibles para registrar pagos de mensualidades y revisar su historial.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">search</span> 2. Buscar un estudiante
+                </h4>
+                <p class="text-xs">Usa el campo <strong>"Buscar estudiante o cédula..."</strong> (arriba a la derecha) para filtrar la tabla en tiempo real. Puedes escribir el <strong>nombre, apellido o número de cédula</strong> y la lista se ajustará automáticamente.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">payments</span> 3. Registrar un pago
+                </h4>
+                <p class="text-xs">Presiona el botón <strong>"Pagado"</strong> en la fila del estudiante para abrir el registro de pago. Allí debes:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li>Indicar el <strong>monto en bolívares (Bs)</strong>.</li>
+                    <li>Seleccionar el <strong>método de pago</strong> (Efectivo, Transferencia, Pago Móvil, Zelle, Binance o PayPal).</li>
+                    <li>En Transferencia o Pago Móvil, elegir la <strong>moneda de referencia (USD o EUR)</strong> para calcular el equivalente con la <strong>tasa BCV del día</strong>.</li>
+                    <li>Agregar el <strong>número de referencia u observación</strong> y luego pulsar <strong>"Procesar Abono"</strong>.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">history</span> 4. Ver el historial de pagos
+                </h4>
+                <p class="text-xs">El botón <strong>"Ver"</strong> en la columna <strong>Historial de pagos</strong> abre el <strong>estado de cuenta</strong> del estudiante, mostrando sus últimos pagos con fecha, método, referencia y monto abonado.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+{% endblock %}

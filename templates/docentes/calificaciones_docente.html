@@ -1,0 +1,715 @@
+{% extends 'docentes/base_docente.html' %}
+{% block title %}Carga de Notas{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-5">
+
+  <!-- Título -->
+  <div>
+    <h2 class="font-headline font-extrabold text-xl text-text-main flex items-center gap-2">
+      <ion-icon name="document-text-outline" class="text-primary"></ion-icon>
+      Registro de Calificaciones
+    </h2>
+    <p class="text-sm text-text-muted mt-1">Selecciona el período, sección y materia para comenzar.</p>
+  </div>
+
+  <!-- ── Selector en cascada (3 pasos) ───────────────────────────────────── -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- 1 · Período -->
+    <div class="bg-surface-container/60 border border-border rounded-2xl p-4">
+      <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">1 · Período Escolar</label>
+      <select id="sel-periodo" onchange="onPeriodoChange()"
+              class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+        <option value="">— Selecciona —</option>
+        {% for p in periodos %}
+        <option value="{{ p.id }}">{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- 2 · Año y Sección unificado (cargado desde la BD según asignaciones del docente) -->
+    <div class="bg-surface-container/60 border border-border rounded-2xl p-4 opacity-40 transition-all" id="card-combo">
+      <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">2 · Año y Sección</label>
+      <select id="sel-combo" onchange="onComboChange()" disabled
+              class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+        <option value="">— Elige el período primero —</option>
+      </select>
+      <p id="err-combo" class="hidden text-[10px] text-error mt-1.5 flex items-center gap-1">
+        <ion-icon name="alert-circle-outline" class="text-xs"></ion-icon>
+        <span id="err-combo-txt">No tienes asignaciones en este período.</span>
+      </p>
+    </div>
+
+    <!-- 3 · Materia -->
+    <div class="bg-surface-container/60 border border-border rounded-2xl p-4 opacity-40 transition-all" id="card-materia">
+      <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">3 · Materia</label>
+      <select id="sel-materia" onchange="cargarTabla()" disabled
+              class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+        <option value="">— Completa los pasos anteriores —</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- ── Estado: cerrado ─────────────────────────────────────────────────── -->
+  <div id="banner-cerrado" class="hidden bg-error/10 border border-error/20 rounded-xl px-4 py-3 flex items-center gap-3">
+    <ion-icon name="lock-closed" class="text-error text-xl flex-shrink-0"></ion-icon>
+    <p class="text-sm text-error font-semibold">Este período está cerrado. Las notas no pueden ser modificadas. Contacta al administrador si necesitas hacer cambios.</p>
+  </div>
+
+  <!-- ── Panel Principal ────────────────────────────────────────────────── -->
+  <div id="panel-principal" class="hidden space-y-5">
+
+    <!-- Barra superior -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 id="titulo-tabla" class="font-headline font-bold text-base text-text-main"></h3>
+        <p id="sub-tabla" class="text-xs text-text-muted mt-0.5"></p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="abrirModalEval()"
+                class="flex items-center gap-2 bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+          <ion-icon name="add-circle-outline" class="text-base"></ion-icon> Nueva Evaluación
+        </button>
+        <button onclick="guardarNotas(true)"
+                class="flex items-center gap-2 bg-surface-element hover:bg-surface-element text-text-main border border-border px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+          <ion-icon name="save-outline" class="text-base"></ion-icon> Guardar Borrador
+        </button>
+        <button onclick="guardarNotas(false)"
+                class="flex items-center gap-2 bg-primary hover:bg-primary/80 text-text-main px-3 py-2 rounded-xl text-xs font-semibold transition-all shadow-neon-primary">
+          <ion-icon name="checkmark-circle-outline" class="text-base"></ion-icon> Confirmar Definitivo
+        </button>
+        <button onclick="cerrarPeriodo()"
+                class="flex items-center gap-2 bg-error/10 hover:bg-error/20 text-error border border-error/20 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+          <ion-icon name="lock-closed-outline" class="text-base"></ion-icon> Cerrar Período
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de ponderación -->
+    <div class="bg-surface-container/60 border border-border rounded-xl px-4 py-2.5 flex items-center gap-4">
+      <span class="text-xs text-text-muted font-semibold uppercase tracking-wide">Ponderación acumulada:</span>
+      <div class="flex-1 bg-surface-element rounded-full h-2 overflow-hidden">
+        <div id="barra-pond" class="h-full bg-primary transition-all rounded-full" style="width:0%"></div>
+      </div>
+      <span id="txt-pond" class="text-xs font-bold text-primary w-14 text-right">0 / 100%</span>
+    </div>
+
+    <!-- Buscador Integrado con Autocompletado -->
+    <div class="relative">
+      <div class="bg-surface-container/60 border border-border rounded-xl px-4 py-3 shadow-md flex items-center gap-3">
+          <ion-icon name="search-outline" class="text-text-muted text-lg"></ion-icon>
+          <input type="text" id="buscador-grid" oninput="buscarEstudiantesGeneral()" placeholder="Escribe el nombre o cédula para buscar y añadir estudiantes de este año..."
+                 class="bg-transparent border-none w-full text-sm text-text-main focus:outline-none focus:ring-0 placeholder:text-text-muted/50"/>
+      </div>
+      <!-- Panel de resultados de búsqueda -->
+      <div id="resultados-busqueda" class="hidden absolute top-full left-0 right-0 mt-2 bg-surface-container border border-border rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto overflow-x-hidden">
+        <!-- Inyectado por JS -->
+      </div>
+    </div>
+
+    <!-- Tabla Excel -->
+    <div class="bg-surface-container/60 border border-border rounded-2xl overflow-hidden shadow-md">
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse" id="tabla-notas">
+          <thead id="thead-notas">
+            <tr class="bg-surface-element/50 border-b border-border text-[10px] uppercase tracking-wider text-text-muted">
+              <th class="px-4 py-3 sticky left-0 bg-surface-element/80 z-10 min-w-[200px]">Estudiante</th>
+              <!-- columnas inyectadas por JS -->
+              <th class="px-4 py-3 text-right text-primary font-bold bg-primary/5">Promedio Pond.</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-notas" class="divide-y divide-white/5 text-sm">
+            <!-- filas inyectadas por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Estado vacío -->
+      <div id="estado-vacio" class="hidden py-16 text-center">
+        <ion-icon name="people-outline" class="text-5xl text-text-muted/30 block mx-auto mb-3"></ion-icon>
+        <p class="text-text-muted text-sm">No hay estudiantes encontrados en esta sección o búsqueda.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado inicial -->
+  <div id="estado-inicial" class="py-20 text-center">
+    <ion-icon name="school-outline" class="text-6xl text-primary/20 block mx-auto mb-4"></ion-icon>
+    <p class="text-text-muted">Selecciona un período, sección y materia para ver la tabla de calificaciones.</p>
+  </div>
+</div>
+
+<!-- ── Modal Nueva Evaluación ──────────────────────────────────────────────── -->
+<div id="modal-eval" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-sm mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-base text-text-main">Nueva Evaluación</h4>
+      <button onclick="cerrarModalEval()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    <div id="eval-error" class="hidden bg-error/10 border border-error/20 text-error text-xs rounded-xl px-3 py-2"></div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Nombre</label>
+        <input id="ev-nombre" type="text" placeholder="Ej: Examen Parcial 1"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50"/>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Tipo</label>
+        <select id="ev-tipo" class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+          <option value="EXAMEN">Examen</option>
+          <option value="TAREA">Tarea</option>
+          <option value="PARTICIPACION">Participación</option>
+          <option value="PROYECTO">Proyecto</option>
+          <option value="PRACTICO">Trabajo Práctico</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Ponderación (%)</label>
+        <input id="ev-pond" type="number" min="1" max="100" step="0.5" placeholder="Ej: 30"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50"/>
+        <p id="ev-disponible" class="text-[10px] text-text-muted mt-1"></p>
+      </div>
+    </div>
+    <button onclick="crearEvaluacion()"
+            class="w-full bg-primary hover:bg-primary/80 text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all">
+      Crear Evaluación
+    </button>
+  </div>
+</div>
+
+<!-- ── Modal Detalles (Asistencia/Observación) ────────────────────────────── -->
+<div id="modal-calificar" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-md mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between border-b border-border pb-3">
+      <div>
+        <h4 class="font-headline font-bold text-base text-text-main flex items-center gap-2">
+          <ion-icon name="information-circle-outline" class="text-primary"></ion-icon> Detalles de Evaluación
+        </h4>
+        <p id="cal-estudiante-nombre" class="text-xs text-text-muted mt-1 font-semibold"></p>
+      </div>
+      <button onclick="cerrarModalCalificar()" class="text-text-muted hover:text-text-main transition-colors self-start">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    
+    <input type="hidden" id="cal-estudiante-id" value="">
+    <input type="hidden" id="cal-evaluacion-id" value="">
+    
+    <div class="space-y-4">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Asistencia</label>
+        <select id="cal-asistencia" onchange="marcarModificado()" class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main font-bold focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+          <option value="true">Sí (Asistió)</option>
+          <option value="false">No (Ausente)</option>
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Observación (Max 1000)</label>
+        <textarea id="cal-observacion" rows="3" maxlength="1000" placeholder="Comentarios sobre el desempeño o comportamiento..."
+                  oninput="marcarModificado(); document.getElementById('cal-contador').textContent = `${this.value.length} / 1000`"
+                  class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-text-muted/50 resize-none"></textarea>
+        <div class="text-right mt-1">
+          <span id="cal-contador" class="text-[10px] text-text-muted">0 / 1000</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="pt-2">
+      <button onclick="aplicarDetalles()"
+              class="w-full bg-primary hover:bg-primary/80 text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all shadow-neon-primary flex items-center justify-center gap-2">
+        <ion-icon name="checkmark"></ion-icon> Aplicar Cambios
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const CSRF = '{{ csrf_token }}';
+let _periodoId = null, _anoGrado = null, _seccion = null, _asignaturaId = null;
+let _evaluaciones = [], _estudiantes = [], _notas = {}, _cerrado = false;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function habilitarCard(id) {
+  document.getElementById(id).classList.remove('opacity-40');
+}
+function toast(msg, ok=true) {
+  const t = document.createElement('div');
+  t.className = `fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all
+    ${ok ? 'bg-secondary/10 border border-secondary/20 text-secondary' : 'bg-error/10 border border-error/20 text-error'}`;
+  t.innerHTML = `<ion-icon name="${ok?'checkmark-circle':'alert-circle'}-outline" class="text-base"></ion-icon>${msg}`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// ── Buscador General (Módulo Expedientes) ───────────────────────────────────
+let _timerBusqueda = null;
+async function buscarEstudiantesGeneral() {
+  const q = document.getElementById('buscador-grid').value.trim();
+  const resPanel = document.getElementById('resultados-busqueda');
+
+  if (q.length < 2) {
+    resPanel.innerHTML = '';
+    resPanel.classList.add('hidden');
+    return;
+  }
+
+  clearTimeout(_timerBusqueda);
+  _timerBusqueda = setTimeout(async () => {
+    const r = await fetch(`/docentes/api/buscar-estudiantes-gestion/?q=${q}&ano_grado=${_anoGrado}`);
+    const d = await r.json();
+    const students = d.estudiantes || [];
+
+    if (students.length === 0) {
+      resPanel.innerHTML = '<div class="px-4 py-3 text-xs text-text-muted">No se encontraron resultados en expedientes para este año.</div>';
+    } else {
+      resPanel.innerHTML = students.map(s => `
+        <div onclick="agregarEstudianteAGrid('${s.id}', '${s.nombre}', '${s.cedula}')" 
+             class="flex items-center justify-between px-4 py-3 hover:bg-surface-element border-b border-border transition-colors group cursor-pointer">
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-text-main group-hover:text-primary transition-colors">${s.nombre}</span>
+            <span class="text-[10px] text-text-muted font-mono">V-${s.cedula}</span>
+          </div>
+          <div class="bg-primary/10 text-primary group-hover:bg-primary group-hover:text-text-main px-2 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1">
+            <ion-icon name="add-outline"></ion-icon> Añadir
+          </div>
+        </div>
+      `).join('');
+    }
+    resPanel.classList.remove('hidden');
+  }, 300);
+}
+
+function agregarEstudianteAGrid(id, nombre, cedula) {
+  // Evitar duplicados
+  if (_estudiantes.some(e => e.estudiante_id == id)) {
+    toast('Este estudiante ya está en la lista.', false);
+    return;
+  }
+
+  _estudiantes.push({
+    estudiante_id: id,
+    nombre: nombre,
+    cedula: cedula
+  });
+
+  document.getElementById('buscador-grid').value = '';
+  document.getElementById('resultados-busqueda').classList.add('hidden');
+  renderTabla();
+  toast(`${nombre} añadido a la lista.`);
+}
+
+// Cerrar resultados al hacer clic fuera
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#buscador-grid') && !e.target.closest('#resultados-busqueda')) {
+    document.getElementById('resultados-busqueda').classList.add('hidden');
+  }
+});
+
+function filtrarGrid() {
+    // Ya no es necesario filtrar el DOM directamente si usamos renderTabla y push
+}
+
+
+// Paso 1: Período → carga combinaciones año+sección desde la BD
+async function onPeriodoChange() {
+  _periodoId = document.getElementById('sel-periodo').value;
+  const selCombo = document.getElementById('sel-combo');
+  const selMat   = document.getElementById('sel-materia');
+
+  selCombo.innerHTML = '<option value="">Cargando...</option>';
+  selCombo.disabled = true;
+  selMat.innerHTML = '<option value="">— Completa los pasos anteriores —</option>';
+  selMat.disabled = true;
+  document.getElementById('panel-principal').classList.add('hidden');
+  document.getElementById('estado-inicial').classList.remove('hidden');
+  const errCombo = document.getElementById('err-combo');
+  if (errCombo) errCombo.classList.add('hidden');
+  ['card-combo','card-materia'].forEach(id => document.getElementById(id).classList.add('opacity-40'));
+  _anoGrado = null; _seccion = null; _asignaturaId = null;
+
+  if (!_periodoId) { selCombo.innerHTML = '<option value="">— Elige el período primero —</option>'; return; }
+
+  const r = await fetch(`/docentes/api/combinaciones/?periodo_id=${_periodoId}`);
+  const d = await r.json();
+  const combos = d.combinaciones || [];
+
+  if (!combos.length) {
+    selCombo.innerHTML = '<option value="">— Sin asignaciones en este período —</option>';
+    if (errCombo) errCombo.classList.remove('hidden');
+    habilitarCard('card-combo');
+    return;
+  }
+
+  if (errCombo) errCombo.classList.add('hidden');
+  selCombo.innerHTML = '<option value="">— Selecciona Año y Sección —</option>';
+  combos.forEach(c => {
+    selCombo.innerHTML += `<option value="${c.valor}" data-ano="${c.ano_grado}" data-sec="${c.seccion}">${c.label}</option>`;
+  });
+  selCombo.disabled = false;
+  habilitarCard('card-combo');
+}
+
+// Paso 2: Año y Sección → carga materias asignadas para esa combinación
+async function onComboChange() {
+  const opt = document.getElementById('sel-combo').selectedOptions[0];
+  const selMat = document.getElementById('sel-materia');
+
+  selMat.innerHTML = '<option value="">Cargando materias...</option>';
+  selMat.disabled = true;
+  document.getElementById('panel-principal').classList.add('hidden');
+  document.getElementById('estado-inicial').classList.remove('hidden');
+  document.getElementById('card-materia').classList.add('opacity-40');
+  _asignaturaId = null;
+
+  if (!opt || !opt.value) { _anoGrado = null; _seccion = null; return; }
+
+  _anoGrado = opt.dataset.ano;
+  _seccion  = opt.dataset.sec;
+
+  const r = await fetch(`/docentes/api/materias-combo/?periodo_id=${_periodoId}&ano_grado=${_anoGrado}&seccion=${_seccion}`);
+  const d = await r.json();
+  const materias = d.materias || [];
+
+  if (!materias.length) {
+    selMat.innerHTML = '<option value="">— Sin materias asignadas —</option>';
+    habilitarCard('card-materia');
+    return;
+  }
+
+  selMat.innerHTML = '<option value="">— Selecciona materia —</option>';
+  materias.forEach(m => { selMat.innerHTML += `<option value="${m.id}">${m.nombre}</option>`; });
+  selMat.disabled = false;
+  habilitarCard('card-materia');
+}
+
+// Aliases para compatibilidad con funciones heredadas
+function cargarSecciones() { onPeriodoChange(); }
+function cargarMaterias()  { onComboChange(); }
+
+
+
+async function cargarTabla() {
+  _asignaturaId = document.getElementById('sel-materia').value;
+  if (!_asignaturaId) return;
+
+  const matNombre = document.getElementById('sel-materia').selectedOptions[0].text;
+  document.getElementById('titulo-tabla').textContent = matNombre;
+  document.getElementById('sub-tabla').textContent = `Año ${_anoGrado} · Sección ${_seccion} · Período ${document.getElementById('sel-periodo').selectedOptions[0].text}`;
+
+  // Fetch estudiantes + evaluaciones en paralelo
+  const [rEst, rEval] = await Promise.all([
+    fetch(`/docentes/api/estudiantes/?periodo_id=${_periodoId}&ano_grado=${_anoGrado}&seccion=${_seccion}&asignatura_id=${_asignaturaId}`),
+    fetch(`/docentes/api/evaluaciones/?asignatura_id=${_asignaturaId}&periodo_id=${_periodoId}&seccion=${_seccion}`)
+  ]);
+  const dEst  = await rEst.json();
+  const dEval = await rEval.json();
+
+  _estudiantes  = dEst.estudiantes  || [];
+  _cerrado      = dEst.cerrado      || false;
+  _evaluaciones = dEval.evaluaciones || [];
+  _notas        = dEval.notas        || {};
+
+  document.getElementById('banner-cerrado').classList.toggle('hidden', !_cerrado);
+  renderTabla();
+  actualizarBarra(dEval.suma_ponderacion || 0);
+  document.getElementById('panel-principal').classList.remove('hidden');
+  document.getElementById('estado-inicial').classList.add('hidden');
+}
+
+// ── Render Tabla ─────────────────────────────────────────────────────────────
+function renderTabla() {
+  const thead = document.getElementById('thead-notas').querySelector('tr');
+  const tbody = document.getElementById('tbody-notas');
+
+  thead.innerHTML = `<th class="px-4 py-3 sticky left-0 bg-surface-element/80 z-10 min-w-[200px] text-[10px] uppercase tracking-wider text-text-muted">Estudiante</th>`;
+  _evaluaciones.forEach(ev => {
+    thead.innerHTML += `<th class="px-4 py-3 text-center text-[10px] uppercase tracking-wider text-text-muted whitespace-nowrap">
+      ${ev.nombre}<br><span class="text-primary font-bold">${ev.ponderacion}%</span>
+      <div class="flex items-center justify-center gap-4 mt-2 pt-1 border-t border-border/50">
+        <span class="w-16 text-center text-[9px] opacity-80">Nota</span>
+        <span class="w-12 text-center text-[9px] text-primary">Ptos</span>
+      </div>
+    </th>`;
+  });
+  thead.innerHTML += `<th class="px-4 py-3 text-right text-[10px] uppercase tracking-wider text-primary font-bold bg-primary/5">Promedio Pond.</th>`;
+
+  tbody.innerHTML = '';
+  if (_estudiantes.length === 0) {
+    document.getElementById('estado-vacio').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('estado-vacio').classList.add('hidden');
+
+  _estudiantes.forEach(est => {
+    let tr = `<tr class="hover:bg-white/3 transition-colors border-b border-border estudiante-row" data-search="${est.nombre.toLowerCase()} v-${est.cedula}">
+      <td class="px-4 py-2.5 sticky left-0 bg-surface-container/80 z-10 font-semibold text-text-main text-xs">
+        ${est.nombre}<br><span class="text-text-muted font-normal">V-${est.cedula}</span>
+      </td>`;
+    
+    _evaluaciones.forEach(ev => {
+      const key = `${est.estudiante_id}_${ev.id}`;
+      const existente = _notas[key];
+      const val = existente ? existente.nota : '';
+      const asistencia = existente && existente.asistencia === false ? 'false' : 'true';
+      const obs = existente && existente.observacion ? existente.observacion : '';
+      const esBorrador = existente ? existente.es_borrador : true;
+      const esConfirmado = existente && !esBorrador;
+      
+      const badgeAviso = obs || asistencia === 'false' ? `<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-secondary rounded-full"></div>` : '';
+
+      tr += `<td class="px-2 py-1.5 text-center relative">
+        <div class="flex items-center justify-center gap-1">
+          <input type="number" min="0" max="20" step="0.5"
+                 data-est="${est.estudiante_id}" data-eval="${ev.id}" data-pond="${ev.ponderacion}"
+                 data-asistencia="${asistencia}" data-obs="${obs.replace(/"/g, '&quot;')}"
+                 value="${val}"
+                 ${esConfirmado || _cerrado ? 'disabled' : ''}
+                 oninput="calcularPuntos(this)"
+                 onchange="calcularFila(this)"
+                 class="w-16 bg-surface-element border ${esConfirmado?'border-secondary/30':'border-border'} rounded-lg py-1.5 px-2 text-center text-sm text-text-main
+                        focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all
+                        [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"/>
+          <div class="w-12 text-center text-xs font-bold text-primary bg-primary/5 border border-primary/10 rounded-lg py-1.5 px-1 flex items-center justify-center h-[34px]" id="ptos-${est.estudiante_id}-${ev.id}">
+             ${val !== '' ? (parseFloat(val)*ev.ponderacion/20).toFixed(1) : '-'}
+          </div>
+          <button onclick="abrirModalDetalles(${est.estudiante_id}, ${ev.id}, '${est.nombre.replace(/'/g, "\\'")}')" 
+                  class="text-text-muted hover:text-primary transition-colors p-1 relative" ${_cerrado?'disabled':''}>
+            <ion-icon name="information-circle"></ion-icon>
+            ${badgeAviso}
+          </button>
+        </div>
+      </td>`;
+    });
+    tr += `<td class="px-4 py-2.5 text-right font-bold text-primary" id="prom-${est.estudiante_id}">–</td>`;
+    tr += `</tr>`;
+    tbody.innerHTML += tr;
+  });
+
+  _estudiantes.forEach(est => calcularFilaPorEstudiante(est.estudiante_id));
+}
+
+// ── Filtrado Local ─────────────────────────────────────────────────────────
+function filtrarGrid() {
+  const query = document.getElementById('buscador-grid').value.toLowerCase();
+  const rows = document.querySelectorAll('.estudiante-row');
+  let count = 0;
+  
+  rows.forEach(row => {
+    if (row.dataset.search.includes(query)) {
+      row.style.display = '';
+      count++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  document.getElementById('estado-vacio').classList.toggle('hidden', count > 0);
+}
+
+// ── Cálculo de Promedios ──────────────────────────────────────────────────
+function calcularFila(input) {
+  const v = parseFloat(input.value);
+  if (input.value !== '' && (isNaN(v) || v < 0 || v > 20)) {
+    input.classList.add('border-error/60', 'ring-1', 'ring-error/40');
+    toast('Nota debe estar entre 0 y 20', false);
+    return;
+  }
+  input.classList.remove('border-error/60', 'ring-1', 'ring-error/40');
+  input.dataset.modificado = "true"; // Marcar para guardar
+  const estId = input.dataset.est;
+  calcularFilaPorEstudiante(estId);
+}
+
+function calcularPuntos(input) {
+  const est = input.dataset.est;
+  const evalId = input.dataset.eval;
+  const pond = parseFloat(input.dataset.pond);
+  const val = parseFloat(input.value);
+  const target = document.getElementById(`ptos-${est}-${evalId}`);
+  if (!isNaN(val) && val >= 0 && val <= 20 && input.value !== '') {
+    target.textContent = (val * pond / 20).toFixed(1);
+  } else {
+    target.textContent = '-';
+  }
+}
+
+function calcularFilaPorEstudiante(estId) {
+  const inputs = document.querySelectorAll(`input[data-est="${estId}"]`);
+  let sumaPond = 0, sumaNotas = 0, hayNotas = false;
+  inputs.forEach(inp => {
+    const v = parseFloat(inp.value);
+    const p = parseFloat(inp.dataset.pond);
+    if (!isNaN(v) && inp.value !== '') {
+      sumaNotas += v * (p / 100);
+      sumaPond += p;
+      hayNotas = true;
+    }
+  });
+
+  const cel = document.getElementById(`prom-${estId}`);
+  if (!hayNotas) { cel.textContent = '–'; return; }
+
+  const promedio = sumaPond > 0 ? (sumaNotas / sumaPond) * 20 : 0;
+  cel.textContent = promedio.toFixed(2);
+  cel.className = `px-4 py-2.5 text-right font-bold ${promedio >= 10 ? 'text-secondary' : 'text-error'}`;
+}
+
+// ── Modal Detalles ────────────────────────────────────────────────────────
+function abrirModalDetalles(estId, evalId, nombre) {
+  if (_cerrado) return;
+  const input = document.querySelector(`input[data-est="${estId}"][data-eval="${evalId}"]`);
+  if (!input) return;
+
+  document.getElementById('cal-estudiante-id').value = estId;
+  document.getElementById('cal-evaluacion-id').value = evalId;
+  document.getElementById('cal-estudiante-nombre').textContent = nombre;
+  
+  document.getElementById('cal-asistencia').value = input.dataset.asistencia || 'true';
+  document.getElementById('cal-observacion').value = input.dataset.obs || '';
+  document.getElementById('cal-contador').textContent = `${(input.dataset.obs || '').length} / 1000`;
+  
+  document.getElementById('modal-calificar').classList.remove('hidden');
+}
+
+function cerrarModalCalificar() { document.getElementById('modal-calificar').classList.add('hidden'); }
+function marcarModificado() {
+  const estId = document.getElementById('cal-estudiante-id').value;
+  const evalId = document.getElementById('cal-evaluacion-id').value;
+  const input = document.querySelector(`input[data-est="${estId}"][data-eval="${evalId}"]`);
+  if (input) input.dataset.modificado = "true";
+}
+
+function aplicarDetalles() {
+  const estId = document.getElementById('cal-estudiante-id').value;
+  const evalId = document.getElementById('cal-evaluacion-id').value;
+  const asistencia = document.getElementById('cal-asistencia').value;
+  const obs = document.getElementById('cal-observacion').value.trim();
+  
+  const input = document.querySelector(`input[data-est="${estId}"][data-eval="${evalId}"]`);
+  if (input) {
+    input.dataset.asistencia = asistencia;
+    input.dataset.obs = obs;
+    // Si no tiene nota pero ponen asistencia u observación, igual se guardará como 0 si no se pone nada? No, no forzamos nota.
+    // Marcar el input como modificado para que guardarNotas lo procese
+    input.dataset.modificado = "true"; 
+    
+    // Añadir el puntito visual si hay info extra
+    const btn = input.nextElementSibling;
+    if (obs || asistencia === 'false') {
+      if (!btn.querySelector('.bg-secondary')) {
+        btn.innerHTML += `<div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-secondary rounded-full"></div>`;
+      }
+    } else {
+      const dot = btn.querySelector('.bg-secondary');
+      if (dot) dot.remove();
+    }
+  }
+  cerrarModalCalificar();
+  toast('Detalles aplicados. Recuerda Guardar para enviar a la base de datos.');
+}
+
+// ── Guardar Notas Masivas ─────────────────────────────────────────────────
+async function guardarNotas(esBorrador) {
+  const notas = [];
+  document.querySelectorAll('#tbody-notas input[type=number]').forEach(inp => {
+    // Solo enviamos inputs que tengan valor
+    if (inp.value !== '') {
+      notas.push({ 
+        estudiante_id: inp.dataset.est, 
+        evaluacion_id: inp.dataset.eval, 
+        nota: parseFloat(inp.value),
+        asistencia: inp.dataset.asistencia === 'true',
+        observacion: inp.dataset.obs || ''
+      });
+    }
+  });
+  if (notas.length === 0) { toast('No hay notas que guardar.', false); return; }
+  if (!esBorrador && !confirm('¿Confirmar notas de forma definitiva? Esta acción es permanente.')) return;
+
+  const r = await fetch('/docentes/api/notas/guardar/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ notas, es_borrador: esBorrador, asignatura_id: _asignaturaId, periodo_id: _periodoId, seccion: _seccion, ano_grado: _anoGrado })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast(`${d.guardadas} nota(s) ${esBorrador ? 'guardadas como borrador' : 'confirmadas definitivamente'}.`);
+    if (!esBorrador) cargarTabla(); 
+  } else {
+    toast(d.error || 'Error al guardar.', false);
+  }
+}
+
+
+// ── Cerrar Período ────────────────────────────────────────────────────────
+async function cerrarPeriodo() {
+  if (!confirm('¿Cerrar definitivamente el período? Nadie podrá modificar notas sin autorización del administrador.')) return;
+  const r = await fetch('/docentes/api/periodo/cerrar/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ asignatura_id: _asignaturaId, periodo_id: _periodoId, seccion: _seccion })
+  });
+  const d = await r.json();
+  if (d.ok) { toast('Período cerrado exitosamente.'); cargarTabla(); }
+  else toast(d.error || 'Error al cerrar.', false);
+}
+
+// ── Modal Evaluaciones ────────────────────────────────────────────────────
+function abrirModalEval() {
+  if (_cerrado) { toast('El período está cerrado.', false); return; }
+  document.getElementById('modal-eval').classList.remove('hidden');
+  const disp = 100 - (document.getElementById('txt-pond').textContent.split('/')[0].trim().replace('%','') || 0);
+  document.getElementById('ev-disponible').textContent = `Disponible: ${disp.toFixed(1)}%`;
+  document.getElementById('eval-error').classList.add('hidden');
+  document.getElementById('ev-nombre').value = '';
+  document.getElementById('ev-pond').value = '';
+  document.getElementById('ev-nombre').focus();
+}
+function cerrarModalEval() { document.getElementById('modal-eval').classList.add('hidden'); }
+
+async function crearEvaluacion() {
+  const nombre = document.getElementById('ev-nombre').value.trim();
+  const tipo   = document.getElementById('ev-tipo').value;
+  const pond   = parseFloat(document.getElementById('ev-pond').value);
+  const errEl  = document.getElementById('eval-error');
+
+  if (!nombre || isNaN(pond)) { errEl.textContent = 'Completa todos los campos.'; errEl.classList.remove('hidden'); return; }
+
+  const r = await fetch('/docentes/api/evaluacion/crear/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ asignatura_id: _asignaturaId, periodo_id: _periodoId, seccion: _seccion, nombre, tipo, ponderacion: pond })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    cerrarModalEval();
+    toast(`Evaluación "${nombre}" creada.`);
+    cargarTabla();
+  } else {
+    errEl.textContent = d.error || 'Error al crear evaluación.';
+    errEl.classList.remove('hidden');
+  }
+}
+
+function actualizarBarra(suma) {
+  const pct = Math.min(suma, 100);
+  document.getElementById('barra-pond').style.width = pct + '%';
+  document.getElementById('barra-pond').className = `h-full transition-all rounded-full ${pct >= 100 ? 'bg-secondary' : 'bg-primary'}`;
+  document.getElementById('txt-pond').textContent = `${suma.toFixed(1)} / 100%`;
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modal-eval').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalEval();
+});
+</script>
+{% endblock %}

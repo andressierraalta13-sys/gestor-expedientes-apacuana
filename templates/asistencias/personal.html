@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Asistencias — Personal | Intranet{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Encabezado -->
+  <div class="bg-surface-container rounded-3xl p-6 md:p-8 border border-border shadow-md">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-text-main font-headline">Asistencias — Personal</h1>
+        <p class="text-text-muted text-sm mt-1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Registro diario de asistencia del personal administrativo y docente.
+          <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+            <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+          </button>
+        </p>
+      </div>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div class="px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl text-primary text-sm font-bold flex items-center gap-2">
+          <ion-icon name="calendar-outline"></ion-icon>
+          {{ fecha|date:"d/m/Y" }}
+        </div>
+        <a href="{% url 'asistencias_registro' %}" class="px-4 py-2 bg-surface border border-border hover:bg-surface-element rounded-xl text-sm text-text-muted hover:text-text-main transition-all flex items-center gap-2">
+          <ion-icon name="time-outline"></ion-icon> Ver Registro
+        </a>
+      </div>
+    </div>
+
+    <!-- Estadísticas del día -->
+    <div class="grid grid-cols-3 gap-4 mt-6">
+      <div class="bg-surface/50 border border-border rounded-2xl p-4 text-center">
+        <p class="text-3xl font-extrabold text-text-main">{{ total }}</p>
+        <p class="text-xs text-text-muted mt-1">Total Personal</p>
+      </div>
+      <div class="bg-secondary/10 border border-secondary/20 rounded-2xl p-4 text-center">
+        <p class="text-3xl font-extrabold text-secondary" id="cnt-presentes">{{ presentes }}</p>
+        <p class="text-xs text-text-muted mt-1">Presentes</p>
+      </div>
+      <div class="bg-error/10 border border-error/20 rounded-2xl p-4 text-center">
+        <p class="text-3xl font-extrabold text-error" id="cnt-ausentes">{{ ausentes }}</p>
+        <p class="text-xs text-text-muted mt-1">Ausentes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="relative">
+    <ion-icon name="search-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-xl pointer-events-none"></ion-icon>
+    <input type="text" id="buscar-input" placeholder="Buscar personal por nombre o cédula..."
+      class="w-full pl-12 pr-4 py-3 bg-surface-container/60 border border-border rounded-2xl text-text-main placeholder-text-muted focus:outline-none focus:border-primary/40 backdrop-blur-xl text-sm transition-all"
+      oninput="filtrarTabla(this.value)">
+  </div>
+
+  <!-- Tabla de Personal -->
+  <div class="bg-surface-container border border-border rounded-2xl overflow-hidden shadow-md">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border text-text-muted text-xs uppercase tracking-wider">
+          <th class="px-6 py-4 text-left">Personal</th>
+          <th class="px-6 py-4 text-left">Rol</th>
+          <th class="px-6 py-4 text-center">Asistencia</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/5" id="tabla-personal">
+        {% for p in lista %}
+        <tr class="hover:bg-white/3 transition-colors fila-personal" data-nombre="{{ p.nombre|lower }}" data-id="{{ p.id }}">
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
+                {{ p.nombre|first|upper }}
+              </div>
+              <span class="font-medium text-text-main">{{ p.nombre }}</span>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-text-muted">{{ p.rol }}</td>
+          <td class="px-6 py-4">
+            <div class="flex justify-center gap-3">
+              <button onclick="marcar({{ p.id }}, 'PERSONAL', true, this)"
+                class="btn-asistio px-4 py-1.5 rounded-xl border text-xs font-bold transition-all
+                  {% if p.asistio %}bg-secondary/20 border-secondary text-secondary{% else %}bg-surface-element border-border text-text-muted hover:border-secondary/50 hover:text-secondary{% endif %}"
+                data-estado="{{ p.asistio|yesno:'true,false' }}">
+                <ion-icon name="checkmark-outline" class="text-base align-middle"></ion-icon> Asistió
+              </button>
+              <button onclick="marcar({{ p.id }}, 'PERSONAL', false, this)"
+                class="btn-ausente px-4 py-1.5 rounded-xl border text-xs font-bold transition-all
+                  {% if not p.asistio and p.asistio is not None %}bg-error/20 border-error text-error{% else %}bg-surface-element border-border text-text-muted hover:border-error/50 hover:text-error{% endif %}">
+                <ion-icon name="close-outline" class="text-base align-middle"></ion-icon> Ausente
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3" class="px-6 py-12 text-center text-text-muted">
+            <ion-icon name="people-outline" class="text-4xl mb-3 block"></ion-icon>
+            No hay personal registrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+async function marcar(id, tipo, asistio, btnEl) {
+  const payload = { tipo, asistio, id };
+  const resp = await fetch("{% url 'api_marcar_asistencia' %}", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) { alert('Error al registrar. Intenta de nuevo.'); return; }
+
+  // Actualizar UI
+  const fila = btnEl.closest('tr');
+  const btnAsistio = fila.querySelector('.btn-asistio');
+  const btnAusente = fila.querySelector('.btn-ausente');
+
+  // Reset both
+  btnAsistio.className = 'btn-asistio px-4 py-1.5 rounded-xl border text-xs font-bold transition-all bg-surface-element border-border text-text-muted hover:border-secondary/50 hover:text-secondary';
+  btnAusente.className = 'btn-ausente px-4 py-1.5 rounded-xl border text-xs font-bold transition-all bg-surface-element border-border text-text-muted hover:border-error/50 hover:text-error';
+
+  if (asistio) {
+    btnAsistio.className = 'btn-asistio px-4 py-1.5 rounded-xl border text-xs font-bold transition-all bg-secondary/20 border-secondary text-secondary';
+  } else {
+    btnAusente.className = 'btn-ausente px-4 py-1.5 rounded-xl border text-xs font-bold transition-all bg-error/20 border-error text-error';
+  }
+
+  // Actualizar contadores
+  recalcularContadores();
+}
+
+function recalcularContadores() {
+  const presentes = document.querySelectorAll('.btn-asistio.bg-secondary\\/20').length;
+  const ausentes = document.querySelectorAll('.btn-ausente.bg-error\\/20').length;
+  document.getElementById('cnt-presentes').textContent = presentes;
+  document.getElementById('cnt-ausentes').textContent = ausentes;
+}
+
+function filtrarTabla(q) {
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('.fila-personal').forEach(fila => {
+    const nombre = fila.dataset.nombre || '';
+    fila.style.display = (!term || nombre.includes(term)) ? '' : 'none';
+  });
+}
+
+function toggleHelpModal() {
+  const modal = document.getElementById('helpModal');
+  if (modal) { modal.classList.toggle('hidden'); }
+}
+</script>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Asistencia del Personal</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">today</span> 1. ¿Qué es esta sección?
+                </h4>
+                <p class="text-xs">Aquí registras la <strong>asistencia diaria</strong> del personal administrativo y docente. La fecha que se está registrando se muestra en la parte superior derecha del encabezado. Cada vez que marcas a una persona, el registro se guarda <strong>automáticamente</strong> para el día actual.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">leaderboard</span> 2. Tarjetas de conteo
+                </h4>
+                <p class="text-xs">En la parte superior verás tres indicadores que se actualizan en tiempo real:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Total Personal:</strong> cantidad de personas registradas en el sistema.</li>
+                    <li><strong>Presentes:</strong> número de personas marcadas como <strong>Asistió</strong>.</li>
+                    <li><strong>Ausentes:</strong> número de personas marcadas como <strong>Ausente</strong>.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">how_to_reg</span> 3. Registrar asistencia
+                </h4>
+                <p class="text-xs">Busca a la persona usando el campo <strong>«Buscar personal por nombre o cédula»</strong> y luego, en la columna <strong>Asistencia</strong>, pulsa el botón correspondiente:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Asistió</strong> (verde): marca a la persona como presente.</li>
+                    <li><strong>Ausente</strong> (rojo): marca a la persona como ausente.</li>
+                </ul>
+                <p class="text-xs mt-2">Puedes cambiar la marca en cualquier momento; el botón seleccionado quedará resaltado con su color y los contadores se ajustarán solos.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">history</span> 4. Consultar el registro
+                </h4>
+                <p class="text-xs">Con el botón <strong>«Ver Registro»</strong> del encabezado accedes al historial completo de asistencias para revisar los registros de días anteriores.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

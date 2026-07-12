@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% block title %}Detalle Asistencias — {{ fecha }} | Intranet{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Encabezado -->
+  <div class="bg-surface-container rounded-3xl p-6 md:p-8 border border-border shadow-md">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <p class="text-text-muted text-sm mb-1">
+          <a href="{% url 'asistencias_registro' %}" class="hover:text-text-main transition-colors">← Registro</a>
+        </p>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-text-main font-headline">{{ fecha }}</h1>
+        <p class="text-text-muted text-sm mt-1">Detalle completo de asistencia registrada en esta fecha.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda -->
+  <div class="relative">
+    <ion-icon name="search-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-xl pointer-events-none"></ion-icon>
+    <input type="text" id="buscar-input" placeholder="Buscar por nombre o cédula..."
+      class="w-full pl-12 pr-4 py-3 bg-surface-container/60 border border-border rounded-2xl text-text-main placeholder-text-muted focus:outline-none focus:border-primary/40 backdrop-blur-xl text-sm transition-all"
+      oninput="filtrar(this.value)">
+  </div>
+
+  <!-- Personal -->
+  {% with personal=asistencias|dictsort:"tipo" %}
+  <div class="bg-surface-container border border-border rounded-2xl overflow-hidden shadow-md">
+    <div class="px-6 py-4 border-b border-border flex items-center gap-3">
+      <ion-icon name="briefcase-outline" class="text-primary text-xl"></ion-icon>
+      <h2 class="font-bold text-text-main">Personal</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-border text-text-muted text-xs uppercase tracking-wider">
+          <th class="px-6 py-3 text-left">Nombre</th>
+          <th class="px-6 py-3 text-center">Estado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/5" id="tabla-personal">
+        {% for a in asistencias %}
+          {% if a.tipo == 'PERSONAL' %}
+          <tr class="hover:bg-white/3 transition-colors fila-registro" data-texto="{{ a.personal.nombre_completo|default:a.personal.username|lower }}">
+            <td class="px-6 py-4 text-text-main font-medium">{{ a.personal.nombre_completo|default:a.personal.username }}</td>
+            <td class="px-6 py-4 text-center">
+              {% if a.asistio %}
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary/10 border border-secondary/20 rounded-full text-secondary text-xs font-bold">
+                <ion-icon name="checkmark-circle-outline"></ion-icon> Asistió
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-error/10 border border-error/20 rounded-full text-error text-xs font-bold">
+                <ion-icon name="close-circle-outline"></ion-icon> No asistió
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+        {% empty %}
+          <tr><td colspan="2" class="px-6 py-8 text-center text-text-muted text-sm">Sin registros de personal.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endwith %}
+
+  <!-- Estudiantes (Grupos desde Docente) -->
+  {% if grupos_docentes %}
+  <div class="space-y-4">
+    <style>
+      [data-theme="dark"] .student-card {
+        background-color: var(--color-surface-container) !important;
+      }
+      .student-card button {
+        background-color: transparent !important;
+        border: none !important;
+        outline: none !important;
+      }
+      [data-theme="dark"] .student-card button:hover {
+        background-color: var(--color-surface-element) !important;
+      }
+    </style>
+    <div class="flex items-center gap-3 mb-4 px-2">
+      <ion-icon name="school-outline" class="text-secondary text-2xl"></ion-icon>
+      <h2 class="text-xl font-bold text-text-main">Estudiantes</h2>
+    </div>
+    
+    {% for grupo in grupos_docentes %}
+    <div class="bg-gray-100 dark:bg-surface-container border border-border rounded-2xl overflow-hidden shadow-sm student-card">
+      <button onclick="toggleAccordion(this)" class="w-full flex items-center justify-between p-5 hover:bg-gray-200 dark:hover:bg-surface-element transition-colors">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary font-bold shrink-0 text-lg">
+            {{ grupo.ano }}-{{ grupo.seccion }}
+          </div>
+          <div class="text-left flex-grow">
+            <h3 class="font-bold text-text-main text-base">{{ grupo.asignatura }}</h3>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-x-5 gap-y-2 mt-1">
+              <p class="text-[13px] text-text-muted flex items-center gap-1.5">
+                <ion-icon name="person-outline"></ion-icon>
+                <span>Docente: <span class="font-semibold text-text-main">{{ grupo.docente }}</span></span>
+              </p>
+              <div class="flex items-center gap-3 text-[12px]">
+                <span class="text-secondary font-medium flex items-center gap-1" title="Asistidos"><ion-icon name="checkmark-circle"></ion-icon> {{ grupo.asistidos }}</span>
+                <span class="text-error font-medium flex items-center gap-1" title="Ausentes"><ion-icon name="close-circle"></ion-icon> {{ grupo.ausentes }}</span>
+                <span class="text-warning font-medium flex items-center gap-1" title="Retrasos"><ion-icon name="time"></ion-icon> {{ grupo.retrasos }}</span>
+                <span class="text-info font-medium flex items-center gap-1" title="Justificados"><ion-icon name="document-text"></ion-icon> {{ grupo.justificados }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ion-icon name="chevron-down-outline" class="text-text-muted transition-transform duration-300 accordion-icon"></ion-icon>
+      </button>
+      
+      <div class="accordion-content hidden">
+        <div class="border-t border-border overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead>
+              <tr class="bg-surface-element text-text-muted text-xs uppercase tracking-wider">
+                <th class="px-5 py-3">Estudiante</th>
+                <th class="px-5 py-3 text-center">Estado</th>
+                <th class="px-5 py-3 text-center">Llegada</th>
+                <th class="px-5 py-3">Notas / Observaciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              {% for asis in grupo.asistencias %}
+              <tr class="hover:bg-white/5 transition-colors fila-registro" data-texto="{{ asis.estudiante.nombres|lower }} {{ asis.estudiante.apellidos|lower }} {{ asis.estudiante.cedula_identidad|lower }}">
+                <td class="px-5 py-3 font-medium text-text-main">{{ asis.estudiante.nombres }} {{ asis.estudiante.apellidos }}</td>
+                <td class="px-5 py-3 text-center">
+                  {% if asis.estado == 'PRESENTE' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary/10 text-secondary">Asistido</span>
+                  {% elif asis.estado == 'AUSENTE' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-error/10 text-error">Ausente</span>
+                  {% elif asis.estado == 'RETARDO' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-warning/10 text-warning">Retraso</span>
+                  {% elif asis.estado == 'JUSTIFICADO' %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-info/10 text-info">Justificado</span>
+                  {% endif %}
+                </td>
+                <td class="px-5 py-3 text-center text-text-muted">{{ asis.hora_llegada|time:"g:i A"|default:"-" }}</td>
+                <td class="px-5 py-3 text-text-muted text-xs max-w-xs truncate" title="{{ asis.observacion }}">{{ asis.observacion|default:"-" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-surface-container border border-border rounded-2xl p-8 text-center shadow-md">
+    <ion-icon name="school-outline" class="text-4xl text-text-muted mb-3 block"></ion-icon>
+    <h3 class="text-lg font-bold text-text-main">Sin registros de estudiantes</h3>
+    <p class="text-text-muted text-sm mt-1">No hay asistencias de estudiantes reportadas por los docentes para esta fecha.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function filtrar(q) {
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('.fila-registro').forEach(fila => {
+    const texto = fila.dataset.texto || '';
+    fila.style.display = (!term || texto.includes(term)) ? '' : 'none';
+  });
+}
+
+function toggleAccordion(btn) {
+  const content = btn.nextElementSibling;
+  const icon = btn.querySelector('.accordion-icon');
+  
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    icon.classList.add('rotate-180');
+  } else {
+    content.classList.add('hidden');
+    icon.classList.remove('rotate-180');
+  }
+}
+</script>
+{% endblock %}

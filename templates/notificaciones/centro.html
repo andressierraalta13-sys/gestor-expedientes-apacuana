@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Centro de Notificaciones{% endblock %}
+
+{% block content %}
+<div class="py-6 max-w-[1400px] mx-auto px-4 h-[calc(100vh-100px)] flex flex-col">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 flex-shrink-0">
+        <div class="flex flex-col gap-1">
+            <h2 class="font-headline font-extrabold text-2xl text-text-main flex items-center gap-3">
+                <ion-icon name="notifications-outline" class="text-primary"></ion-icon> Centro de Notificaciones
+            </h2>
+            <p class="text-sm text-text-muted" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Alertas globales y registro del sistema.
+                <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+                </button>
+            </p>
+        </div>
+        
+        <button onclick="marcarTodasLeidasCentro()" class="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/20 hover:opacity-90">
+            <ion-icon name="checkmark-done-outline" class="text-lg"></ion-icon> Marcar todas como leídas
+        </button>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="flex gap-6 flex-1 min-h-0">
+        
+        <!-- SIDEBAR (List) -->
+        <div class="w-1/3 flex flex-col gap-4">
+            <div class="bg-surface-container rounded-3xl p-4 shadow-xl border border-border flex flex-col h-full relative">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-text-main">Bandeja de Entrada</h3>
+                </div>
+                <!-- Search -->
+                <div class="relative mb-4">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                    <input type="text" id="search-notif" placeholder="Buscar notificación..." onkeyup="filtrarLista()" class="w-full bg-surface-element py-2.5 pl-10 pr-4 rounded-xl text-sm border border-border focus:outline-none focus:ring-1 focus:ring-primary/50 text-text-main transition-all shadow-inner">
+                </div>
+
+                <!-- List -->
+                <div class="flex-1 overflow-y-auto obs-scroll pr-2 space-y-2" id="notif-list-container">
+                    {% for noti in notificaciones %}
+                        <div class="notif-card cursor-pointer p-3 rounded-2xl border transition-all 
+                                    {% if forloop.first %}bg-primary/10 border-primary/20 shadow-md{% else %}bg-surface border-transparent hover:bg-surface-element{% endif %}" 
+                             onclick="selectNotificacion(this, {{ noti.id }}, '{{ noti.tipo }}')"
+                             data-id="{{ noti.id }}"
+                             data-tipo="{{ noti.tipo }}"
+                             data-titulo="{{ noti.titulo|escapejs }}"
+                             data-mensaje="{{ noti.mensaje|escapejs }}"
+                             data-fecha="{{ noti.creado_en|date:'l, d \d\e F \d\e Y, H:i'|escapejs }}"
+                             data-fecha-corta="{{ noti.creado_en|date:'d M, H:i'|escapejs }}">
+                            
+                            <div class="flex items-start gap-3">
+                                <div class="text-[16px] mt-0.5">
+                                    {% if noti.tipo == 'ACTUALIZACION' %}🚀{% else %}🛡️{% endif %}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-sm text-text-main truncate search-target">{{ noti.titulo }}</p>
+                                    <p class="text-[11px] text-text-muted mt-0.5 truncate">{{ noti.mensaje }}</p>
+                                    <div class="flex items-center justify-between mt-2">
+                                        <span class="text-[10px] font-semibold text-text-muted uppercase">{{ noti.tipo }}</span>
+                                        <span class="text-[10px] text-text-muted">{{ noti.creado_en|date:'d M, H:i' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-text-muted pointer-events-none mt-16">
+                            <span class="material-symbols-outlined text-4xl mb-2 opacity-50">inbox</span>
+                            <p class="text-sm font-bold">Bandeja limpia</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN DETAIL VIEW -->
+        <div class="w-2/3 bg-surface-container rounded-3xl p-8 shadow-xl border border-border flex flex-col relative overflow-hidden">
+            <div id="detail-empty" class="absolute inset-0 flex flex-col items-center justify-center text-text-muted bg-surface-container z-10 transition-opacity duration-300 {% if notificaciones %}opacity-0 pointer-events-none{% else %}opacity-100{% endif %}">
+                <span class="material-symbols-outlined text-6xl mb-4 opacity-50">notifications_off</span>
+                <p class="text-lg font-bold">No hay ninguna notificación seleccionada</p>
+                <p class="text-sm mt-1">Selecciona una notificación de la lista para ver sus detalles.</p>
+            </div>
+
+            <div id="detail-content" class="flex flex-col h-full transition-opacity duration-300 {% if not notificaciones %}opacity-0 pointer-events-none{% else %}opacity-100{% endif %}">
+                <div class="flex-1 overflow-y-auto obs-scroll pr-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <h2 class="text-xl font-black text-text-main flex items-center gap-3">
+                            <span id="detail-icon">🚀</span> <span id="detail-title-text">Título</span>
+                        </h2>
+                        <span class="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase border border-primary/20 shadow-sm" id="detail-badge">INFO</span>
+                    </div>
+                    <p class="text-[11px] text-text-muted mb-6 pb-4 border-b border-border/50 font-medium" id="detail-meta">Enviado el ...</p>
+                    
+                    <div class="prose prose-invert max-w-none text-[13px] text-text-main leading-relaxed" id="detail-body">
+                        <!-- message content here -->
+                    </div>
+                </div>
+
+                <!-- Footer / Actions -->
+                <div class="pt-4 mt-4 border-t border-border flex justify-between">
+                    <button onclick="eliminarNotificacionActual()" class="px-4 py-2.5 rounded-xl bg-surface-element hover:bg-error/10 text-text-muted hover:text-error border border-border hover:border-error/30 transition-all text-sm font-semibold flex items-center gap-2 shadow-sm">
+                        <ion-icon name="trash-outline" class="text-lg"></ion-icon> Eliminar Notificación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentNotifId = null;
+    let currentNotifTipo = null;
+
+    function selectNotificacion(element, id, tipo) {
+        document.querySelectorAll('.notif-card').forEach(el => {
+            el.classList.remove('bg-primary/10', 'border-primary/20', 'shadow-md');
+            el.classList.add('bg-surface', 'border-transparent');
+        });
+        element.classList.remove('bg-surface', 'border-transparent');
+        element.classList.add('bg-primary/10', 'border-primary/20', 'shadow-md');
+
+        currentNotifId = id;
+        currentNotifTipo = tipo;
+
+        const titulo = element.dataset.titulo;
+        const mensaje = element.dataset.mensaje;
+        const fecha = element.dataset.fecha;
+        
+        document.getElementById('detail-title-text').innerText = titulo;
+        document.getElementById('detail-meta').innerText = `Enviado el ${fecha.toLowerCase()} · Tipo: ${tipo}`;
+        document.getElementById('detail-icon').innerText = tipo === 'ACTUALIZACION' ? '🚀' : '🛡️';
+        
+        let formattedMsg = mensaje.replace(/\n/g, '<br>');
+        
+        // Hacer un poco de bold parsing básico si contiene "1.", "2."
+        formattedMsg = formattedMsg.replace(/(\d+\.\s+[^\:]+)\:/g, '<strong>$1:</strong>');
+        
+        document.getElementById('detail-body').innerHTML = formattedMsg;
+
+        document.getElementById('detail-empty').classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('detail-empty').classList.remove('opacity-100');
+        
+        document.getElementById('detail-content').classList.remove('opacity-0', 'pointer-events-none');
+        document.getElementById('detail-content').classList.add('opacity-100');
+        
+        // Marcar como leída automáticamente al seleccionarla
+        marcarLeidaLocal(id, tipo);
+    }
+
+    async function marcarLeidaLocal(id, tipo) {
+        try {
+            await fetch(`/auditoria/api/marcar-leido/${id}/?origen=SISTEMA`, { 
+                method: 'POST', 
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+            });
+            // Update app bell if needed
+            if (typeof actualizarConteo === 'function') actualizarConteo();
+        } catch(e){}
+    }
+
+    async function marcarTodasLeidasCentro() {
+        try {
+            await fetch('/auditoria/api/marcar-todos/', { 
+                method: 'POST', 
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+            });
+            if (typeof toast !== 'undefined') toast('Todas marcadas como leídas', 'success');
+            if (typeof actualizarConteo === 'function') actualizarConteo();
+        } catch(e){}
+    }
+
+    async function eliminarNotificacionActual() {
+        if (!currentNotifId) return;
+        if (!confirm('¿Eliminar esta notificación? Ten en cuenta que esto la eliminará de tu historial permanentemente.')) return;
+        
+        try {
+            const res = await fetch(`/auditoria/api/eliminar/${currentNotifId}/?origen=SISTEMA`, { 
+                method: 'POST', 
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+            });
+            
+            if (res.ok) {
+                const el = document.querySelector(`.notif-card[data-id="${currentNotifId}"]`);
+                if (el) el.remove();
+                
+                if (typeof actualizarConteo === 'function') actualizarConteo();
+                
+                const next = document.querySelector('.notif-card');
+                if (next) {
+                    selectNotificacion(next, next.dataset.id, next.dataset.tipo);
+                } else {
+                    document.getElementById('detail-content').classList.remove('opacity-100');
+                    document.getElementById('detail-content').classList.add('opacity-0', 'pointer-events-none');
+                    
+                    document.getElementById('detail-empty').classList.remove('opacity-0', 'pointer-events-none');
+                    document.getElementById('detail-empty').classList.add('opacity-100');
+                }
+            }
+        } catch (e) {
+            console.error('Error', e);
+        }
+    }
+
+    function filtrarLista() {
+        const query = document.getElementById('search-notif').value.toLowerCase();
+        document.querySelectorAll('.notif-card').forEach(card => {
+            const txt = card.querySelector('.search-target').innerText.toLowerCase();
+            card.style.display = txt.includes(query) ? 'block' : 'none';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const first = document.querySelector('.notif-card');
+        if (first) {
+            selectNotificacion(first, first.dataset.id, first.dataset.tipo);
+        }
+    });
+
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Centro de Notificaciones</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">inbox</span> 1. ¿Qué es esta sección?
+                </h4>
+                <p class="text-xs">Es la <strong>Bandeja de Entrada</strong> para las alertas globales y notas de actualización del sistema. Aquí recibirás comunicados importantes enviados por el equipo de Desarrollo o por el Administrador.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">mark_email_read</span> 2. Estado de Lectura
+                </h4>
+                <p class="text-xs">Al hacer click en una notificación de la lista, esta se <strong>marcará como leída</strong> automáticamente y dejará de sumarse al contador de tu campanita. Si deseas marcar todas al mismo tiempo, utiliza el botón "Marcar todas como leídas".</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">delete</span> 3. Eliminar Notificaciones
+                </h4>
+                <p class="text-xs">Para limpiar tu bandeja, selecciona una notificación y presiona el botón <strong>Eliminar Notificación</strong> en la parte inferior del mensaje. <strong>Ojo:</strong> esta acción la borrará permanentemente de tu historial personal.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="px-4 py-2 text-xs font-bold bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 rounded-xl transition-all uppercase tracking-wide">Entendido</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

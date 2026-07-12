@@ -1,0 +1,961 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% block title %}Carga Masiva de Alumnos | Intranet{% endblock %}
+
+{% block content %}
+<style>
+  .cm-hero {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .cm-title {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: .25rem;
+  }
+
+  .cm-subtitle {
+    color: var(--color-text-secondary);
+    font-size: .9rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Drop Zone */
+  .drop-zone {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 3.5rem 2rem;
+    transition: all .3s ease;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone:hover,
+  .drop-zone.drag-over {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+    transform: scale(1.01);
+  }
+
+  .drop-zone ion-icon {
+    font-size: 3.5rem;
+    color: var(--color-accent);
+    display: block;
+    margin: 0 auto .75rem;
+  }
+
+  .drop-zone h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: .4rem;
+    color: var(--color-text-primary);
+  }
+
+  .drop-zone p {
+    font-size: .85rem;
+    color: var(--color-text-secondary);
+  }
+
+  #file-name-display {
+    margin-top: .75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: var(--color-primary-subtle, rgba(79, 70, 229, 0.1));
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: .95rem;
+    min-height: 1.2rem;
+    display: inline-block;
+  }
+
+  /* Deducción automática */
+  .deduce-panel {
+    display: none;
+    margin-top: 1.25rem;
+    background: rgba(16, 185, 129, .08);
+    border: 1px solid rgba(16, 185, 129, .3);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    animation: fadeIn .4s ease;
+  }
+
+  .deduce-panel .badge {
+    display: inline-block;
+    background: var(--secondary);
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .25rem .65rem;
+    border-radius: 20px;
+    margin-right: .5rem;
+  }
+
+  /* Botón */
+  #btn-procesar {
+    display: none;
+    margin-top: 1.5rem;
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border: none;
+    padding: 0.7rem 2rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  #btn-procesar:hover {
+    background: var(--color-accent-hover);
+  }
+
+  #btn-procesar ion-icon {
+    vertical-align: middle;
+    margin-right: .3rem;
+  }
+
+  /* Spinner */
+  #spinner-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .6);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .spinner {
+    width: 56px;
+    height: 56px;
+    border: 5px solid rgba(255, 255, 255, .2);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Tarjetas de resumen */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .summary-card {
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    animation: fadeIn .5s ease;
+  }
+
+  .summary-card.success {
+    background: rgba(16, 185, 129, .1);
+    border: 1px solid rgba(16, 185, 129, .3);
+  }
+
+  .summary-card.warning {
+    background: rgba(245, 158, 11, .1);
+    border: 1px solid rgba(245, 158, 11, .3);
+  }
+
+  .summary-card.danger {
+    background: rgba(239, 68, 68, .1);
+    border: 1px solid rgba(239, 68, 68, .3);
+  }
+
+  .summary-card .num {
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .summary-card.success .num {
+    color: #10b981;
+  }
+
+  .summary-card.warning .num {
+    color: #f59e0b;
+  }
+
+  .summary-card.danger .num {
+    color: #ef4444;
+  }
+
+  .summary-card .label {
+    font-size: .8rem;
+    color: var(--color-text-secondary);
+    margin-top: .4rem;
+  }
+
+  /* Diagnóstico */
+  .diag-panel {
+    margin-top: 2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 1.5rem;
+  }
+
+  .diag-panel h4 {
+    font-size: .95rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--color-text-primary);
+  }
+
+  .diag-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .4rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: .85rem;
+    color: var(--color-text-secondary);
+  }
+
+  .diag-row:last-child {
+    border: none;
+  }
+
+  .diag-badge {
+    font-size: .72rem;
+    font-weight: 700;
+    padding: .2rem .6rem;
+    border-radius: 20px;
+  }
+
+  .diag-badge.ok {
+    background: rgba(16, 185, 129, .15);
+    color: #10b981;
+  }
+
+  .diag-badge.warn {
+    background: rgba(245, 158, 11, .15);
+    color: #f59e0b;
+  }
+
+  .diag-badge.crit {
+    background: rgba(239, 68, 68, .15);
+    color: #ef4444;
+  }
+
+  /* Barra de integridad */
+  .bar-wrap {
+    background: rgba(255, 255, 255, .06);
+    border-radius: 99px;
+    height: 8px;
+    flex: 1;
+    margin-left: .75rem;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width .8s ease;
+  }
+
+  .bar-fill.high {
+    background: #10b981;
+  }
+
+  .bar-fill.mid {
+    background: #f59e0b;
+  }
+
+  .bar-fill.low {
+    background: #ef4444;
+  }
+
+  /* Tabla de resultados */
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+    margin-top: .75rem;
+  }
+
+  .result-table th {
+    background: rgba(79, 70, 229, .1);
+    color: var(--color-text-primary);
+    padding: .5rem .75rem;
+    text-align: left;
+    font-weight: 700;
+  }
+
+  .result-table td {
+    padding: .45rem .75rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+
+  .result-table tr:last-child td {
+    border: none;
+  }
+
+  .tag-adv {
+    font-size: .7rem;
+    background: rgba(245, 158, 11, .15);
+    color: #f59e0b;
+    padding: .15rem .45rem;
+    border-radius: 20px;
+    margin: .1rem;
+    display: inline-block;
+  }
+
+  /* Advertencias globales */
+  .adv-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .adv-list li {
+    padding: .3rem 0;
+    font-size: .82rem;
+    color: #f59e0b;
+    display: flex;
+    align-items: flex-start;
+    gap: .4rem;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 10000;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .4);
+    animation: slideUp .4s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+  }
+
+  .toast.success {
+    border-left: 4px solid #10b981;
+  }
+
+  .toast.warning {
+    border-left: 4px solid #f59e0b;
+  }
+
+  .toast .toast-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  .toast .toast-title {
+    font-weight: 700;
+    font-size: .9rem;
+    color: var(--color-text-primary);
+  }
+
+  .toast .toast-msg {
+    font-size: .8rem;
+    color: var(--color-text-secondary);
+    margin-top: .15rem;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Pasos de validación */
+  .steps-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-top: 1rem;
+  }
+
+  .steps-list li {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .85rem;
+    color: var(--color-text-secondary);
+  }
+
+  .steps-list ion-icon {
+    color: var(--secondary);
+    flex-shrink: 0;
+  }
+
+  /* Collapsibles */
+  details summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .9rem;
+    color: var(--color-text-primary);
+    padding: .75rem 0;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  details[open] summary ion-icon.arr {
+    transform: rotate(90deg);
+  }
+
+  details summary ion-icon.arr {
+    transition: transform .2s;
+  }
+</style>
+
+<div class="block md:hidden text-center py-20 px-6 bg-white rounded-2xl shadow-sm border border-gray-100 my-8">
+  <div class="w-16 h-16 mx-auto bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 mb-4">
+    <ion-icon name="desktop-outline" class="text-3xl"></ion-icon>
+  </div>
+  <h3 class="text-lg font-bold text-gray-800 mb-2">Modo Escritorio Requerido</h3>
+  <p class="text-sm text-gray-500">Para ir a la carga masiva te recomendamos ir a una Computadora de Escritorio (PC)</p>
+</div>
+
+<div class="cm-hero hidden md:block">
+  <h1 class="cm-title">Carga Masiva de Alumnos</h1>
+  <p class="cm-subtitle" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    Motor IA adaptativo · Detecta estructura Excel no normalizada · Genera expedientes automáticamente
+    <button type="button" onclick="toggleCargaMasivaHelp()" style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;cursor:pointer;color:var(--color-accent);font-size:.8rem;font-weight:700;padding:0;">
+      <span class="material-symbols-outlined" style="font-size:15px;">help</span> ¿Cómo usar esta sección?
+    </button>
+  </p>
+
+  {% if not procesado %}
+  <!-- ═══ FORMULARIO DE CARGA ═══════════════════════════════════════════ -->
+  <div class="glass-panel" style="padding:2rem;">
+
+    {% if error %}
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem;border-radius:10px;margin-bottom:1.5rem;">
+      <ion-icon name="alert-circle-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon>
+      <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" id="upload-form" data-turbo="false">
+      {% csrf_token %}
+
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" name="archivo_excel" accept=".xlsx,.xls" style="display:none;">
+        <ion-icon name="cloud-upload-outline"></ion-icon>
+        <h3>Arrastra <code>CARGA_MASIVA.xlsx</code> aquí</h3>
+        <p>El motor IA detectará automáticamente el año académico y la estructura de datos</p>
+        <div id="file-name-display"></div>
+      </div>
+      
+      <div style="text-align:center; margin-top: 1.5rem;">
+        <a href="/static/formatos/prueba_carga_masiva.xlsx" download
+           style="display:inline-flex; align-items:center; gap:.5rem; background:var(--color-bg-secondary); color:var(--color-text-primary); border:1px solid var(--color-border); padding:.6rem 1.5rem; border-radius:8px; font-size:.85rem; font-weight:700; text-decoration:none; transition:all .2s;">
+          <ion-icon name="download-outline" style="font-size:1.2rem; color:var(--color-accent);"></ion-icon>
+          Aquí tienes un formato para subir tus archivos
+        </a>
+      </div>
+
+      <!-- Panel de deducción automática -->
+      <div class="deduce-panel" id="deduce-panel">
+        <ion-icon name="flash-outline" style="color:var(--secondary);vertical-align:middle;margin-right:.4rem;"></ion-icon>
+        <strong style="color:var(--color-text-primary);font-size:.9rem;">Motor IA listo</strong>
+        <div style="margin-top:.5rem;font-size:.85rem;color:var(--color-text-secondary);">
+          <span class="badge">CARGA_MASIVA.xlsx</span>
+          El año académico será detectado automáticamente desde el contenido del documento y el rango de edad de los alumnos.
+        </div>
+      </div>
+
+      <div style="text-align:center;">
+        <button type="submit" id="btn-procesar" style="display:none;">
+          <ion-icon name="sparkles-outline"></ion-icon> Procesar con IA
+        </button>
+      </div>
+    </form>
+
+    <!-- Pasos de validación -->
+    <div style="margin-top:2rem;">
+      <h4 style="font-size:.9rem;font-weight:700;color:var(--color-text-primary);margin-bottom:.5rem;">Fases del Motor Adaptativo:</h4>
+      <ul class="steps-list">
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Detección estructural del encabezado (hasta fila 30)</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Mapeo: F.N, L NAC, N C, AÑO N, S/C…</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Inferencia del año académico por cabecera o edad promedio</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Detección de duplicados por cédula o nombre+fecha</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Análisis de integridad de expediente por alumno</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Diagnóstico de calidad del archivo cargado</li>
+      </ul>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ═══ RESULTADOS CARGA MASIVA (flujo original) ════════════════════ -->
+
+  <!-- Encabezado de resultado -->
+  <div class="glass-panel" style="padding:1.5rem 2rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <span style="font-size:.8rem;color:var(--color-text-secondary);">Año académico detectado</span>
+      <div style="font-size:1.3rem;font-weight:800;color:var(--color-accent);">{{ ano_label }}</div>
+    </div>
+    <div style="text-align:right;">
+      <span style="font-size:.8rem;color:var(--color-text-secondary);">Completitud promedio de expedientes</span>
+      <div style="font-size:1.3rem;font-weight:800;color:var(--secondary);">{{ completitud_promedio }}%</div>
+    </div>
+  </div>
+
+  <!-- Tarjetas de resumen -->
+  <div class="summary-grid">
+    <div class="summary-card success">
+      <div class="num">{{ total_cargados }}</div>
+      <div class="label">✅ Alumnos cargados exitosamente</div>
+    </div>
+    <div class="summary-card warning">
+      <div class="num">{{ total_existentes }}</div>
+      <div class="label">⚠️ Alumnos ya existentes</div>
+    </div>
+    <div class="summary-card danger">
+      <div class="num">{{ total_errores }}</div>
+      <div class="label">❌ Registros con error</div>
+    </div>
+  </div>
+
+  <!-- Diagnóstico del archivo -->
+  <div class="diag-panel" style="margin-top:1.5rem;">
+    <h4><ion-icon name="analytics-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon>Diagnóstico de Calidad del Archivo</h4>
+    <div class="diag-row">
+      <span>Nivel de desorganización estructural</span>
+      {% if diagnostico.nivel_desorganizacion == 0 %}
+        <span class="diag-badge ok">Ordenado</span>
+      {% elif diagnostico.nivel_desorganizacion == 1 %}
+        <span class="diag-badge warn">Moderado</span>
+      {% else %}
+        <span class="diag-badge crit">Caótico</span>
+      {% endif %}
+    </div>
+    <div class="diag-row">
+      <span>Método de detección del año académico</span>
+      <span style="color:var(--color-text-primary);font-size:.82rem;">{{ diagnostico.year_detection_method }}</span>
+    </div>
+    <div class="diag-row">
+      <span>Fila de encabezado detectada</span>
+      <span style="color:var(--color-text-primary);">Fila {{ diagnostico.header_row_index|default:"?" }}</span>
+    </div>
+    <div class="diag-row">
+      <span>Total filas analizadas / omitidas</span>
+      <span style="color:var(--color-text-primary);">{{ diagnostico.total_filas_raw }} / {{ diagnostico.filas_omitidas }}</span>
+    </div>
+    <div class="diag-row">
+      <span>Completitud de registros</span>
+      <span style="color:var(--secondary);font-weight:700;">{{ calidad.porcentaje_completitud }}%</span>
+    </div>
+    <div class="diag-row">
+      <span>Registros sin cédula</span>
+      <span {% if calidad.sin_cedula > 0 %}style="color:#f59e0b;font-weight:700;"{% endif %}>{{calidad.sin_cedula|formato_cedula}}</span>
+    </div>
+    <div class="diag-row">
+      <span>Registros sin fecha de nacimiento</span>
+      <span {% if calidad.sin_fecha_nac > 0 %}style="color:#f59e0b;font-weight:700;"{% endif %}>{{ calidad.sin_fecha_nac }}</span>
+    </div>
+    {% if calidad.rango_edades %}
+    <div class="diag-row">
+      <span>Rango de edades detectado</span>
+      <span style="color:var(--color-text-primary);">{{ calidad.rango_edades }} · Promedio: {{ calidad.edad_promedio }} años</span>
+    </div>
+    {% endif %}
+    <div class="diag-row">
+      <span>Columnas mapeadas</span>
+      <span style="color:var(--secondary);">{{ diagnostico.columnas_detectadas|join:", " }}</span>
+    </div>
+    {% if diagnostico.columnas_faltantes %}
+    <div class="diag-row">
+      <span>Columnas no encontradas</span>
+      <span style="color:#f59e0b;">{{ diagnostico.columnas_faltantes|join:", " }}</span>
+    </div>
+    {% endif %}
+    {% if diagnostico.advertencias %}
+    <div style="margin-top:.75rem;">
+      <ul class="adv-list">
+        {% for adv in diagnostico.advertencias %}
+        <li><ion-icon name="warning-outline"></ion-icon>{{ adv }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Integridad por alumno -->
+  {% if integridad_list %}
+  <div class="diag-panel" style="margin-top:1.25rem;">
+    <details>
+      <summary>
+        <ion-icon name="shield-checkmark-outline" style="color:var(--secondary);"></ion-icon>
+        Reporte de Integridad de Expedientes ({{ integridad_list|length }} alumnos)
+        <ion-icon name="chevron-forward-outline" class="arr" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="result-table" style="margin-top:.75rem;">
+        <thead>
+          <tr>
+            <th>Cédula</th>
+            <th>Alumno</th>
+            <th>Completitud</th>
+            <th>Campos faltantes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in integridad_list %}
+          <tr>
+            <td>{{item.cedula|formato_cedula}}</td>
+            <td>{{ item.apellidos }} {{ item.nombres }}</td>
+            <td>
+              <div style="display:flex;align-items:center;min-width:120px;">
+                <span style="font-weight:700;font-size:.85rem;width:35px;
+                  color:{% if item.integridad.porcentaje >= 70 %}#10b981{% elif item.integridad.porcentaje >= 40 %}#f59e0b{% else %}#ef4444{% endif %}">
+                  {{ item.integridad.porcentaje }}%
+                </span>
+                <div class="bar-wrap">
+                  <div class="bar-fill {% if item.integridad.porcentaje >= 70 %}high{% elif item.integridad.porcentaje >= 40 %}mid{% else %}low{% endif %}"
+                       style="width:{{ item.integridad.porcentaje }}%;"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% for f in item.integridad.faltantes %}
+                <span class="tag-adv">{{ f }}</span>
+              {% empty %}
+                <span style="color:#10b981;font-size:.75rem;">✓ Completo</span>
+              {% endfor %}
+              {% for a in item.advertencias %}
+                <span class="tag-adv" style="background:rgba(239,68,68,.15);color:#f87171;">{{ a }}</span>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Tabla: cargados exitosamente -->
+  {% if cargados %}
+  <div class="diag-panel" style="margin-top:1.25rem;">
+    <details>
+      <summary>
+        <ion-icon name="checkmark-circle-outline" style="color:#10b981;"></ion-icon>
+        Alumnos Cargados Exitosamente ({{ cargados|length }})
+        <ion-icon name="chevron-forward-outline" class="arr" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="result-table">
+        <thead><tr><th>Cédula</th><th>Apellidos</th><th>Nombres</th><th>Año</th></tr></thead>
+        <tbody>
+          {% for a in cargados %}
+          <tr>
+            <td>{{a.cedula|formato_cedula}}</td>
+            <td>{{ a.apellidos }}</td>
+            <td>{{ a.nombres }}</td>
+            <td><span class="diag-badge ok">{{ a.ano }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Tabla: ya existentes -->
+  {% if ya_existentes %}
+  <div class="diag-panel" style="margin-top:1.25rem;">
+    <details>
+      <summary>
+        <ion-icon name="people-outline" style="color:#f59e0b;"></ion-icon>
+        Alumnos Ya Existentes en el Sistema ({{ ya_existentes|length }})
+        <ion-icon name="chevron-forward-outline" class="arr" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="result-table">
+        <thead><tr><th>Cédula</th><th>Apellidos</th><th>Nombres</th><th>Integridad</th></tr></thead>
+        <tbody>
+          {% for a in ya_existentes %}
+          <tr>
+            <td>{{a.cedula|formato_cedula}}</td>
+            <td>{{ a.apellidos }}</td>
+            <td>{{ a.nombres }}</td>
+            <td>
+              {% if a.integridad %}
+                <span style="color:{% if a.integridad.porcentaje >= 70 %}#10b981{% elif a.integridad.porcentaje >= 40 %}#f59e0b{% else %}#ef4444{% endif %};font-weight:700;">
+                  {{ a.integridad.porcentaje }}%
+                </span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Tabla: errores -->
+  {% if errores_filas %}
+  <div class="diag-panel" style="margin-top:1.25rem;">
+    <details>
+      <summary>
+        <ion-icon name="close-circle-outline" style="color:#ef4444;"></ion-icon>
+        Registros con Error ({{ errores_filas|length }})
+        <ion-icon name="chevron-forward-outline" class="arr" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="result-table">
+        <thead><tr><th>Fila Excel</th><th>Motivo</th></tr></thead>
+        <tbody>
+          {% for e in errores_filas %}
+          <tr><td>{{ e.fila }}</td><td>{{ e.motivo }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Botón nueva carga -->
+  <div style="text-align:center;margin-top:2rem;">
+    <a href="{% url 'calificaciones' %}"
+       style="display:inline-block;background:var(--color-accent);color:var(--color-text-on-accent);padding:0.7rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;transition:background 0.15s ease;"
+       onmouseover="this.style.background='var(--color-accent-hover)'"
+       onmouseout="this.style.background='var(--color-accent)'">
+      <ion-icon name="refresh-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon>
+      Cargar otro archivo
+    </a>
+    <a href="{% url 'expedientes' %}"
+       style="display:inline-block;margin-left:1rem;border:1px solid var(--color-accent);color:var(--color-accent);padding:0.7rem 2rem;border-radius:8px;font-weight:700;text-decoration:none;transition:all 0.15s ease;"
+       onmouseover="this.style.background='var(--color-accent-subtle)'"
+       onmouseout="this.style.background='transparent'">
+      <ion-icon name="folder-open-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon>
+      Ver Expedientes
+    </a>
+  </div>
+
+
+  {% endif %}{# endif not procesado #}
+</div>
+
+<!-- Spinner overlay -->
+<div id="spinner-overlay">
+  <div class="spinner"></div>
+  <p style="color:#fff;font-weight:600;font-size:.95rem;">Procesando con Motor IA…</p>
+  <p style="color:rgba(255,255,255,.6);font-size:.8rem;">Analizando estructura, mapeando columnas y creando expedientes</p>
+</div>
+
+<!-- Toast -->
+{% if procesado %}
+<div class="toast {% if total_errores == 0 %}success{% else %}warning{% endif %}" id="result-toast">
+  <ion-icon name="{% if total_errores == 0 %}checkmark-circle{% else %}warning{% endif %}-outline"
+            class="toast-icon" style="color:{% if total_errores == 0 %}#10b981{% else %}#f59e0b{% endif %};"></ion-icon>
+  <div>
+    <div class="toast-title">Importación completada · {{ ano_label }}</div>
+    <div class="toast-msg">
+      {{ total_cargados }} alumnos cargados · {{ total_existentes }} ya existentes · {{ total_errores }} errores
+    </div>
+  </div>
+</div>
+<script>setTimeout(() => { const t = document.getElementById('result-toast'); if(t) t.style.opacity='0'; }, 6000);</script>
+{% endif %}
+
+<!-- Modal de Ayuda (Guía de Carga Masiva de Alumnos) -->
+<div id="cargaMasivaHelpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+      <div class="flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined">table_view</span>
+        <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Carga Masiva de Alumnos</h3>
+      </div>
+      <button type="button" onclick="toggleCargaMasivaHelp()" class="text-text-muted hover:text-text-main cursor-pointer bg-transparent border-none">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+
+      <!-- Sección 1: Formato del Archivo -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">description</span>
+          1. Formato del Archivo Excel
+        </h4>
+        <p class="text-xs">
+          El sistema <strong>solo acepta archivos en formato Excel (.xlsx o .xls)</strong>. Puedes descargar el formato oficial de ejemplo haciendo clic en el botón <em>"Aquí tienes un formato para subir tus archivos"</em> que aparece debajo de la zona de carga. El Motor IA es capaz de detectar automáticamente la estructura, incluso si el archivo no está perfectamente normalizado.
+        </p>
+      </div>
+
+      <!-- Sección 2: Motor IA Adaptativo -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">auto_awesome</span>
+          2. ¿Qué hace el Motor IA?
+        </h4>
+        <p class="text-xs mb-2">El motor analiza el archivo de forma inteligente en varias fases:</p>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li><strong>Detección del encabezado:</strong> Busca la fila de títulos en las primeras 30 filas, sin importar si hay filas vacías o texto adicional arriba.</li>
+          <li><strong>Mapeo de columnas:</strong> Reconoce variaciones como "F.N", "FECHA NAC", "FECHA DE NACIMIENTO", "N° C.I.", etc.</li>
+          <li><strong>Inferencia del año académico:</strong> Deduce el año escolar a partir de datos en la cabecera del archivo o del rango de edades de los alumnos.</li>
+          <li><strong>Detección de duplicados:</strong> Si un alumno ya existe en el sistema (por cédula o nombre+fecha), lo marca como ya existente sin duplicar.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 3: Columnas Reconocidas -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">grid_on</span>
+          3. Columnas que Reconoce el Sistema
+        </h4>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Cédula / V-CI</span>
+            <span>N° C.I., C.I., CÉDULA, V-CI, CI</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Nombres</span>
+            <span>NOMBRES, NOMBRE, PRIMER NOMBRE</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Apellidos</span>
+            <span>APELLIDOS, APELLIDO, PRIMER APELLIDO</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Fecha de Nacimiento</span>
+            <span>F.N, FECHA NAC, FECHA DE NACIMIENTO, L NAC</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Año / Grado</span>
+            <span>AÑO, GRADO, AÑO N, CURSANDO</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Sección</span>
+            <span>SECCIÓN, SECCION, S/C, SEC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 4: Interpretación de Resultados -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">analytics</span>
+          4. Interpretación del Reporte Final
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li><strong class="text-emerald-400">Alumnos Cargados:</strong> Registros nuevos creados exitosamente con su expediente.</li>
+          <li><strong class="text-amber-400">Ya Existentes:</strong> Alumnos que ya estaban en el sistema. No se duplican, pero se informa de su completitud.</li>
+          <li><strong class="text-red-400">Registros con Error:</strong> Filas con datos insuficientes (sin cédula, nombre o fecha). Se muestra el número de fila exacto para corregir.</li>
+        </ul>
+        <p class="text-xs mt-2 text-amber-400 flex items-center gap-1">
+          <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+          <span>El sistema también calcula la <strong>completitud del expediente</strong> de cada alumno cargado.</span>
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+      <button type="button" onclick="toggleCargaMasivaHelp()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleCargaMasivaHelp() {
+  const modal = document.getElementById('cargaMasivaHelpModal');
+  if (modal) modal.classList.toggle('hidden');
+}
+</script>
+
+<script>
+{
+  const dropZone  = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const nameDisp  = document.getElementById('file-name-display');
+  const deduceP   = document.getElementById('deduce-panel');
+  const btnProc   = document.getElementById('btn-procesar');
+  const form      = document.getElementById('upload-form');
+  const spinner   = document.getElementById('spinner-overlay');
+  function handleFile(file) {
+    if (!file) return;
+    nameDisp.textContent = '📄 ' + file.name;
+    if (deduceP) deduceP.style.display = 'block';
+    if (btnProc) {
+      btnProc.style.display = 'inline-block';
+      btnProc.style.visibility = 'visible';
+      btnProc.style.opacity = '1';
+    }
+  }
+
+  if (fileInput) fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+  if (dropZone) {
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) { fileInput.files = e.dataTransfer.files; handleFile(file); }
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Por favor seleccione o arrastre un archivo .xlsx para continuar.');
+        return;
+      }
+      if (spinner) { spinner.style.display = 'flex'; }
+    });
+  }
+}
+</script>
+{% endblock %}

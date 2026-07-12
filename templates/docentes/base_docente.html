@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}Portal Docente{% endblock %} | Intranet</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;600;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'background': '#0B0E11', 'surface': '#111417',
+              'surface-container': '#181C25', 'surface-element': '#1E232D',
+              'primary': '#6366F1', 'primary-glow': 'rgba(99,102,241,0.4)',
+              'secondary': '#10B981', 'secondary-glow': 'rgba(16,185,129,0.4)',
+              'tertiary': '#F59E0B', 'error': '#EF4444',
+              'text-main': '#E1E2E7', 'text-muted': '#8A8D98',
+            },
+            fontFamily: { headline: ['Manrope','sans-serif'], body: ['Inter','sans-serif'] },
+            boxShadow: { 'glass': '0 8px 32px 0 rgba(0,0,0,0.3)', 'neon-primary': '0 0 20px rgba(99,102,241,0.3)' },
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <style>
+      /* ─── Docente Portal Responsive ─── */
+      /* All rules inside @media — zero Desktop impact */
+      @media (max-width: 768px) {
+        /* Prevent iOS zoom on form inputs */
+        input:not([type="checkbox"]):not([type="radio"]),
+        select, textarea { font-size: 16px !important; }
+        /* Touch-friendly buttons */
+        button, a[class*="btn"], [class*="rounded-xl"][class*="px-"] { min-height: 44px; }
+        /* Tables scroll horizontally */
+        .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+        table { min-width: 500px; }
+        /* Compact checkboxes for touch */
+        input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; }
+      }
+      @media (max-width: 480px) {
+        /* Reduce bottom nav height */
+        .bottom-nav-compact { height: 52px !important; }
+        /* Stack grids to single column */
+        [class*="grid-cols-2"], [class*="grid-cols-3"], [class*="grid-cols-4"] {
+          grid-template-columns: 1fr !important;
+        }
+        /* Full-width modals */
+        [class*="max-w-"] { max-width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
+      }
+    </style>
+</head>
+<body class="bg-background text-text-main font-body flex h-screen overflow-hidden">
+
+    <!-- Sidebar (Escritorio) -->
+    <aside class="w-64 flex-shrink-0 bg-surface-container/70 backdrop-blur-xl border-r border-border hidden md:flex flex-col z-40">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-border/50">
+            <div class="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center mr-3 shadow-neon-primary">
+                <ion-icon name="school-outline" class="text-primary text-base"></ion-icon>
+            </div>
+            <span class="font-headline font-bold text-sm text-text-main tracking-wide">Portal Docente</span>
+        </div>
+
+        <!-- Perfil Resumen -->
+        <div class="p-6 border-b border-border/30 text-center">
+            <div class="w-16 h-16 rounded-full mx-auto bg-surface-element border border-border flex items-center justify-center overflow-hidden mb-3">
+                {% if request.user.perfil_docente.foto_perfil %}
+                <img src="{{ request.user.perfil_docente.foto_perfil.url }}" alt="Perfil" class="w-full h-full object-cover">
+                {% else %}
+                <ion-icon name="person" class="text-2xl text-text-muted"></ion-icon>
+                {% endif %}
+            </div>
+            <p class="font-bold text-sm text-text-main truncate">{{ request.user.nombre_completo|default:request.user.username }}</p>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold uppercase tracking-wide mt-1.5 inline-block">Docente</span>
+        </div>
+
+        <!-- Navegación -->
+        <nav class="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-3 px-3">Menú Principal</p>
+            
+            <a href="{% url 'portal_docente' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.resolver_match.url_name == 'portal_docente' %}bg-primary/10 text-primary shadow-sm border border-primary/20{% else %}text-text-muted hover:bg-surface-element hover:text-text-main border border-transparent{% endif %}">
+                <ion-icon name="grid-outline" class="text-lg"></ion-icon>
+                Dashboard
+            </a>
+            <a href="{% url 'calificaciones_docente' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.resolver_match.url_name == 'calificaciones_docente' %}bg-primary/10 text-primary shadow-sm border border-primary/20{% else %}text-text-muted hover:bg-surface-element hover:text-text-main border border-transparent{% endif %}">
+                <ion-icon name="document-text-outline" class="text-lg"></ion-icon>
+                Calificaciones
+            </a>
+            <a href="{% url 'planificacion_docente' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.resolver_match.url_name == 'planificacion_docente' %}bg-primary/10 text-primary shadow-sm border border-primary/20{% else %}text-text-muted hover:bg-surface-element hover:text-text-main border border-transparent{% endif %}">
+                <ion-icon name="calendar-outline" class="text-lg"></ion-icon>
+                Planificación
+            </a>
+        </nav>
+
+        <!-- Cerrar Sesión -->
+        <div class="p-4 border-t border-border/50">
+            <a href="{% url 'logout' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:bg-error/10 hover:text-error border border-transparent hover:border-error/20 transition-all">
+                <ion-icon name="log-out-outline" class="text-lg"></ion-icon>
+                Cerrar Sesión
+            </a>
+        </div>
+    </aside>
+
+    <!-- Contenedor Principal -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        
+        <!-- Header Móvil -->
+        <header class="md:hidden h-16 flex-shrink-0 flex items-center justify-between px-4 border-b border-border bg-surface-container/90 backdrop-blur-md z-30">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
+                    <ion-icon name="school-outline" class="text-primary text-base"></ion-icon>
+                </div>
+                <span class="font-headline font-bold text-sm text-text-main">Portal Docente</span>
+            </div>
+            <a href="{% url 'logout' %}" class="text-text-muted hover:text-error transition-colors p-2">
+                <ion-icon name="log-out-outline" class="text-2xl"></ion-icon>
+            </a>
+        </header>
+
+        <!-- Content -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar relative">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Menú Móvil Simple (Solo accesos rápidos abajo) -->
+    <div class="md:hidden flex-shrink-0 h-16 bg-surface-container border-t border-border flex items-center justify-around px-2 z-30">
+        <a href="{% url 'portal_docente' %}" class="flex flex-col items-center gap-1 p-2 rounded-lg {% if request.resolver_match.url_name == 'portal_docente' %}text-primary{% else %}text-text-muted{% endif %}">
+            <ion-icon name="grid-outline" class="text-xl"></ion-icon>
+            <span class="text-[9px] font-bold uppercase tracking-wider">Inicio</span>
+        </a>
+        <a href="{% url 'calificaciones_docente' %}" class="flex flex-col items-center gap-1 p-2 rounded-lg {% if request.resolver_match.url_name == 'calificaciones_docente' %}text-primary{% else %}text-text-muted{% endif %}">
+            <ion-icon name="document-text-outline" class="text-xl"></ion-icon>
+            <span class="text-[9px] font-bold uppercase tracking-wider">Notas</span>
+        </a>
+        <a href="{% url 'planificacion_docente' %}" class="flex flex-col items-center gap-1 p-2 rounded-lg {% if request.resolver_match.url_name == 'planificacion_docente' %}text-primary{% else %}text-text-muted{% endif %}">
+            <ion-icon name="calendar-outline" class="text-xl"></ion-icon>
+            <span class="text-[9px] font-bold uppercase tracking-wider">Plan</span>
+        </a>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

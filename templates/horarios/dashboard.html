@@ -1,0 +1,1068 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestor de Horarios | Intranet{% endblock %}
+
+{% block content %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<div class="flex flex-col lg:flex-row gap-6">
+    <!-- Panel Izquierdo -->
+    <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-6">
+        
+        {% if modo_lectura %}
+        <!-- Tarjeta de Detalles (Solo Lectura) -->
+        <div class="bg-surface-container rounded-3xl p-6 border border-border shadow-md">
+            <h2 class="text-xl font-bold text-text-main">Detalles del Horario</h2>
+            <button type="button" onclick="toggleGestorHorariosHelp()" style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;cursor:pointer;color:var(--color-accent);font-size:.8rem;font-weight:700;padding:0;margin:4px 0 16px;">
+                <span class="material-symbols-outlined" style="font-size:15px;">help</span> ¿Cómo usar esta sección?
+            </button>
+            <div class="space-y-4">
+                <div class="bg-surface-element p-4 rounded-xl border border-border">
+                    <p class="text-xs text-text-muted uppercase font-bold tracking-wide">Período</p>
+                    <p class="text-base font-semibold">{{ horario_precargado.periodo.nombre }}</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="bg-surface-element p-4 rounded-xl border border-border flex-1">
+                        <p class="text-xs text-text-muted uppercase font-bold tracking-wide">Año</p>
+                        <p class="text-base font-semibold">{{ horario_precargado.ano_grado }}°</p>
+                    </div>
+                    <div class="bg-surface-element p-4 rounded-xl border border-border flex-1">
+                        <p class="text-xs text-text-muted uppercase font-bold tracking-wide">Sección</p>
+                        <p class="text-base font-semibold">{{ horario_precargado.seccion }}</p>
+                    </div>
+                </div>
+                <a href="{% url 'horarios_dashboard_id' horario_precargado.id %}?edit=1" data-turbo="false" class="w-full mt-4 flex items-center justify-center gap-2 py-3 bg-primary hover:bg-primary/80 text-text-main font-bold rounded-xl shadow-neon-primary transition-all">
+                    <ion-icon name="create-outline" class="text-xl"></ion-icon> Editar Horario
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <!-- Tarjeta Configuración (Edición) -->
+        <div class="bg-surface-container rounded-3xl p-6 border border-border shadow-md contenedor-crear-horario">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-text-main">Configurar Horario</h2>
+                {% if request.user.rol == 'PERSONAL' or request.user.rol == 'DESARROLLADOR' %}
+                <a href="{% url 'notas_calificaciones' %}" id="btnNuevoPeriodo"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary border border-primary/30 rounded-xl hover:bg-primary/20 transition-all whitespace-nowrap">
+                    <ion-icon name="add-circle-outline" class="text-base"></ion-icon>
+                    Crear Nuevo Periodo
+                </a>
+                {% endif %}
+            </div>
+            <button type="button" onclick="toggleGestorHorariosHelp()" style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;cursor:pointer;color:var(--color-accent);font-size:.8rem;font-weight:700;padding:0;margin:0 0 16px;">
+                <span class="material-symbols-outlined" style="font-size:15px;">help</span> ¿Cómo usar esta sección?
+            </button>
+            <form id="horarioForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Período Académico</label>
+                    <select id="selPeriodo" class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors">
+                        {% for p in periodos %}
+                        <option value="{{ p.id }}" {% if horario_precargado and horario_precargado.periodo.id == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Año/Grado</label>
+                    <select id="selAno" class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors">
+                        <option value="1" {% if horario_precargado.ano_grado == 1 %}selected{% endif %}>1er Año</option>
+                        <option value="2" {% if horario_precargado.ano_grado == 2 %}selected{% endif %}>2do Año</option>
+                        <option value="3" {% if horario_precargado.ano_grado == 3 %}selected{% endif %}>3er Año</option>
+                        <option value="4" {% if horario_precargado.ano_grado == 4 %}selected{% endif %}>4to Año</option>
+                        <option value="5" {% if horario_precargado.ano_grado == 5 %}selected{% endif %}>5to Año</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Sección</label>
+                    <input type="text" id="selSeccion" value="{{ horario_precargado.seccion|default:'A' }}" class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-colors uppercase" maxlength="1">
+                </div>
+                <button type="submit" class="w-full py-3 bg-primary hover:bg-primary/80 text-text-main font-bold rounded-xl shadow-neon-primary transition-all">
+                    Cargar / Actualizar Panel
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Acciones Exportar y Finalizar -->
+        <div class="bg-surface-container rounded-3xl p-6 border border-border shadow-md {% if not horario_precargado and not modo_lectura %}hidden{% endif %}" id="accionesPanel">
+            <h3 class="text-sm font-bold text-text-main mb-3">Acciones</h3>
+            <button id="btnExportarExcel" class="w-full flex items-center justify-center gap-2 py-2.5 bg-secondary/10 text-secondary hover:bg-secondary/20 font-semibold rounded-xl transition-all border border-secondary/20 mb-3">
+                <ion-icon name="document-text-outline" class="text-xl"></ion-icon> Exportar Excel
+            </button>
+            
+            {% if not modo_lectura %}
+            <button id="btnDejarEnBlanco" class="w-full flex items-center justify-center gap-2 py-2.5 bg-error/10 text-error hover:bg-error/20 font-semibold rounded-xl transition-all border border-error/20 mb-3">
+                <ion-icon name="trash-outline" class="text-xl"></ion-icon> Dejar en Blanco
+            </button>
+
+            <button id="btnAgregarBloqueMenu" class="w-full flex items-center justify-center gap-2 py-2.5 bg-surface-element text-text-main hover:bg-surface-element font-semibold rounded-xl transition-all border border-border mb-3">
+                <ion-icon name="add-outline" class="text-xl"></ion-icon> Nuevo Bloque (Manual)
+            </button>
+            
+            <button id="btnGuardarHorarioFinal" class="w-full flex items-center justify-center gap-2 py-3 bg-secondary hover:bg-secondary/80 text-text-main font-bold rounded-xl shadow-neon-secondary transition-all">
+                <ion-icon name="checkmark-circle-outline" class="text-xl"></ion-icon> Guardar Horario
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- ── Horarios Guardados (Acceso Rápido) ── -->
+        {% if horarios_existentes %}
+        <div class="bg-surface-container rounded-3xl p-5 border border-border shadow-md">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-text-main flex items-center gap-2">
+                    <ion-icon name="albums-outline" class="text-primary text-base"></ion-icon>
+                    Horarios Guardados
+                </h3>
+                <a href="{% url 'horarios_lista' %}" class="text-xs text-primary/70 hover:text-primary transition-colors font-semibold">Ver todos</a>
+            </div>
+            <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                {% for h in horarios_existentes %}
+                <a href="{% url 'horarios_dashboard_id' h.id %}" data-turbo="false"
+                   class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-surface-element hover:bg-surface-element border border-border hover:border-primary/30 transition-all group {% if horario_precargado and horario_precargado.id == h.id %}border-primary/40 bg-primary/10{% endif %}">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-text-main group-hover:text-primary transition-colors truncate">
+                            {{ h.ano_grado }}° Año — Sección {{ h.seccion }}
+                        </p>
+                        <p class="text-[11px] text-text-muted truncate">{{ h.periodo.nombre }}</p>
+                    </div>
+                    <ion-icon name="arrow-forward-outline" class="text-text-muted group-hover:text-primary transition-colors flex-shrink-0"></ion-icon>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <!-- Sin horarios guardados aún -->
+        <div class="bg-surface-container rounded-3xl p-5 border border-border shadow-md">
+            <h3 class="text-sm font-bold text-text-main flex items-center gap-2 mb-3">
+                <ion-icon name="albums-outline" class="text-primary text-base"></ion-icon>
+                Horarios Guardados
+            </h3>
+            <div class="text-center py-4">
+                <ion-icon name="calendar-clear-outline" class="text-3xl text-text-muted/40 mb-2"></ion-icon>
+                <p class="text-xs text-text-muted">No hay horarios guardados aún.<br>Configura uno y guarda bloques para comenzar.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Área Principal Calendario -->
+    <div class="flex-1 bg-surface-container rounded-3xl p-6 border border-border shadow-md flex flex-col relative overflow-hidden">
+        <style>
+            /* ── Calendar Theme Variables ── */
+
+            #calendar-container {
+                --fc-page-bg-color: transparent;
+                --fc-neutral-bg-color: var(--color-surface-element);
+                --fc-neutral-text-color: var(--color-text-main);
+                --fc-border-color: var(--color-border);
+                --fc-list-event-hover-bg-color: var(--color-surface);
+                --fc-today-bg-color: var(--color-accent-subtle);
+                color: var(--color-text-main);
+            }
+
+            /* Evita que se resalte toda la fila en el calendario al pasar el mouse */
+            .fc tbody tr:hover {
+                background-color: transparent !important;
+            }
+            /* Resalta únicamente el cuadro/celda individual sobre la que está el mouse */
+            .fc-timegrid-slot:hover,
+            .fc-timegrid-slot-lane:hover,
+            .fc-daygrid-day:hover {
+                background-color: var(--color-surface-hover) !important;
+            }
+
+            .fc-theme-standard th,
+            .fc-theme-standard td,
+            .fc-theme-standard .fc-scrollgrid {
+                border-color: var(--color-border) !important;
+            }
+
+            .fc .fc-col-header-cell-cushion {
+                color: var(--color-text-main);
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                letter-spacing: 0.05em;
+                padding: 10px 0;
+            }
+
+            .fc .fc-timegrid-slot-label-cushion {
+                color: var(--color-text-secondary);
+                font-size: 0.7rem;
+            }
+            .fc .fc-timegrid-slot { height: 5.5em; }
+            .fc-event-main {
+                white-space: pre-wrap; font-size: 0.8rem; text-align: center;
+                display: flex; flex-direction: column; justify-content: center;
+            }
+
+            /* Parche de Fuerza Bruta CSS para mitigar fallos por JavaScript */
+            @media (max-width: 640px) {
+                /* Forzar a que ningún contenedor rompa el ancho, EXCEPTO el calendario para permitir scroll */
+                div:not(#calendar-wrapper):not(#calendar-container):not(.fc):not(.fc *), section, main {
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                }
+                
+                /* Permitir scroll horizontal en el contenedor del calendario */
+                #calendar-wrapper {
+                    overflow-x: auto !important;
+                    -webkit-overflow-scrolling: touch;
+                }
+                
+                /* Forzar un ancho mínimo para que los días no se aplasten */
+                #calendar-container {
+                    min-width: 600px !important;
+                }
+                
+                /* Hacer las celdas más altas en móvil para que el texto del bloque quepa completo */
+                .fc .fc-timegrid-slot { height: 7.5em !important; }
+                .fc-event-main { font-size: 0.75rem !important; }
+                
+                /* El elemento exacto con sus clases reflejado de forma estricta */
+                .max-w-md {
+                    max-width: 100% !important;
+                    width: 100% !important;
+                }
+            }
+        </style>
+        
+        <div id="advertenciaHorario" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-background/95 backdrop-blur-md overflow-hidden rounded-3xl">
+            <div class="w-[90%] max-w-[400px] p-6 sm:p-8 bg-surface border border-border rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col items-center box-border relative z-50">
+                <ion-icon name="calendar-outline" class="text-6xl text-primary mb-4"></ion-icon>
+                <h3 class="text-2xl font-black text-text-main font-headline mb-2 text-center">Comienza tu Nuevo Horario</h3>
+                <p class="text-sm text-text-muted mb-6 text-center">Tus horarios anteriores fueron limpiados por la actualización de materias. Crea uno nuevo seleccionando el año y sección en el panel izquierdo.</p>
+                <button onclick="document.querySelector('#horarioForm button[type=\'submit\']').click()" class="w-full py-3 bg-primary hover:bg-primary/80 text-text-main font-bold rounded-xl shadow-neon-primary transition-all flex items-center justify-center gap-2">
+                    <ion-icon name="add-circle-outline" class="text-xl"></ion-icon>
+                    Crear Horario Ahora
+                </button>
+            </div>
+        </div>
+
+        <h2 class="text-center font-bold text-lg mb-2 text-text-muted" id="calendarioHeader"></h2>
+
+        <div id="calendar-wrapper" class="flex-1 relative w-full max-w-full overflow-hidden rounded-3xl">
+            <div id="calendar-container" class="h-[600px] mt-2"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bloque (Solo se usa si está en modo edición) -->
+<div id="bloqueModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-3xl shadow-md w-full max-w-md overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="bloqueModalContent">
+        <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-element">
+            <h3 class="text-lg font-bold" id="modalTitle">Detalle de Bloque</h3>
+            <button onclick="closeModal()" class="text-text-muted hover:text-text-main transition-colors">
+                <ion-icon name="close" class="text-2xl"></ion-icon>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="bloqueForm" class="space-y-4">
+                <input type="hidden" id="bloqueId">
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Día</label>
+                        <select id="bDia" class="w-full bg-surface-element border border-border rounded-lg py-2.5 px-3 text-sm focus:border-primary/50 outline-none">
+                            <option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Tipo</label>
+                        <select id="bTipo" onchange="toggleTipoFields()" class="w-full bg-surface-element border border-border rounded-lg py-2.5 px-3 text-sm focus:border-primary/50 outline-none">
+                            <option value="CLASE">Clase Académica</option><option value="RECESO">Receso</option><option value="ALMUERZO">Almuerzo</option><option value="OTRO">Otro Evento</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Inicio</label>
+                        <input type="time" id="bInicio" class="w-full bg-surface-element border border-border rounded-lg py-2 px-3 text-sm" required>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Fin</label>
+                        <input type="time" id="bFin" class="w-full bg-surface-element border border-border rounded-lg py-2 px-3 text-sm" required>
+                    </div>
+                </div>
+
+                <!-- Datos de asignaturas y docentes en JSON para uso directo en el frontend -->
+                <script id="asignaturas-data" type="application/json">{{ asignaturas_json|safe }}</script>
+                <script id="docentes-data" type="application/json">{{ docentes_json|safe }}</script>
+
+                <div id="claseFields" class="space-y-4 transition-all">
+                    <div>
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Docente <span class="text-primary/60 normal-case font-normal">(Asignado)</span></label>
+                        <select id="bDocente" class="w-full bg-surface-element border border-border rounded-lg py-2.5 px-3 text-sm">
+                            <option value="">- Seleccionar Docente -</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Asignatura</label>
+                        <select id="bAsignatura" class="w-full bg-surface-element border border-border rounded-lg py-2.5 px-3 text-sm">
+                            <option value="">- Seleccionar Materia -</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-text-muted uppercase mb-1">
+                            Aula
+                            <span class="text-primary/60 normal-case font-normal">(solo número)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="bAula"
+                            inputmode="numeric"
+                            placeholder="Ej: 12"
+                            maxlength="4"
+                            class="w-full bg-surface-element border border-border rounded-lg py-2.5 px-3 text-sm focus:border-primary/50 outline-none tracking-widest"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                            onkeydown="if(!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab/.test(event.key)){event.preventDefault();}"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Color del Bloque</label>
+                    <input type="color" id="bColor" value="#6366F1" class="w-full h-10 rounded cursor-pointer border-0 p-0 bg-transparent">
+                </div>
+
+                <div class="mt-6 flex gap-3 pt-4 border-t border-border">
+                    <button type="button" id="btnDelete" onclick="eliminarBloque()" class="hidden px-4 py-2 bg-error/10 text-error hover:bg-error/20 rounded-xl font-bold transition-all w-1/3 text-center">
+                        Eliminar
+                    </button>
+                    <button type="submit" class="flex-1 py-2 bg-primary hover:bg-primary/80 text-text-main rounded-xl font-bold transition-all">
+                        Guardar Bloque
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Crear Nuevo Período Académico ── -->
+<div id="modalNuevoPeriodo" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-3xl shadow-md w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="modalNuevoPeriodoContent">
+        <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-element">
+            <h3 class="text-lg font-bold">Crear Nuevo Período Académico</h3>
+            <button onclick="cerrarModalPeriodo()" class="text-text-muted hover:text-text-main transition-colors">
+                <ion-icon name="close" class="text-2xl"></ion-icon>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-text-muted uppercase mb-2">Nombre del Período</label>
+                <input
+                    type="text"
+                    id="inputNombrePeriodo"
+                    placeholder="Ej: 2025-2026, Período II-2025, etc."
+                    class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-4 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                    autocomplete="off"
+                >
+                <p id="errorMsgPeriodo" class="text-xs text-red-400 mt-1 hidden"></p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="cerrarModalPeriodo()" class="flex-1 py-2.5 bg-surface-element hover:bg-surface-element text-text-muted font-semibold rounded-xl transition-all text-sm">
+                    Cancelar
+                </button>
+                <button type="button" id="btnGuardarPeriodo" onclick="guardarNuevoPeriodo()" class="flex-1 py-2.5 bg-primary hover:bg-primary/80 text-text-main font-bold rounded-xl shadow-neon-primary transition-all text-sm flex items-center justify-center gap-2">
+                    <ion-icon name="save-outline"></ion-icon> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Crear Nuevo Período Académico ── -->
+<div id="modalNuevoPeriodo" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-4">
+    <div class="bg-surface border border-border rounded-3xl shadow-md w-full max-w-sm overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="modalNuevoPeriodoContent">
+        <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-surface-element">
+            <h3 class="text-lg font-bold">Crear Nuevo Período Académico</h3>
+            <button onclick="cerrarModalPeriodo()" class="text-text-muted hover:text-text-main transition-colors">
+                <ion-icon name="close" class="text-2xl"></ion-icon>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-text-muted uppercase mb-2">Nombre del Período</label>
+                <input
+                    type="text"
+                    id="inputNombrePeriodo"
+                    placeholder="Ej: 2025-2026, Período II-2025, etc."
+                    class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-4 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                    autocomplete="off"
+                >
+                <p id="errorMsgPeriodo" class="text-xs text-red-400 mt-1 hidden"></p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="cerrarModalPeriodo()" class="flex-1 py-2.5 bg-surface-element hover:bg-surface-element text-text-muted font-semibold rounded-xl transition-all text-sm">
+                    Cancelar
+                </button>
+                <button type="button" id="btnGuardarPeriodo" onclick="guardarNuevoPeriodo()" class="flex-1 py-2.5 bg-primary hover:bg-primary/80 text-text-main font-bold rounded-xl shadow-neon-primary transition-all text-sm flex items-center justify-center gap-2">
+                    <ion-icon name="save-outline"></ion-icon> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let calendar;
+    let currentHorarioId = {% if horario_precargado %}{{ horario_precargado.id }}{% else %}null{% endif %};
+    const isReadOnly = {% if modo_lectura %}true{% else %}false{% endif %};
+
+    // ── Lógica de filtrado de asignaturas por año ──────────────────────────────
+    const TODAS_ASIGNATURAS = JSON.parse(document.getElementById('asignaturas-data').textContent);
+    const TODOS_DOCENTES = JSON.parse(document.getElementById('docentes-data').textContent);
+
+    // ── Año seleccionado actualmente (para filtrar asignaturas) ───────────────
+    function getAnoSeleccionado() {
+        const sel = document.getElementById('selAno');
+        return sel ? parseInt(sel.value) : null;
+    }
+
+    document.addEventListener('turbo:load', function() {
+        var calendarEl = document.getElementById('calendar-container');
+        
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            headerToolbar: {
+                left: '',
+                center: '',
+                right: ''
+            },
+            dayHeaderFormat: { weekday: 'long' }, // Remove dates, show only 'Lunes', 'Martes', etc.
+            allDaySlot: false,
+            slotMinTime: '07:00:00',
+            slotMaxTime: '18:00:00',
+            hiddenDays: [0, 6],
+            height: '100%',
+            locale: 'es',
+            editable: !isReadOnly, 
+            selectable: !isReadOnly,
+            events: function(fetchInfo, successCallback, failureCallback) {
+                if(!currentHorarioId || currentHorarioId === 'TEMP') {
+                    successCallback([]);
+                    return;
+                }
+                fetch(`/horarios/api/obtener/?horario_id=${currentHorarioId}`)
+                .then(response => response.json())
+                .then(data => {
+                    successCallback(data);
+                })
+                .catch(error => {
+                    console.error("Error fetching events:", error);
+                    failureCallback(error);
+                });
+            },
+            select: function(info) {
+                if(!currentHorarioId) {
+                    alert("Por favor cargue un horario primero.");
+                    calendar.unselect();
+                    return;
+                }
+                abrirModalNueva(info);
+            },
+            eventClick: function(info) {
+                if(!isReadOnly){
+                    abrirModalEditar(info.event);
+                }
+            }
+        });
+
+        calendar.render();
+
+        if (currentHorarioId) {
+            document.getElementById('advertenciaHorario').classList.add('hidden');
+            {% if horario_precargado %}
+            document.getElementById('calendarioHeader').innerText = `Horario Académico - {{ horario_precargado.periodo.nombre|slice:"0:4" }}`;
+            // Pre-cargar asignaciones para que los selectores funcionen al editar bloques
+            cargarAsignaciones(
+                '{{ horario_precargado.periodo.id }}',
+                '{{ horario_precargado.ano_grado }}',
+                '{{ horario_precargado.seccion }}'
+            );
+            {% endif %}
+        }
+
+        const horarioForm = document.getElementById('horarioForm');
+        if(horarioForm) {
+            horarioForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                cargarHorario();
+            });
+        }
+
+        document.getElementById('bloqueForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            guardarBloque();
+        });
+        
+        const btnExportarExcel = document.getElementById('btnExportarExcel');
+        if(btnExportarExcel) {
+            btnExportarExcel.addEventListener('click', function() {
+                if(currentHorarioId && currentHorarioId !== 'TEMP') {
+                    window.location.href = `/horarios/exportar/excel/${currentHorarioId}/`;
+                }
+            });
+        }
+        
+        const btnAgregar = document.getElementById('btnAgregarBloqueMenu');
+        if(btnAgregar) {
+            btnAgregar.addEventListener('click', function() {
+                abrirModalNuevaMenu();
+            });
+        }
+
+        const btnGuardarFinal = document.getElementById('btnGuardarHorarioFinal');
+        if(btnGuardarFinal) {
+            btnGuardarFinal.addEventListener('click', function() {
+                if(currentHorarioId && currentHorarioId !== 'TEMP') {
+                    window.location.href = `/horarios/${currentHorarioId}/`; // Redirects to read-only view
+                } else {
+                    alert('Asigne al menos un bloque para generar el horario antes de guardar.');
+                }
+            });
+        }
+
+        const btnDejarEnBlanco = document.getElementById('btnDejarEnBlanco');
+        if (btnDejarEnBlanco) {
+            btnDejarEnBlanco.addEventListener('click', async function() {
+                if (!currentHorarioId || currentHorarioId === 'TEMP') {
+                    calendar.removeAllEvents();
+                    mostrarToast('Se limpiaron los bloques de la pantalla.');
+                    return;
+                }
+                
+                if (confirm('⚠️ ¡ATENCIÓN!\n\n¿Estás seguro de dejar este horario en blanco?\n\nSe eliminarán de forma permanente TODOS los bloques de clase asignados a este horario. Esta acción no se puede deshacer.')) {
+                    try {
+                        const res = await fetch(`/horarios/api/limpiar/${currentHorarioId}/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.status === 'ok') {
+                            calendar.refetchEvents();
+                            mostrarToast('Se eliminaron todos los bloques del horario.');
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error de conexión al limpiar el horario.');
+                    }
+                }
+            });
+        }
+    });
+
+    async function cargarHorario() {
+        const pId = document.getElementById('selPeriodo').value;
+        const ano = document.getElementById('selAno').value;
+        const seccion = document.getElementById('selSeccion').value.toUpperCase();
+        const pText = document.getElementById('selPeriodo').options[document.getElementById('selPeriodo').selectedIndex].text;
+        
+        document.getElementById('calendarioHeader').innerText = `Horario Académico - ${pText.substring(0,4)}`;
+
+        try {
+            const response = await fetch(`/horarios/api/validar/?periodo_id=${pId}&ano=${ano}&seccion=${seccion}`);
+            const data = await response.json();
+            
+            if(data.status === 'ok') {
+                currentHorarioId = data.horario_id;
+            } else {
+                currentHorarioId = 'TEMP';
+            }
+            
+            document.getElementById('advertenciaHorario').classList.add('hidden');
+            document.getElementById('accionesPanel').classList.remove('hidden');
+            if(currentHorarioId !== 'TEMP') {
+                calendar.refetchEvents();
+            } else {
+                calendar.removeAllEvents();
+            }
+            
+            cargarAsignaciones(pId, ano, seccion);
+
+        } catch (error) {
+            console.error("Error loading schedule context:", error);
+        }
+    }
+
+    let ASIGNACIONES_HORARIO = [];
+    async function cargarAsignaciones(pId, ano, seccion) {
+        try {
+            const res = await fetch(`/horarios/api/asignaciones/?periodo_id=${pId}&ano_grado=${ano}&seccion=${seccion}`);
+            ASIGNACIONES_HORARIO = await res.json();
+        } catch(e) { 
+            console.error("Error cargando asignaciones:", e);
+            ASIGNACIONES_HORARIO = [];
+        }
+        // Siempre poblar selectores después de intentar cargar asignaciones
+        poblarSelectores('', '');
+    }
+
+    /**
+     * Poblar los selectores de Docente y Asignatura.
+     * Si hay AsignacionDocente records: usa cross-filtering inteligente.
+     * Si no hay (tabla vacía): muestra TODOS los docentes y asignaturas del año.
+     */
+    function poblarSelectores(asigId = '', docNombre = '') {
+        const bAsig = document.getElementById('bAsignatura');
+        const bDoc = document.getElementById('bDocente');
+        const ano = getAnoSeleccionado();
+
+        // ── Poblar Docentes ─────────────────────────────────────────────────
+        bDoc.innerHTML = '<option value="">- Seleccionar Docente -</option>';
+
+        if (ASIGNACIONES_HORARIO.length > 0) {
+            // Modo con asignaciones: filtrado cruzado
+            const asignacionesFiltradas = asigId 
+                ? ASIGNACIONES_HORARIO.filter(a => a.asignatura_id == asigId)
+                : ASIGNACIONES_HORARIO;
+            const mapDocentes = new Map();
+            asignacionesFiltradas.forEach(a => mapDocentes.set(a.docente_nombre, a.docente_nombre));
+            mapDocentes.forEach((nombre) => {
+                const opt = document.createElement('option');
+                opt.value = nombre; opt.text = nombre;
+                if (nombre == docNombre) opt.selected = true;
+                bDoc.appendChild(opt);
+            });
+        } else {
+            // Modo sin asignaciones: mostrar todos los docentes disponibles
+            TODOS_DOCENTES.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.nombre;
+                opt.text = d.cargo ? `${d.nombre} (${d.cargo})` : d.nombre;
+                if (d.nombre == docNombre) opt.selected = true;
+                bDoc.appendChild(opt);
+            });
+        }
+
+        // ── Poblar Asignaturas ──────────────────────────────────────────────
+        bAsig.innerHTML = '<option value="">- Seleccionar Materia -</option>';
+
+        if (ASIGNACIONES_HORARIO.length > 0) {
+            // Modo con asignaciones: filtrado cruzado
+            const asignacionesFiltradas = docNombre 
+                ? ASIGNACIONES_HORARIO.filter(a => a.docente_nombre == docNombre)
+                : ASIGNACIONES_HORARIO;
+            const mapMaterias = new Map();
+            asignacionesFiltradas.forEach(a => mapMaterias.set(a.asignatura_id, a.asignatura_nombre));
+            mapMaterias.forEach((nombre, id) => {
+                const opt = document.createElement('option');
+                opt.value = id; opt.text = nombre;
+                if (id == asigId) opt.selected = true;
+                bAsig.appendChild(opt);
+            });
+        } else {
+            // Modo sin asignaciones: mostrar todas las asignaturas del año seleccionado
+            const filtradas = ano 
+                ? TODAS_ASIGNATURAS.filter(a => a.ano_grado === ano) 
+                : TODAS_ASIGNATURAS;
+            filtradas.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.text = `${a.codigo} - ${a.nombre}`;
+                if (a.id == asigId) opt.selected = true;
+                bAsig.appendChild(opt);
+            });
+        }
+    }
+
+    document.getElementById('bDocente').addEventListener('change', function() {
+        poblarSelectores(document.getElementById('bAsignatura').value, this.value);
+    });
+
+    document.getElementById('bAsignatura').addEventListener('change', function() {
+        poblarSelectores(this.value, document.getElementById('bDocente').value);
+    });
+
+    // Funciones del Modal (Solo disponibles en modo edición)
+    function toggleTipoFields() {
+        const b = document.getElementById('bTipo').value;
+        const f = document.getElementById('claseFields');
+        if(b === 'CLASE') {
+            f.style.display = 'block';
+            document.getElementById('bColor').value = '#6366F1';
+        } else if(b === 'RECESO') {
+            f.style.display = 'none';
+            document.getElementById('bColor').value = '#F59E0B'; 
+        } else if(b === 'ALMUERZO') {
+            f.style.display = 'none';
+            document.getElementById('bColor').value = '#10B981'; 
+        } else {
+            f.style.display = 'none';
+            document.getElementById('bColor').value = '#EF4444'; 
+        }
+    }
+
+    function openModal() {
+        const m = document.getElementById('bloqueModal');
+        const mc = document.getElementById('bloqueModalContent');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+        setTimeout(() => {
+            mc.classList.remove('scale-95', 'opacity-0');
+        }, 10);
+    }
+
+    function closeModal() {
+        const m = document.getElementById('bloqueModal');
+        const mc = document.getElementById('bloqueModalContent');
+        mc.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }, 300);
+    }
+
+    function resetForm() {
+        document.getElementById('bloqueForm').reset();
+        document.getElementById('bloqueId').value = '';
+        const btnDelete = document.getElementById('btnDelete');
+        if (btnDelete) btnDelete.classList.add('hidden');
+        document.getElementById('modalTitle').innerText = "Nuevo Bloque";
+        toggleTipoFields();
+    }
+
+    function formatTime(dateObj) {
+        return dateObj.getHours().toString().padStart(2, '0') + ':' + dateObj.getMinutes().toString().padStart(2, '0');
+    }
+
+    function abrirModalNueva(info) {
+        resetForm();
+        document.getElementById('bDia').value = info.start.getDay().toString();
+        document.getElementById('bInicio').value = formatTime(info.start);
+        document.getElementById('bFin').value = formatTime(info.end);
+        poblarSelectores('', '');
+        openModal();
+    }
+    
+    function abrirModalNuevaMenu() {
+        resetForm();
+        poblarSelectores('', '');
+        openModal();
+    }
+
+    function abrirModalEditar(eventObj) {
+        resetForm();
+        document.getElementById('modalTitle').innerText = "Editar Bloque";
+        const btnDelete = document.getElementById('btnDelete');
+        if (btnDelete) btnDelete.classList.remove('hidden');
+        
+        document.getElementById('bloqueId').value = eventObj.id;
+        document.getElementById('bInicio').value = formatTime(eventObj.start);
+        document.getElementById('bFin').value = formatTime(eventObj.end);
+        document.getElementById('bColor').value = eventObj.backgroundColor;
+        
+        const props = eventObj.extendedProps;
+        document.getElementById('bDia').value = eventObj.start.getDay().toString();
+        document.getElementById('bTipo').value = props.tipo || 'CLASE';
+        
+        toggleTipoFields();
+        
+        if(props.tipo === 'CLASE') {
+            poblarSelectores(props.asignatura_id || '', props.docente_nombre || '');
+            document.getElementById('bAula').value = props.aula_numero || '';
+        }
+
+
+        openModal();
+    }
+
+    async function guardarBloque() {
+        if(!currentHorarioId) {
+            alert("Seleccione y cargue un horario."); return;
+        }
+
+        const data = {
+            periodo_id: document.getElementById('selPeriodo').value,
+            ano: document.getElementById('selAno').value,
+            seccion: document.getElementById('selSeccion').value.toUpperCase(),
+            bloque_id: document.getElementById('bloqueId').value,
+            tipo: document.getElementById('bTipo').value,
+            dia: document.getElementById('bDia').value,
+            hora_inicio: document.getElementById('bInicio').value,
+            hora_fin: document.getElementById('bFin').value,
+            color: document.getElementById('bColor').value,
+            asignatura_id: document.getElementById('bAsignatura').value,
+            docente_nombre: document.getElementById('bDocente').value,
+            aula_numero:    document.getElementById('bAula').value,       // número de aula
+
+        };
+
+        try {
+            const res = await fetch('/horarios/api/guardar/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const rData = await res.json();
+            if(rData.status === 'ok') {
+                if(currentHorarioId === 'TEMP') currentHorarioId = rData.horario_id;
+                closeModal();
+                calendar.refetchEvents();
+            } else {
+                alert("Error: " + rData.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error de conexión");
+        }
+    }
+
+    async function eliminarBloque() {
+        const id = document.getElementById('bloqueId').value;
+        if(id && confirm("¿Está seguro de eliminar este bloque?")) {
+            try {
+                const res = await fetch(`/horarios/api/eliminar/${id}/`, { method: 'POST' });
+                const rData = await res.json();
+                if(rData.status === 'ok') {
+                    closeModal();
+                    calendar.refetchEvents();
+                } else {
+                    alert("Error eliminando.");
+                }
+            } catch(e) { console.error(e); }
+        }
+    }
+
+    // ── Lógica Modal: Crear Nuevo Período ──────────────────────────────────────
+    const btnNuevoPeriodo = document.getElementById('btnNuevoPeriodo');
+    if (btnNuevoPeriodo) {
+        btnNuevoPeriodo.addEventListener('click', abrirModalPeriodo);
+    }
+
+    function abrirModalPeriodo() {
+        const modal = document.getElementById('modalNuevoPeriodo');
+        const content = document.getElementById('modalNuevoPeriodoContent');
+        document.getElementById('inputNombrePeriodo').value = '';
+        document.getElementById('errorMsgPeriodo').classList.add('hidden');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); }, 10);
+        setTimeout(() => document.getElementById('inputNombrePeriodo').focus(), 100);
+    }
+
+    function cerrarModalPeriodo() {
+        const modal = document.getElementById('modalNuevoPeriodo');
+        const content = document.getElementById('modalNuevoPeriodoContent');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+    }
+
+    // Cerrar al hacer click fuera del modal
+    document.getElementById('modalNuevoPeriodo').addEventListener('click', function(e) {
+        if (e.target === this) cerrarModalPeriodo();
+    });
+
+    // Permitir guardar con Enter
+    document.getElementById('inputNombrePeriodo').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') guardarNuevoPeriodo();
+    });
+
+    async function guardarNuevoPeriodo() {
+        const nombre = document.getElementById('inputNombrePeriodo').value.trim();
+        const errorEl = document.getElementById('errorMsgPeriodo');
+        const btn = document.getElementById('btnGuardarPeriodo');
+
+        errorEl.classList.add('hidden');
+
+        if (!nombre) {
+            errorEl.textContent = 'Por favor ingresa el nombre del período.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<ion-icon name="hourglass-outline" class="animate-spin"></ion-icon> Guardando...';
+
+        try {
+            const res = await fetch('/horarios/api/periodos/crear/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ nombre })
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                // Agregar el nuevo período al select sin recargar la página
+                const select = document.getElementById('selPeriodo');
+                const option = new Option(data.periodo.nombre, data.periodo.id, true, true);
+                select.prepend(option);
+                select.value = data.periodo.id;
+                cerrarModalPeriodo();
+
+                // Toast de éxito
+                mostrarToast(`✅ Período "${data.periodo.nombre}" creado exitosamente.`);
+            } else {
+                errorEl.textContent = data.error || 'Error al crear el período.';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+            errorEl.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<ion-icon name="save-outline"></ion-icon> Guardar';
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            for (const cookie of document.cookie.split(';')) {
+                const c = cookie.trim();
+                if (c.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(c.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function mostrarToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'fixed bottom-6 right-6 z-[999] bg-surface border border-border text-text-main text-sm font-semibold px-5 py-3 rounded-2xl shadow-md transition-all duration-500 opacity-0 translate-y-4';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        requestAnimationFrame(() => { t.classList.remove('opacity-0', 'translate-y-4'); });
+        setTimeout(() => {
+            t.classList.add('opacity-0', 'translate-y-4');
+            setTimeout(() => t.remove(), 500);
+        }, 3500);
+    }
+</script>
+
+<!-- Modal de Ayuda (Guía del Gestor de Horarios) -->
+<div id="gestorHorariosHelpModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+      <div class="flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined">edit_calendar</span>
+        <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Gestor de Horarios</h3>
+      </div>
+      <button type="button" onclick="toggleGestorHorariosHelp()" class="text-text-muted hover:text-text-main cursor-pointer bg-transparent border-none">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+
+      <!-- Sección 1: ¿Qué es el Gestor? -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">info</span>
+          1. ¿Qué es el Gestor de Horarios?
+        </h4>
+        <p class="text-xs">
+          Es el <strong>editor visual</strong> donde construyes el horario semanal de clases de un año y sección, bloque por bloque, sobre una cuadrícula de Lunes a Viernes. Cada horario queda guardado y vinculado a un período académico.
+        </p>
+      </div>
+
+      <!-- Sección 2: Configurar el panel -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">tune</span>
+          2. Configurar el Panel
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>En el panel izquierdo selecciona el <strong>Período Académico</strong>, el <strong>Año/Grado</strong> y la <strong>Sección</strong>.</li>
+          <li>Pulsa <strong>"Cargar / Actualizar Panel"</strong> para mostrar la cuadrícula del horario.</li>
+          <li>Si el período aún no existe, créalo con el botón <strong>"Crear Nuevo Periodo"</strong> (solo roles autorizados).</li>
+        </ul>
+      </div>
+
+      <!-- Sección 3: Agregar y editar bloques -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">add_box</span>
+          3. Agregar y Editar Bloques
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>Haz clic en una <strong>franja libre</strong> del calendario (o usa <strong>"Nuevo Bloque Manual"</strong>) para abrir el formulario de bloque.</li>
+          <li>Define el <strong>Día</strong>, el <strong>Tipo</strong> y las horas de <strong>Inicio</strong> y <strong>Fin</strong>.</li>
+          <li>Haz clic sobre un <strong>bloque existente</strong> para modificarlo o eliminarlo.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 4: Tipos de bloque -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">category</span>
+          4. Tipos de Bloque
+        </h4>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Clase Académica</span>
+            <span>Pide Docente, Asignatura y Aula.</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">Receso / Almuerzo / Otro</span>
+            <span>Solo ocupan la franja horaria, sin datos académicos.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 5: Bloques de clase -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">school</span>
+          5. Bloques de Clase
+        </h4>
+        <p class="text-xs">
+          Cuando el tipo es <strong>Clase</strong>, debes asignar el <strong>Docente</strong> (tomado de la nómina y de las asignaciones del período), la <strong>Asignatura</strong> y el número de <strong>Aula</strong>.
+        </p>
+        <p class="text-xs mt-2 text-amber-400 flex items-center gap-1">
+          <span class="material-symbols-outlined" style="font-size:14px;">warning</span>
+          <span>El número de aula debe contener <strong>solo dígitos</strong> (ej: 12), sin letras ni símbolos.</span>
+        </p>
+      </div>
+
+      <!-- Sección 6: Acciones del panel -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">bolt</span>
+          6. Acciones del Panel
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li><strong class="text-emerald-400">Guardar Horario:</strong> confirma y persiste todos los bloques.</li>
+          <li><strong>Exportar Excel:</strong> descarga el horario como archivo .xlsx.</li>
+          <li><strong class="text-amber-400">Restablecer:</strong> descarta los cambios no guardados.</li>
+          <li><strong class="text-red-400">Dejar en Blanco:</strong> elimina todos los bloques del horario actual.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 7: Modo lectura vs edición -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">lock_open</span>
+          7. Modo Lectura vs. Edición
+        </h4>
+        <p class="text-xs">
+          Al abrir un horario guardado desde la Biblioteca se muestra en <strong>solo lectura</strong>. Pulsa el botón <strong>"Editar Horario"</strong> para habilitar la edición de sus bloques.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+      <button type="button" onclick="toggleGestorHorariosHelp()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleGestorHorariosHelp() {
+  const modal = document.getElementById('gestorHorariosHelpModal');
+  if (modal) modal.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

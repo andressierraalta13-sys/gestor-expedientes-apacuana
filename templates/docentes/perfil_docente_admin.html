@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+{% block title %}Perfil: {{ docente.username }} | Intranet{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-sm text-text-muted">
+    <a href="{% url 'gestion_docentes' %}" class="hover:text-primary transition-colors">Gestión</a>
+    <ion-icon name="chevron-forward-outline" class="text-xs"></ion-icon>
+    <span class="text-text-main">{{ docente.username }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+    <!-- Panel izquierdo: avatar + datos básicos -->
+    <div class="lg:col-span-1 space-y-4">
+      <div class="bg-surface-container/60 border border-border rounded-2xl p-6 shadow-md text-center">
+        <div class="relative w-36 h-36 mx-auto mb-4 group">
+          {% if perfil.foto_perfil %}
+          <img src="{{ perfil.foto_perfil.url }}" class="w-36 h-36 rounded-full border-2 border-primary/30 object-cover shadow-[0_0_20px_rgba(99,102,241,0.2)]" alt="Foto de {{ docente.username }}">
+          {% else %}
+          <div class="w-36 h-36 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 border-2 border-primary/30 flex items-center justify-center text-primary text-5xl font-bold shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+            {{ docente.username|first|upper }}
+          </div>
+          {% endif %}
+          <label for="pf-foto" class="absolute bottom-2 right-2 bg-primary text-text-main w-8 h-8 rounded-full cursor-pointer hover:bg-primary/80 transition shadow-neon-primary flex items-center justify-center opacity-0 group-hover:opacity-100" title="Cambiar foto">
+            <ion-icon name="camera"></ion-icon>
+            <input type="file" id="pf-foto" accept="image/*" class="hidden" onchange="previewFoto(this)">
+          </label>
+        </div>
+        <h2 class="font-headline font-bold text-base text-text-main">
+          {{ perfil.nombre_completo|default:docente.nombre_completo|default:docente.username }}
+        </h2>
+        <p class="text-xs text-text-muted mt-1">@{{ docente.username }}</p>
+        <div class="mt-3 flex flex-col gap-2 items-center">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">
+            <ion-icon name="school-outline" class="text-xs"></ion-icon> Docente
+          </span>
+          {% if docente.is_active %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Activo
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-error/10 text-error border border-error/20 uppercase">
+            <span class="w-1.5 h-1.5 rounded-full bg-error"></span> Bloqueado
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Clases asignadas resumen -->
+      <div class="bg-surface-container/60 rounded-2xl p-5 shadow-md">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-headline font-bold text-sm text-text-main flex items-center gap-2">
+            <ion-icon name="library-outline" class="text-primary"></ion-icon> Clases en:
+          </h3>
+          {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+            {% if asignaciones %}
+            <button onclick="restablecerMaterias()" title="Restablecer Todas" class="p-1.5 rounded-lg bg-error text-white hover:bg-[#DC2626] transition-all flex items-center justify-center">
+              <ion-icon name="refresh-outline" class="text-sm"></ion-icon>
+            </button>
+            {% endif %}
+          {% elif request.user.rol == 'PERSONAL' and asignaciones %}
+          <button onclick="solicitarAccion({accion:'restablecer_materias',modulo:'Gestión Docente',descripcion:'Solicito restablecer (eliminar) todas las materias asignadas al docente {{ docente.nombre_completo|default:docente.username }}.',payload:{docente_id:{{ docente.id }}}})"
+            title="Solicitar Restablecer" class="p-1.5 rounded-lg bg-tertiary/10 hover:bg-tertiary/20 text-tertiary transition-all flex items-center justify-center">
+            <ion-icon name="refresh-outline" class="text-sm"></ion-icon>
+          </button>
+          {% endif %}
+        </div>
+        <div id="lista-clases" class="space-y-2">
+          {% if asignaciones %}
+            {% for a in asignaciones %}
+            <div class="flex items-center justify-between gap-2 group cursor-pointer hover:bg-surface-element/80 p-2 -mx-2 rounded-xl transition-all" id="asig-row-{{ a.id }}" onclick="verPlanEvaluacion({{ a.asignatura.id }}, {{ a.ano_grado }}, '{{ a.seccion }}', '{{ a.asignatura.nombre|escapejs }}')">
+              <div class="flex-1 min-w-0">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/5 border border-primary/10 rounded-lg text-xs font-semibold text-primary/90">
+                  {{ a.ano_grado }}{{ a.seccion }}
+                </span>
+                <span class="text-xs text-text-muted ml-1 truncate">· {{ a.asignatura.nombre }}</span>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+                <button onclick="abrirEditarAsig({{ a.id }}, {{ a.ano_grado }}, '{{ a.seccion }}', {{ a.asignatura.id }})"
+                        class="p-1 rounded hover:bg-surface-element text-text-muted hover:text-primary transition-all" title="Editar">
+                  <ion-icon name="pencil-outline" class="text-sm"></ion-icon>
+                </button>
+                {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+                <button onclick="eliminarAsig({{ a.id }}, this)"
+                        class="p-1 rounded bg-error text-white hover:bg-[#DC2626] transition-all shadow-sm" title="Eliminar">
+                  <ion-icon name="trash-outline" class="text-sm"></ion-icon>
+                </button>
+                {% elif request.user.rol == 'PERSONAL' %}
+                <button onclick="solicitarAccion({accion:'restablecer_materias',modulo:'Gestión Docente',descripcion:'Solicito eliminar la asignatura {{ a.asignatura.nombre }} ({{ a.ano_grado }}{{ a.seccion }}) del docente {{ docente.nombre_completo|default:docente.username }}.',payload:{docente_id:{{ docente.id }},asignacion_id:{{ a.id }}}})"
+                        class="p-1 rounded hover:bg-tertiary/10 text-text-muted hover:text-tertiary transition-all" title="Solicitar Eliminación">
+                  <ion-icon name="trash-outline" class="text-sm"></ion-icon>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p id="sin-clases" class="text-xs text-text-muted italic">Sin asignaciones activas.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel derecho: formularios -->
+    <div class="lg:col-span-3 space-y-5">
+
+      <!-- 1. Datos Personales -->
+      <div class="bg-surface-container/60 rounded-2xl p-6 shadow-md">
+        <h3 class="font-headline font-bold text-base text-text-main mb-5 flex items-center gap-2">
+          <ion-icon name="person-circle-outline" class="text-primary"></ion-icon> Datos Personales
+        </h3>
+        <div id="msg-perfil" class="hidden mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Nombre</label>
+            <input id="pf-nombre" type="text" value="{{ perfil.nombre }}"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Apellidos</label>
+            <input id="pf-apellidos" type="text" value="{{ perfil.apellidos }}"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Cédula</label>
+            <div style="display: flex; border: 1px solid var(--color-border); border-radius: 0.75rem; overflow: hidden; background: var(--color-surface-element); transition: all 0.2s;">
+                <span style="padding: 0 12px; font-weight: 600; color: var(--color-text-muted); background: rgba(0,0,0,0.05); border-right: 1px solid var(--color-border); display: flex; align-items: center;">V-</span>
+                <input id="pf-cedula" type="text" value="{{ perfil.cedula|default:'' }}" placeholder="Solo números"
+                       class="w-full bg-transparent py-2.5 px-3 text-sm text-text-main focus:outline-none" style="border: none; border-radius: 0; flex: 1; outline: none; width: 100%;"
+                       oninput="this.value = this.value.replace(/[^0-9]/g,'')"/>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Correo Electrónico</label>
+            <input id="pf-email" type="email" value="{{ perfil.email }}"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Teléfono</label>
+            <input id="pf-telefono" type="text" value="{{ perfil.telefono }}" placeholder="Ej: 0414-1234567"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Estado de Residencia</label>
+            <select id="pf-estado"
+                    class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+              <option value="">— Selecciona un estado —</option>
+              {% for codigo, nombre in estados_venezuela %}
+              <option value="{{ codigo }}" {% if perfil.estado_residencia == codigo %}selected{% endif %}>{{ nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mt-5 flex justify-end">
+          <button onclick="guardarPerfil()"
+                  class="flex items-center gap-2 bg-primary hover:bg-primary/80 text-text-main px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-neon-primary">
+            <ion-icon name="save-outline"></ion-icon> Guardar Datos
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Agregar Grado/Año/Sección -->
+      <div class="bg-surface-container/60 rounded-2xl p-6 shadow-md">
+        <h3 class="font-headline font-bold text-base text-text-main mb-5 flex items-center gap-2">
+          <ion-icon name="add-circle-outline" class="text-secondary"></ion-icon> Agregar Grado / Año / Sección
+        </h3>
+        <div id="msg-asig" class="hidden mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Año</label>
+            <select id="asig-ano"
+                    class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+              <option value="">— Selecciona —</option>
+              <option value="1">1ER AÑO</option>
+              <option value="2">2DO AÑO</option>
+              <option value="3">3ER AÑO</option>
+              <option value="4">4TO AÑO</option>
+              <option value="5">5TO AÑO</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Sección</label>
+            <input id="asig-seccion" type="text" maxlength="1" placeholder="Ej: A"
+                   class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main uppercase tracking-widest text-center font-bold focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Materia</label>
+            <select id="asig-materia"
+                    class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all">
+              <option value="">Cargando...</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button onclick="crearAsignacion()"
+                  class="flex items-center gap-2 bg-secondary hover:bg-[#059669] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm">
+            <ion-icon name="add-circle-outline"></ion-icon> Asignar
+          </button>
+        </div>
+      </div>
+      
+      <!-- Contenedor Plan Evaluacion -->
+      <div id="contenedor-plan-evaluacion"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Editar Asignación ─────────────────────────────────────────────── -->
+<div id="modal-edit-asig" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-sm mx-4 p-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-sm text-text-main">Editar Asignación</h4>
+      <button onclick="cerrarModalEdit()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    <input type="hidden" id="edit-asig-id"/>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Año</label>
+        <select id="edit-ano"
+                class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50">
+          <option value="1">1ER AÑO</option>
+          <option value="2">2DO AÑO</option>
+          <option value="3">3ER AÑO</option>
+          <option value="4">4TO AÑO</option>
+          <option value="5">5TO AÑO</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Sección</label>
+        <input id="edit-seccion" type="text" maxlength="1"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main uppercase tracking-widest text-center font-bold focus:outline-none focus:border-primary/50"/>
+      </div>
+      <div class="col-span-2">
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Materia</label>
+        <select id="edit-materia"
+                class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50">
+        </select>
+      </div>
+    </div>
+    <button onclick="guardarEditAsig()"
+            class="w-full bg-primary hover:bg-primary/80 text-text-main font-semibold py-2.5 rounded-xl text-sm transition-all">
+      Guardar Cambios
+    </button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+var CSRF = '{{ csrf_token }}';
+var DOCENTE_ID = {{ docente.id }};
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function toast(msg, ok=true) {
+  const t = document.createElement('div');
+  t.className = `fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all
+    ${ok ? 'bg-secondary/10 border border-secondary/20 text-secondary' : 'bg-error/10 border border-error/20 text-error'}`;
+  t.innerHTML = `<ion-icon name="${ok?'checkmark-circle':'alert-circle'}-outline" class="text-base"></ion-icon>${msg}`;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 3500);
+}
+function showMsg(id, msg, ok=true) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `px-4 py-2.5 rounded-xl text-xs font-semibold ${ok ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'bg-error/10 text-error border border-error/20'}`;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+// ── Guardar Datos Personales ──────────────────────────────────────────────
+// ── Guardar Datos Personales y Foto ──────────────────────────────────────────────
+async function guardarPerfil() {
+  const formData = new FormData();
+  formData.append('docente_id', DOCENTE_ID);
+  formData.append('cedula', document.getElementById('pf-cedula').value.trim());
+  formData.append('nombre', document.getElementById('pf-nombre').value.trim());
+  formData.append('apellidos', document.getElementById('pf-apellidos').value.trim());
+  formData.append('email', document.getElementById('pf-email').value.trim());
+  formData.append('telefono', document.getElementById('pf-telefono').value.trim());
+  formData.append('estado_residencia', document.getElementById('pf-estado').value);
+  
+  const fotoInput = document.getElementById('pf-foto');
+  if (fotoInput && fotoInput.files.length > 0) {
+    formData.append('foto_perfil', fotoInput.files[0]);
+  }
+
+  const r = await fetch('/docentes/api/perfil/guardar/', {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF}, // Quitamos Content-Type para que el navegador ponga multipart/form-data con boundary
+    body: formData
+  });
+  const d = await r.json();
+  if (d.ok) showMsg('msg-perfil', `Datos guardados. Nombre: ${d.nombre_completo}`);
+  else showMsg('msg-perfil', d.error || 'Error al guardar.', false);
+}
+
+function previewFoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const container = input.closest('.relative');
+      let img = container.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.className = "w-36 h-36 rounded-full border-2 border-primary/30 object-cover shadow-[0_0_20px_rgba(99,102,241,0.2)]";
+        const placeholder = container.querySelector('div.bg-gradient-to-br');
+        if (placeholder) {
+          placeholder.parentNode.insertBefore(img, placeholder);
+          placeholder.remove();
+        }
+      }
+      img.src = e.target.result;
+    }
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// ── Cargar Materias Disponibles y Filtrado Dinámico ───────────────────────
+var _materias = [];
+
+function actualizarMaterias(anoVal, selectElement, selectedMateriaId = null) {
+  if (!anoVal) {
+    selectElement.innerHTML = '<option value="">— Selecciona año primero —</option>';
+    return;
+  }
+  const anoInt = parseInt(anoVal);
+  const filtradas = _materias.filter(m => m.ano_grado === anoInt);
+  
+  selectElement.innerHTML = '<option value="">— Selecciona materia —</option>';
+  filtradas.forEach(m => {
+    const selected = (selectedMateriaId && parseInt(selectedMateriaId) === m.id) ? 'selected' : '';
+    selectElement.innerHTML += `<option value="${m.id}" ${selected}>${m.nombre}</option>`;
+  });
+}
+
+async function cargarMaterias() {
+  const r = await fetch('/docentes/api/materias-disponibles/');
+  const d = await r.json();
+  _materias = d.materias || [];
+  
+  const asigAno = document.getElementById('asig-ano');
+  const asigMat = document.getElementById('asig-materia');
+  asigAno.addEventListener('change', () => actualizarMaterias(asigAno.value, asigMat));
+  
+  const editAno = document.getElementById('edit-ano');
+  const editMat = document.getElementById('edit-materia');
+  editAno.addEventListener('change', () => actualizarMaterias(editAno.value, editMat));
+  
+  // Rellenar inicialmente según los valores actuales de los selectores de año
+  actualizarMaterias(asigAno.value, asigMat);
+  actualizarMaterias(editAno.value, editMat);
+}
+cargarMaterias();
+
+// Validar input sección
+['asig-seccion','edit-seccion'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    this.value = this.value.replace(/[^a-zA-Z]/g,'').toUpperCase().slice(0,1);
+  });
+  document.getElementById(id).addEventListener('keydown', function(e) {
+    const allowed = ['Backspace','Delete','Tab','ArrowLeft','ArrowRight'];
+    if (allowed.includes(e.key)) return;
+    if (!/^[a-zA-Z]$/.test(e.key)) e.preventDefault();
+  });
+});
+
+// ── Crear Asignación ──────────────────────────────────────────────────────
+async function crearAsignacion() {
+  const ano = document.getElementById('asig-ano').value;
+  const sec = document.getElementById('asig-seccion').value.toUpperCase();
+  const mat = document.getElementById('asig-materia').value;
+
+  if (!ano || !sec || !mat) { showMsg('msg-asig', 'Año, Sección y Materia son obligatorios.', false); return; }
+  if (!/^[A-Z]$/.test(sec)) { showMsg('msg-asig', 'La sección debe ser una sola letra A–Z.', false); return; }
+
+  const r = await fetch('/docentes/api/asignacion/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ accion:'crear', docente_id: DOCENTE_ID, ano_grado: parseInt(ano), seccion: sec, asignatura_id: parseInt(mat) })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    showMsg('msg-asig', `Asignación "${d.asignacion.label}" creada.`);
+    agregarFilaClase(d.asignacion);
+    document.getElementById('asig-ano').value = '';
+    document.getElementById('asig-seccion').value = '';
+    document.getElementById('asig-materia').value = '';
+  } else {
+    showMsg('msg-asig', d.error || 'Error al crear.', false);
+  }
+}
+
+function agregarFilaClase(asig) {
+  document.getElementById('sin-clases')?.remove();
+  const lista = document.getElementById('lista-clases');
+  const div = document.createElement('div');
+  div.className = 'flex items-center justify-between gap-2 group cursor-pointer hover:bg-surface-element/80 p-2 -mx-2 rounded-xl transition-all';
+  div.id = `asig-row-${asig.id}`;
+  div.setAttribute('onclick', `verPlanEvaluacion(${asig.asignatura_id || 0}, ${asig.ano_grado}, '${asig.seccion}', '${asig.materia.replace(/'/g, "\\'")}')`);
+  div.innerHTML = `
+    <div class="flex-1 min-w-0">
+      <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/5 border border-primary/10 rounded-lg text-xs font-semibold text-primary/90">${asig.ano_grado}${asig.seccion}</span>
+      <span class="text-xs text-text-muted ml-1 truncate">· ${asig.materia}</span>
+    </div>
+    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+      <button onclick="abrirEditarAsig(${asig.id}, ${asig.ano_grado}, '${asig.seccion}', ${asig.asignatura_id || 0})" class="p-1 rounded hover:bg-surface-element text-text-muted hover:text-primary transition-all" title="Editar"><ion-icon name="pencil-outline" class="text-sm"></ion-icon></button>
+      <button onclick="eliminarAsig(${asig.id}, this)" class="p-1 rounded hover:bg-error/10 text-text-muted hover:text-error transition-all" title="Eliminar"><ion-icon name="trash-outline" class="text-sm"></ion-icon></button>
+    </div>`;
+  lista.appendChild(div);
+}
+
+// ── Eliminar Asignación ───────────────────────────────────────────────────
+async function eliminarAsig(asigId, btn) {
+  if (!confirm('¿Eliminar esta asignación? El docente ya no podrá cargar notas en este grupo.')) return;
+  const r = await fetch('/docentes/api/asignacion/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ accion:'eliminar', docente_id: DOCENTE_ID, asignacion_id: asigId })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById(`asig-row-${asigId}`)?.remove();
+    if (!document.querySelectorAll('#lista-clases .group').length) {
+      document.getElementById('lista-clases').innerHTML = '<p id="sin-clases" class="text-xs text-text-muted italic">Sin asignaciones activas.</p>';
+    }
+    toast('Asignación eliminada.');
+  } else toast(d.error || 'Error.', false);
+}
+
+// ── Restablecer Todas las Asignaciones ────────────────────────────────────
+async function restablecerMaterias() {
+  if (!confirm('¡ATENCIÓN! ¿Estás completamente seguro de que deseas restablecer TODAS las materias asignadas a este docente? Esta acción eliminará todas sus clases actuales de manera inmediata y no se puede deshacer.')) return;
+  
+  const r = await fetch('/docentes/api/asignacion/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ accion:'restablecer_todas', docente_id: DOCENTE_ID })
+  });
+  
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('lista-clases').innerHTML = '<p id="sin-clases" class="text-xs text-text-muted italic">Sin asignaciones activas.</p>';
+    // Eliminar botón de restablecer
+    const btnRefresh = document.querySelector('button[title="Restablecer Todas"]');
+    if (btnRefresh) btnRefresh.remove();
+    toast(d.mensaje || 'Todas las materias han sido restablecidas.');
+  } else {
+    toast(d.error || 'Error al restablecer materias.', false);
+  }
+}
+
+// ── Modal Editar Asignación ───────────────────────────────────────────────
+function abrirEditarAsig(id, ano, sec, matId) {
+  document.getElementById('edit-asig-id').value = id;
+  document.getElementById('edit-ano').value = ano;
+  document.getElementById('edit-seccion').value = sec;
+  
+  // Re-filtrar materias para el año seleccionado y pre-seleccionar la materia
+  actualizarMaterias(ano, document.getElementById('edit-materia'), matId);
+  
+  document.getElementById('modal-edit-asig').classList.remove('hidden');
+}
+function cerrarModalEdit() { document.getElementById('modal-edit-asig').classList.add('hidden'); }
+document.getElementById('modal-edit-asig').addEventListener('click', e => { if(e.target===document.getElementById('modal-edit-asig')) cerrarModalEdit(); });
+
+async function guardarEditAsig() {
+  const id = document.getElementById('edit-asig-id').value;
+  const ano = document.getElementById('edit-ano').value;
+  const sec = document.getElementById('edit-seccion').value.toUpperCase();
+  const mat = document.getElementById('edit-materia').value;
+
+  if (!ano || !sec || !mat) { toast('Completa todos los campos.', false); return; }
+
+  const r = await fetch('/docentes/api/asignacion/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ accion:'editar', docente_id: DOCENTE_ID, asignacion_id: parseInt(id), ano_grado: parseInt(ano), seccion: sec, asignatura_id: parseInt(mat) })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    cerrarModalEdit();
+    toast('Asignación actualizada.');
+    // Actualizar fila visualmente
+    const row = document.getElementById(`asig-row-${id}`);
+    if (row) {
+      const [badge, label] = row.querySelectorAll('span');
+      if (badge) badge.textContent = `${d.asignacion.ano_grado}${d.asignacion.seccion}`;
+      if (label) label.textContent = `· ${d.asignacion.materia}`;
+    }
+  } else toast(d.error || 'Error al editar.', false);
+}
+// ── Ver Plan de Evaluación (Integración Django -> Flask) ──────────────────────
+async function verPlanEvaluacion(asignaturaId, anoGrado, seccion, nombreMateria = 'Importado') {
+  const contenedor = document.getElementById('contenedor-plan-evaluacion');
+  
+  if (!contenedor) {
+      console.error("No se encontró el contenedor-plan-evaluacion en el DOM.");
+      return;
+  }
+
+  contenedor.innerHTML = '<div class="text-center py-8"><ion-icon name="sync-outline" class="animate-spin text-primary text-3xl"></ion-icon><p class="text-text-muted mt-2">Consultando plan de evaluación al servidor local...</p></div>';
+  
+  // Llamamos al proxy en Django que se conectará a Flask
+  const url = `/docentes/api/plan-evaluacion/flask/${DOCENTE_ID}/?asignatura_id=${asignaturaId}&seccion=${seccion}`;
+  
+  try {
+    const r = await fetch(url);
+    if (!r.ok) {
+      const text = await r.text();
+      let errorMsg = text || `Código ${r.status}`;
+      try {
+        const jsonError = JSON.parse(text);
+        if (jsonError.error) errorMsg = jsonError.error;
+      } catch(e) {}
+      throw new Error(errorMsg);
+    }
+    
+    const data = await r.json();
+    const temas = data.temas || [];
+
+    if (temas.length === 0) {
+      contenedor.innerHTML = `
+        <div class="bg-surface-container/60 border border-border rounded-2xl p-6 shadow-md mt-4">
+          <h4 class="font-headline font-bold text-base text-text-main mb-4 flex items-center gap-2">
+            <ion-icon name="calendar-outline" class="text-primary"></ion-icon> Plan de Evaluación
+          </h4>
+          <div class="p-6 text-center bg-surface-element rounded-xl border border-dashed border-border">
+            <ion-icon name="folder-open-outline" class="text-text-muted text-4xl mb-3 block"></ion-icon>
+            <p class="text-text-muted font-medium text-sm">El docente aún no ha cargado una planificación para esta materia en el Portal Docente.</p>
+          </div>
+        </div>`;
+      contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    let filas = '';
+    for (const t of temas) {
+      const fechaHtml = (t.fecha_programada && t.fecha_programada !== 'None' && t.fecha_programada !== '')
+        ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20">
+            <ion-icon name="calendar-outline" class="text-xs"></ion-icon> ${t.fecha_programada}
+          </span>`
+        : `<span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-error/10 text-error border border-error/20">
+            <ion-icon name="alert-circle-outline" class="text-xs"></ion-icon> Fecha no definida
+          </span>`;
+
+      let evalHtml = '<p class="text-xs text-text-muted italic">Sin evaluaciones asignadas aún</p>';
+      if (t.evaluaciones && t.evaluaciones.length > 0) {
+        evalHtml = '<div class="flex flex-col gap-1.5 items-start">';
+        t.evaluaciones.forEach(ev => {
+          evalHtml += `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 shadow-sm">${ev.nombre}</span>`;
+        });
+        evalHtml += '</div>';
+      }
+
+      filas += `
+        <tr class="border-b border-border/50 hover:bg-surface-element/50 transition-colors">
+          <td class="py-3 px-4 text-sm text-text-main font-medium">${t.titulo_tema}</td>
+          <td class="py-3 px-4 text-sm text-text-muted">${t.descripcion || '—'}</td>
+          <td class="py-3 px-4">${evalHtml}</td>
+          <td class="py-3 px-4 text-center">${fechaHtml}</td>
+        </tr>`;
+    }
+
+    contenedor.innerHTML = `
+      <div class="bg-surface-container/60 border border-border rounded-2xl p-6 shadow-md mt-4 animate-fade-in">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="font-headline font-bold text-base text-text-main flex items-center gap-2">
+            <ion-icon name="calendar-outline" class="text-primary"></ion-icon> Plan de Evaluación (${nombreMateria})
+            <span class="ml-2 text-xs text-text-muted font-normal">${temas.length} tema(s)</span>
+          </h4>
+          <button onclick="descargarPlanPDF('${nombreMateria}', ${anoGrado}, '${seccion}')" class="flex items-center gap-2 bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 px-4 py-2 rounded-xl text-xs font-semibold transition-all">
+            <ion-icon name="download-outline" class="text-base"></ion-icon> Descargar PDF
+          </button>
+        </div>
+        <div id="tabla-plan-evaluacion" class="overflow-x-auto rounded-xl border border-border bg-surface-element/20 p-2">
+          <table class="w-full bg-surface-container">
+            <thead class="bg-surface-element">
+              <tr>
+                <th class="py-3 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-text-muted">Título del Tema</th>
+                <th class="py-3 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-text-muted">Descripción</th>
+                <th class="py-3 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-text-muted">Evaluaciones Asignadas</th>
+                <th class="py-3 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-text-muted">Fecha Programada</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>
+      </div>`;
+    contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (error) {
+    console.error(error);
+    alert(`Error de Conexión o Servidor:\n${error.message}`);
+    contenedor.innerHTML = `
+      <div class="text-error p-4 bg-error/10 border border-error/20 rounded-xl font-medium mt-4 flex items-start gap-2">
+        <ion-icon name="alert-circle-outline" class="text-xl shrink-0 mt-0.5"></ion-icon>
+        <div>
+          <p class="font-bold mb-1">Error al cargar la planificación</p>
+          <p class="text-sm opacity-90">${error.message}</p>
+        </div>
+      </div>`;
+  }
+}
+
+function descargarPlanPDF(nombre, grado, seccion) {
+  const element = document.getElementById('tabla-plan-evaluacion');
+  if (!element) return;
+
+  // Inyectar CSS global temporal con la más alta prioridad (!important)
+  const styleId = 'pdf-export-styles';
+  let styleEl = document.getElementById(styleId);
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    styleEl.innerHTML = `
+      .pdf-export-mode {
+        background-color: white !important;
+        padding: 20px !important;
+      }
+      .pdf-export-mode * {
+        background-color: transparent !important;
+        color: black !important;
+        box-shadow: none !important;
+      }
+      .pdf-export-mode th, .pdf-export-mode td {
+        border: 1px solid black !important;
+      }
+      .pdf-export-mode span {
+        border: none !important;
+        padding: 2px 0 !important;
+        display: inline-block !important;
+        margin: 2px 0 !important;
+      }
+      .pdf-export-mode ion-icon {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
+  // Activar el modo PDF en el elemento real para que html2canvas lo lea sin fallos
+  element.classList.add('pdf-export-mode');
+
+  // Insertar título dinámico temporal con nombre del docente y año
+  const titleId = 'pdf-temp-title';
+  const title = document.createElement('h2');
+  title.id = titleId;
+  const teacherName = "{{ perfil.nombre_completo|default:docente.nombre_completo|default:docente.username|escapejs }}";
+  const currentYear = new Date().getFullYear();
+  title.innerHTML = `PLAN DE EVALUACIÓN - ${nombre}<br><span style="font-size: 16px; font-weight: normal; color: #333; margin-top: 5px; display: block; text-transform: none;">Docente: ${teacherName} &nbsp;|&nbsp; Cursando: ${grado}° Año &nbsp;|&nbsp; Año Escolar: ${currentYear}</span>`;
+  title.style.cssText = 'text-align:center; font-size:22px; font-weight:bold; color:black; margin-bottom:20px; text-transform:uppercase;';
+  element.insertBefore(title, element.firstChild);
+
+  const opt = {
+    margin:       0.5,
+    filename:     `Plan_de_Evaluacion_${nombre.replace(/\s+/g, '_')}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+  };
+  
+  // Generar y limpiar al terminar
+  html2pdf().set(opt).from(element).save().then(() => {
+    element.classList.remove('pdf-export-mode');
+    document.getElementById(titleId)?.remove();
+    document.getElementById(styleId)?.remove();
+  });
+}
+</script>
+{% endblock %}

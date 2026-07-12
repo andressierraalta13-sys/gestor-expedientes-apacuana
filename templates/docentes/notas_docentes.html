@@ -1,0 +1,1089 @@
+{% extends "base.html" %}
+{% block title %}Notas de Docentes | Intranet{% endblock %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h2 class="font-headline font-extrabold text-2xl text-text-main flex items-center gap-3">
+        <ion-icon name="document-text-outline" class="text-primary"></ion-icon> Actividades de docentes
+      </h2>
+      <p class="text-sm text-text-muted" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Registro en tiempo real de la actividad de carga de calificaciones por docente.
+        <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+            <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+        </button>
+      </p>
+    </div>
+    
+    {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'PERSONAL' or request.user.rol == 'DESARROLLADOR' %}
+    <button onclick="abrirGestionEvaluaciones()" class="flex items-center gap-2 bg-error hover:bg-[#DC2626] text-white px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-error/20">
+      <ion-icon name="trash-outline" class="text-lg"></ion-icon> Eliminar Evaluación
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Buscador -->
+  <div class="bg-surface-container/60 backdrop-blur-md rounded-2xl p-5 shadow-md">
+    <form method="GET" class="relative max-w-2xl">
+      <ion-icon name="search-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-lg z-10"></ion-icon>
+      <input type="text" name="q" value="{{ query }}" placeholder="Buscar docente por usuario o nombre..."
+             class="w-full bg-surface-element border border-border rounded-xl py-3 pl-12 pr-28 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-text-muted"/>
+      <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-primary/80 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm">Buscar</button>
+    </form>
+  </div>
+
+  <!-- Tabla -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md overflow-hidden">
+    <div class="px-6 py-4 border-b border-border flex items-center justify-between">
+      <h3 class="font-headline font-bold text-base text-text-main">Actividad de Docentes</h3>
+      <span class="text-xs font-semibold px-2 py-1 bg-surface-element text-text-muted rounded-md border border-border">
+        {{ total }} docente{{ total|pluralize:"s" }}{% if query %} · búsqueda: "{{ query }}"{% endif %}
+      </span>
+    </div>
+
+    {% if datos %}
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-element/50 border-b border-border text-xs text-text-muted uppercase tracking-wider">
+            <th class="px-6 py-4">Docente</th>
+            <th class="px-6 py-4">Asignaciones Activas</th>
+            <th class="px-6 py-4 text-center">Notas Confirm.</th>
+            <th class="px-6 py-4 text-center">Borradores</th>
+            <th class="px-6 py-4">Estado</th>
+            <th class="px-6 py-4">Última Actividad</th>
+            <th class="px-6 py-4 text-right">Perfil</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-sm">
+          {% for item in datos %}
+          <tr class="hover:bg-white/3 transition-colors">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
+                  {{ item.usuario.username|first|upper }}
+                </div>
+                <div>
+                  <p class="font-semibold text-text-main">{{ item.usuario.username }}</p>
+                  <p class="text-xs text-text-muted">{{ item.perfil.nombre_completo|default:item.usuario.nombre_completo|default:"—" }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              {% if item.asignaciones %}
+                <div class="flex flex-wrap gap-1">
+                  {% for a in item.asignaciones %}
+                  <span class="inline-block px-2 py-0.5 bg-surface-element border border-border rounded text-[10px] text-text-muted">
+                    {{ a.ano_grado }}{{ a.seccion }} · {{ a.asignatura__nombre|truncatechars:12 }}
+                  </span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-text-muted text-xs">Sin asignaciones</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span class="font-bold {% if item.notas_confirmadas > 0 %}text-secondary{% else %}text-text-muted{% endif %}">{{ item.notas_confirmadas }}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span class="font-bold {% if item.notas_borrador > 0 %}text-tertiary{% else %}text-text-muted{% endif %}">{{ item.notas_borrador }}</span>
+            </td>
+            <td class="px-6 py-4">
+              {% if item.estado == 'COMPLETA' %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase">
+                  <ion-icon name="checkmark-circle"></ion-icon> Completa
+                </span>
+              {% elif item.estado == 'BORRADOR' %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-tertiary/10 text-tertiary border border-tertiary/20 uppercase">
+                  <ion-icon name="time"></ion-icon> Borrador
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-error/10 text-error border border-error/20 uppercase">
+                  <ion-icon name="alert-circle"></ion-icon> Sin Cargar
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-xs text-text-muted">
+              {{ item.ultima_actividad|date:"d/m/Y h:i A"|default:"—" }}
+            </td>
+            <td class="px-6 py-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'PERSONAL' or request.user.rol == 'DESARROLLADOR' %}
+                <button onclick="abrirGestionEvaluaciones({{ item.usuario.id }}, '{{ item.usuario.username }}')" 
+                        title="Gestionar evaluaciones de este docente"
+                        class="w-8 h-8 flex items-center justify-center rounded-lg bg-error text-white hover:bg-[#DC2626] transition-all shadow-sm">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </button>
+                {% endif %}
+                <button onclick="abrirModalActividades({{ item.usuario.id }}, '{{ item.perfil.nombre_completo|default:item.usuario.username }}')"
+                        class="inline-flex items-center gap-2 text-white bg-secondary hover:bg-[#059669] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-sm">
+                  <ion-icon name="analytics-outline" class="text-sm"></ion-icon> Ver Actividades
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center">
+      <ion-icon name="document-text-outline" class="text-5xl text-text-muted/20 mb-4"></ion-icon>
+      <h4 class="text-text-main font-bold mb-1">
+        {% if query %}No se encontraron docentes para "{{ query }}"{% else %}No hay docentes registrados{% endif %}
+      </h4>
+      <p class="text-sm text-text-muted max-w-sm">
+        {% if query %}Intenta con otro nombre o usuario.{% else %}Crea docentes desde el módulo de Usuarios.{% endif %}
+      </p>
+      {% if query %}<a href="{% url 'notas_docentes' %}" class="mt-4 text-primary text-xs hover:underline">Ver todos los docentes</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══ MODAL GESTIÓN DE EVALUACIONES ════════════════════════════════════════ -->
+<dialog id="modalGestionEval" class="bg-transparent p-0 w-[90%] max-w-4xl border-none outline-none focus:outline-none m-auto">
+  <div class="bg-surface-element border border-border/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <!-- Header -->
+    <div class="px-8 py-6 border-b border-border flex items-center justify-between bg-surface-element/50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error border border-error/20">
+          <ion-icon name="trash-outline" class="text-xl"></ion-icon>
+        </div>
+        <div>
+          <h3 class="text-lg font-headline font-bold text-text-main">Gestionar Evaluaciones Registradas</h3>
+          <p class="text-xs text-text-muted">Busca, selecciona y elimina evaluaciones del sistema.</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('modalGestionEval').close()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-text-muted transition-colors">
+        <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="p-6 border-b border-border bg-surface-element/30 flex flex-col md:flex-row gap-4">
+      <div class="flex-1 relative">
+        <ion-icon name="search-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"></ion-icon>
+        <input type="text" id="filtro-eval-nombre" oninput="buscarEvaluaciones()" placeholder="Filtrar por nombre de evaluación..." 
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 pl-11 pr-4 text-xs text-text-main focus:outline-none focus:border-primary/50 transition-all"/>
+      </div>
+      <div class="w-full md:w-64">
+        <select id="filtro-eval-docente" onchange="alCambiarDocente()" class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-4 text-xs text-text-main focus:outline-none focus:border-primary/50">
+          <option value="">Seleccione un docente...</option>
+          {% for item in datos %}
+          <option value="{{ item.usuario.id }}">{{ item.usuario.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="w-full md:w-64">
+        <select id="filtro-eval-combinacion" onchange="buscarEvaluaciones()" disabled class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-4 text-xs text-text-main focus:outline-none focus:border-primary/50 opacity-50">
+          <option value="">Seleccione año y sección...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Cuerpo: Listado -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-surface-container/50">
+      <div id="contenedor-lista-evals" class="space-y-3">
+        <!-- Inyectado por JS -->
+        <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-60">
+          <ion-icon name="information-circle-outline" class="text-4xl mb-2"></ion-icon>
+          <p class="text-xs">Por favor, seleccione un docente para comenzar.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="footerGestionEval" class="px-8 py-5 border-t border-border bg-surface-element/50 flex items-center justify-between opacity-50 pointer-events-none transition-all">
+      <div class="text-xs font-semibold text-text-main">
+        <span id="count-eval-selected" class="text-error font-bold text-sm">0</span> seleccionadas
+      </div>
+      <div class="flex gap-3">
+        <button onclick="document.getElementById('modalGestionEval').close()" class="px-5 py-2.5 rounded-xl text-xs font-bold text-text-muted hover:text-text-main transition-colors">Cancelar</button>
+        <button id="btnEliminarEvalsSelected" onclick="eliminarEvaluacionesSeleccionadas()" class="px-6 py-2.5 bg-error text-text-main rounded-xl text-xs font-bold shadow-neon-error hover:bg-error/80 transition-all flex items-center gap-2">
+          <ion-icon name="trash-outline" class="text-sm"></ion-icon> Eliminar Seleccionadas
+        </button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  let evaluacionesCargadas = [];
+  let seleccionadas = new Set();
+
+  async function abrirGestionEvaluaciones(docenteId = null, username = null) {
+    const modal = document.getElementById('modalGestionEval');
+    modal.showModal();
+    
+    if (docenteId) {
+      document.getElementById('filtro-eval-docente').value = docenteId;
+    } else {
+      document.getElementById('filtro-eval-docente').value = "";
+    }
+    
+    await alCambiarDocente();
+  }
+
+  async function alCambiarDocente() {
+    const docenteId = document.getElementById('filtro-eval-docente').value;
+    const combSelect = document.getElementById('filtro-eval-combinacion');
+    const container = document.getElementById('contenedor-lista-evals');
+    
+    combSelect.innerHTML = '<option value="">Seleccione año y sección...</option>';
+    combSelect.disabled = true;
+    combSelect.classList.add('opacity-50');
+    
+    evaluacionesCargadas = [];
+    seleccionadas.clear();
+    actualizarFooter();
+    
+    if (!docenteId) {
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-60">
+          <ion-icon name="information-circle-outline" class="text-4xl mb-2"></ion-icon>
+          <p class="text-xs">Por favor, seleccione un docente para comenzar.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-12 text-text-muted">
+        <ion-icon name="sync-outline" class="text-4xl mb-2 animate-spin"></ion-icon>
+        <p class="text-xs">Cargando año y sección...</p>
+      </div>
+    `;
+    
+    try {
+      const resp = await fetch(`/docentes/api/asignaciones/${docenteId}/`);
+      const data = await resp.json();
+      
+      const asignaciones = data.asignaciones || [];
+      if (asignaciones.length === 0) {
+        combSelect.innerHTML = '<option value="">Sin asignaciones activas</option>';
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-60">
+            <ion-icon name="alert-circle-outline" class="text-4xl mb-2"></ion-icon>
+            <p class="text-xs">Este docente no tiene asignaciones activas en este período.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const MAPA_GRADOS = {1: '1er Año', 2: '2do Año', 3: '3er Año', 4: '4to Año', 5: '5to Año'};
+      const combinaciones = [];
+      const seen = new Set();
+      
+      asignaciones.forEach(a => {
+        const key = `${a.ano_grado}-${a.seccion}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          combinaciones.push({
+            value: key,
+            label: `${MAPA_GRADOS[a.ano_grado] || a.ano_grado + ' Año'} - Sección ${a.seccion}`
+          });
+        }
+      });
+      
+      combSelect.innerHTML = '<option value="">Seleccione año y sección...</option>' + 
+        combinaciones.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
+      
+      combSelect.disabled = false;
+      combSelect.classList.remove('opacity-50');
+      
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-60">
+          <ion-icon name="arrow-forward-outline" class="text-4xl mb-2 animate-bounce"></ion-icon>
+          <p class="text-xs">Por favor, seleccione el Año y Sección para mostrar las evaluaciones.</p>
+        </div>
+      `;
+    } catch (err) {
+      console.error(err);
+      combSelect.innerHTML = '<option value="">Error al cargar</option>';
+      container.innerHTML = `<p class="text-error text-center py-8 text-xs">Error al cargar asignaciones del docente.</p>`;
+    }
+  }
+
+  async function buscarEvaluaciones() {
+    const query = document.getElementById('filtro-eval-nombre').value;
+    const docenteId = document.getElementById('filtro-eval-docente').value;
+    const combinacion = document.getElementById('filtro-eval-combinacion').value;
+    const container = document.getElementById('contenedor-lista-evals');
+    
+    if (!docenteId || !combinacion) {
+      evaluacionesCargadas = [];
+      seleccionadas.clear();
+      actualizarFooter();
+      
+      if (docenteId) {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-60">
+            <ion-icon name="arrow-forward-outline" class="text-4xl mb-2 animate-bounce"></ion-icon>
+            <p class="text-xs">Por favor, seleccione el Año y Sección para mostrar las evaluaciones.</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-60">
+            <ion-icon name="information-circle-outline" class="text-4xl mb-2"></ion-icon>
+            <p class="text-xs">Por favor, seleccione un docente para comenzar.</p>
+          </div>
+        `;
+      }
+      return;
+    }
+    
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-12 text-text-muted">
+        <ion-icon name="sync-outline" class="text-4xl mb-2 animate-spin"></ion-icon>
+        <p class="text-xs">Buscando...</p>
+      </div>
+    `;
+
+    try {
+      const [anoGrado, seccion] = combinacion.split('-');
+      const resp = await fetch(`{% url 'api_buscar_evaluaciones_admin' %}?q=${encodeURIComponent(query)}&docente_id=${docenteId}&ano_grado=${anoGrado}&seccion=${seccion}`);
+      const data = await resp.json();
+      
+      evaluacionesCargadas = data.evaluaciones || [];
+      seleccionadas.clear();
+      actualizarFooter();
+      renderizarEvaluaciones();
+    } catch (err) {
+      container.innerHTML = `<p class="text-error text-center py-8 text-xs">Error al cargar evaluaciones.</p>`;
+    }
+  }
+
+  function renderizarEvaluaciones() {
+    const container = document.getElementById('contenedor-lista-evals');
+    if (evaluacionesCargadas.length === 0) {
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-text-muted opacity-40">
+          <ion-icon name="file-tray-outline" class="text-4xl mb-2"></ion-icon>
+          <p class="text-xs">No se encontraron evaluaciones con los filtros actuales.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = evaluacionesCargadas.map(ev => `
+      <div class="bg-surface-element border ${seleccionadas.has(ev.id) ? 'border-error bg-error/5' : 'border-border'} rounded-2xl p-4 flex items-center gap-4 transition-all hover:bg-surface-element cursor-pointer group" onclick="toggleSeleccionEval(${ev.id})">
+        <div class="w-5 h-5 rounded border ${seleccionadas.has(ev.id) ? 'bg-error border-error' : 'border-border bg-surface-element'} flex items-center justify-center transition-all">
+          ${seleccionadas.has(ev.id) ? '<ion-icon name="checkmark-outline" class="text-text-main text-xs"></ion-icon>' : ''}
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-surface-element text-text-muted border border-border">${ev.tipo}</span>
+            <h4 class="text-sm font-bold text-text-main">${ev.nombre}</h4>
+          </div>
+          <p class="text-[10px] text-text-muted mt-1">
+            <span class="text-primary/70">${ev.asignatura}</span> · ${ev.seccion} · ${ev.ponderacion}% · Período: ${ev.periodo}
+          </p>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] font-bold text-text-main/80">${ev.docente}</p>
+          <p class="text-[9px] text-text-muted mt-0.5">${ev.fecha}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleSeleccionEval(id) {
+    if (seleccionadas.has(id)) {
+      seleccionadas.delete(id);
+    } else {
+      seleccionadas.add(id);
+    }
+    renderizarEvaluaciones();
+    actualizarFooter();
+  }
+
+  function actualizarFooter() {
+    const footer = document.getElementById('footerGestionEval');
+    const count = document.getElementById('count-eval-selected');
+    const btn = document.getElementById('btnEliminarEvalsSelected');
+    
+    count.textContent = seleccionadas.size;
+    
+    if (seleccionadas.size > 0) {
+      footer.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+      footer.classList.add('opacity-50', 'pointer-events-none');
+    }
+  }
+
+  async function eliminarEvaluacionesSeleccionadas() {
+    const ids = Array.from(seleccionadas);
+    const userRole = "{{ request.user.rol }}";
+
+    if (userRole === 'PERSONAL') {
+      solicitarAccion({
+        accion: 'eliminar_evaluaciones',
+        modulo: 'Evaluaciones',
+        descripcion: `Solicito eliminar ${ids.length} evaluaciones seleccionadas en el módulo de Actividades de Docentes.`,
+        payload: { evaluaciones_ids: ids },
+        onSuccess: (data) => {
+          document.getElementById('modalGestionEval').close();
+        }
+      });
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de eliminar las ${ids.length} evaluaciones seleccionadas?\n\nEsta acción eliminará permanentemente todas las notas cargadas en estas evaluaciones.`)) return;
+
+    const btn = document.getElementById('btnEliminarEvalsSelected');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<ion-icon name="sync-outline" class="animate-spin"></ion-icon> Eliminando...`;
+    btn.disabled = true;
+
+    try {
+      const resp = await fetch(`{% url 'api_eliminar_evaluaciones' %}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ evaluaciones_ids: ids })
+      });
+      const data = await resp.json();
+      
+      if (data.ok) {
+        alert(data.mensaje);
+        document.getElementById('modalGestionEval').close();
+        window.location.reload();
+      } else {
+        alert('Error: ' + data.error);
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      alert('Error de conexión.');
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
+    }
+  }
+</script>
+
+<!-- ═══ MODAL ACTIVIDADES DEL DOCENTE ════════════════════════════════════════ -->
+<dialog id="modal-actividades" class="bg-transparent p-0 w-[98%] max-w-[95vw] border-none outline-none focus:outline-none m-auto">
+  <div class="bg-surface-element border border-border/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[94vh] md:h-[90vh]">
+    
+    <!-- HEADER -->
+    <div class="px-4 py-3 md:px-6 md:py-5 border-b border-border flex items-center justify-between bg-surface-element/40">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+          <ion-icon name="analytics-outline" class="text-xl"></ion-icon>
+        </div>
+        <div>
+          <h3 class="text-lg font-headline font-bold text-text-main">Actividades del Docente</h3>
+          <p id="modal-docente-nombre" class="text-xs text-text-muted">Cargando...</p>
+        </div>
+      </div>
+      <button onclick="cerrarModalActividades()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-element text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+      </button>
+    </div>
+
+    <!-- CONTENIDO CON VISTA DE DOS PANELES O NAVEGACIÓN -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+      
+      <!-- Panel Izquierdo: Listado de Asignaciones (Asignaturas / Secciones) -->
+      <div id="panel-izquierdo" class="w-full md:w-80 border-r border-border flex flex-col bg-surface-element/10 p-3 md:p-5 flex-shrink-0 h-full max-h-[85vh] sm:max-h-none">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-text-muted mb-3 md:mb-4">Asignaturas y Secciones</h4>
+        
+        <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3 scrolling-touch" style="-webkit-overflow-scrolling: touch;">
+          <!-- Loader Asignaciones -->
+          <div id="loader-asignaciones" class="flex flex-col items-center justify-center py-12 text-text-muted">
+            <ion-icon name="sync-outline" class="text-3xl mb-2 animate-spin text-primary"></ion-icon>
+            <p class="text-[11px]">Buscando asignaciones...</p>
+          </div>
+
+          <!-- Sin Asignaciones -->
+          <div id="empty-asignaciones" class="hidden flex flex-col items-center justify-center py-12 text-center text-text-muted">
+            <ion-icon name="folder-open-outline" class="text-3xl mb-2"></ion-icon>
+            <p class="text-xs">No tiene asignaturas asignadas en este periodo.</p>
+          </div>
+
+          <!-- Grid de Asignaciones -->
+          <div id="grid-asignaciones" class="hidden space-y-3">
+            <!-- Dinámico por JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Derecho: Detalle de Calificaciones (Solo Lectura) -->
+      <div id="panel-derecho" class="flex-1 flex flex-col overflow-hidden bg-surface-container/30">
+        
+        <!-- Detalle Inicial / Instrucción -->
+        <div id="vista-inicial-cal" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-text-muted">
+          <ion-icon name="school-outline" class="text-5xl mb-3 opacity-30 text-primary"></ion-icon>
+          <h4 class="text-text-main font-bold text-sm">Registro de Notas</h4>
+          <p class="text-xs max-w-xs mt-1">Selecciona una asignatura a la izquierda para ver las calificaciones de los estudiantes en modo lectura.</p>
+        </div>
+
+        <!-- Vista Tabla Calificaciones (Escondido al inicio) -->
+        <div id="vista-tabla-cal" class="hidden flex-1 flex flex-col overflow-hidden">
+          
+          <!-- Encabezado de la Asignatura Seleccionada -->
+          <div class="p-3 md:p-5 border-b border-border bg-surface-element/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <button onclick="volverAListado()" class="md:hidden flex items-center justify-center gap-1.5 text-primary bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-primary/20">
+                <ion-icon name="arrow-back-outline" class="text-sm"></ion-icon> Volver
+              </button>
+              <div>
+                <h4 id="cal-titulo-materia" class="font-headline font-bold text-text-main text-base">Asignatura</h4>
+                <p id="cal-sub-materia" class="text-xs text-text-muted">Año y Sección</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold text-text-muted bg-surface-element border border-border px-2.5 py-1.5 rounded-lg">
+                Ponderación Total: <span id="cal-ponderacion" class="text-primary font-extrabold">0%</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Loader Notas -->
+          <div id="loader-notes" class="hidden flex-1 flex flex-col items-center justify-center text-text-muted">
+            <ion-icon name="sync-outline" class="text-3xl mb-2 animate-spin text-primary"></ion-icon>
+            <p class="text-xs">Cargando calificaciones...</p>
+          </div>
+
+          <!-- Tabla Scrolleable (Solo PC) -->
+          <div class="hidden md:block flex-1 overflow-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+              <thead id="cal-thead" class="sticky top-0 bg-surface-container z-20">
+                <!-- Dinámico -->
+              </thead>
+              <tbody id="cal-tbody" class="divide-y divide-white/5 text-xs text-text-main">
+                <!-- Dinámico -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Listado de Estudiantes (Solo Móviles) -->
+          <div id="mobile-estudiantes-lista" class="md:hidden flex-1 overflow-y-auto p-4 space-y-3 bg-surface-container/20">
+             <!-- Dinámico por JS -->
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</dialog>
+
+<!-- ═══ MODAL DETALLES DE NOTA (LECTURA) ════════════════════════════════════ -->
+<dialog id="modal-detalle-nota" class="bg-transparent p-0 w-[90%] max-w-md border-none outline-none focus:outline-none m-auto z-[9999]">
+  <div class="bg-surface-element border border-border/80 rounded-3xl shadow-2xl p-6 space-y-5">
+    <div class="flex items-center justify-between border-b border-border pb-3">
+      <div class="flex items-center gap-2 text-primary">
+        <ion-icon name="information-circle-outline" class="text-2xl"></ion-icon>
+        <h4 class="font-headline font-bold text-base text-text-main">Detalles de Calificación</h4>
+      </div>
+      <button onclick="document.getElementById('modal-detalle-nota').close()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close-outline" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Estudiante</span>
+        <p id="det-nota-estudiante" class="font-semibold text-text-main text-sm">Cargando...</p>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Evaluación</span>
+        <p id="det-nota-evaluacion" class="font-semibold text-text-main text-sm">Cargando...</p>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <span class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Calificación</span>
+          <p id="det-nota-valor" class="font-extrabold text-text-main text-sm">Cargando...</p>
+        </div>
+        <div>
+          <span class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Asistencia</span>
+          <p id="det-nota-asistencia" class="font-extrabold text-sm">Cargando...</p>
+        </div>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Observación</span>
+        <div id="det-nota-observacion" class="p-3 bg-surface-container/60 border border-border rounded-xl text-text-main whitespace-pre-wrap min-h-[60px] text-xs">
+          Cargando...
+        </div>
+      </div>
+    </div>
+    
+    <div class="pt-2 text-right">
+      <button onclick="document.getElementById('modal-detalle-nota').close()" class="px-5 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-bold transition-all border border-primary/10">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ═══ MODAL DETALLE ESTUDIANTE MOVIL (LECTURA) ════════════════════════════ -->
+<dialog id="modal-estudiante-movil" class="bg-transparent p-0 w-[92%] max-w-md border-none outline-none focus:outline-none m-auto z-[9999]">
+  <div class="bg-surface-element border border-border rounded-3xl shadow-2xl p-5 flex flex-col max-h-[85vh]">
+    <div class="flex items-center justify-between border-b border-border pb-3 flex-shrink-0">
+      <div>
+        <h4 class="font-headline font-bold text-base text-text-main">Calificaciones del Estudiante</h4>
+        <p id="mob-est-nombre" class="text-xs text-text-muted font-semibold mt-0.5"></p>
+        <p id="mob-est-cedula" class="text-[10px] text-text-muted font-mono"></p>
+      </div>
+      <button onclick="document.getElementById('modal-estudiante-movil').close()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close-outline" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    
+    <!-- Contenido Scrollable -->
+    <div id="mob-est-evals-container" class="flex-1 overflow-y-auto py-4 space-y-4 custom-scrollbar">
+       <!-- Lista de evaluaciones inyectadas por JS -->
+    </div>
+    
+    <!-- Footer Promedio -->
+    <div class="border-t border-border pt-4 flex items-center justify-between flex-shrink-0">
+       <span class="text-xs font-bold uppercase tracking-widest text-text-muted">Promedio Final</span>
+       <span id="mob-est-promedio" class="text-lg font-extrabold text-primary">0.00</span>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  function verDetallesNota(estudianteNombre, evaluacionNombre, nota, asistencia, observacion) {
+      document.getElementById('det-nota-estudiante').textContent = estudianteNombre;
+      document.getElementById('det-nota-evaluacion').textContent = evaluacionNombre;
+      document.getElementById('det-nota-valor').textContent = `${nota} / 20`;
+      document.getElementById('det-nota-asistencia').textContent = asistencia ? 'Sí (Asistió)' : 'No (Ausente)';
+      document.getElementById('det-nota-asistencia').className = asistencia ? 'font-extrabold text-secondary text-sm' : 'font-extrabold text-error text-sm';
+      document.getElementById('det-nota-observacion').textContent = observacion || 'Sin observaciones.';
+      
+      document.getElementById('modal-detalle-nota').showModal();
+  }
+
+  function abrirDetallesEstudianteMovil(nombre, cedula, estudianteId, promedio) {
+      document.getElementById('mob-est-nombre').textContent = nombre;
+      document.getElementById('mob-est-cedula').textContent = `Cédula: V-${cedula}`;
+      
+      const container = document.getElementById('mob-est-evals-container');
+      container.innerHTML = '';
+      
+      _evaluacionesAct.forEach(ev => {
+          const key = `${estudianteId}_${ev.id}`;
+          const existente = _notasAct[key];
+          
+          let val = '-';
+          let ptos = '-';
+          let textColor = 'text-text-muted';
+          let hasSpecialStatus = false;
+          let obsHtml = '';
+          
+          if (existente && existente.nota !== null) {
+              val = parseFloat(existente.nota);
+              const pond = parseFloat(ev.ponderacion);
+              ptos = (val * pond / 100).toFixed(1);
+              
+              textColor = 'text-text-main';
+              if (val < 10) textColor = 'text-error';
+              else if (val >= 19) textColor = 'text-secondary';
+              
+              hasSpecialStatus = existente.asistencia === false || (existente.observacion && existente.observacion.trim() !== '');
+              if (hasSpecialStatus) {
+                  obsHtml = `
+                      <div class="p-2.5 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[11px] text-text-main flex flex-col gap-1 mt-2">
+                          <div class="flex items-center gap-1.5">
+                              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                              <span class="font-bold">Asistencia:</span>
+                              <span class="${existente.asistencia !== false ? 'text-secondary' : 'text-error'}">${existente.asistencia !== false ? 'Asistió' : 'Ausente'}</span>
+                          </div>
+                          ${existente.observacion ? `
+                              <div class="mt-1">
+                                  <span class="font-bold text-text-muted">Observación:</span>
+                                  <p class="text-text-main whitespace-pre-wrap">${existente.observacion}</p>
+                              </div>
+                          ` : ''}
+                      </div>
+                  `;
+              }
+          }
+          
+          container.innerHTML += `
+              <div class="bg-surface-container/40 border border-border/80 rounded-2xl p-4">
+                  <div class="flex items-center justify-between">
+                      <div>
+                          <h5 class="font-bold text-text-main text-xs line-clamp-1">${ev.nombre}</h5>
+                          <span class="inline-block mt-1 text-[9px] text-text-muted bg-surface-element px-2 py-0.5 rounded border border-border font-bold uppercase tracking-wider">${ev.ponderacion}%</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                          <div class="flex flex-col items-center">
+                              <span class="text-[9px] text-text-muted uppercase font-bold tracking-wider mb-1">Nota</span>
+                              <div class="w-10 py-1 bg-surface-element border border-border rounded-xl text-center font-extrabold text-xs ${textColor}">
+                                  ${val}
+                              </div>
+                          </div>
+                          <div class="flex flex-col items-center">
+                              <span class="text-[9px] text-text-muted uppercase font-bold tracking-wider mb-1">Ptos</span>
+                              <div class="w-10 py-1 text-center font-extrabold text-xs text-text-main">
+                                  ${ptos}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                  ${obsHtml}
+              </div>
+          `;
+      });
+      
+      const promSpan = document.getElementById('mob-est-promedio');
+      promSpan.textContent = promedio;
+      promSpan.className = `text-lg font-extrabold ${parseFloat(promedio) >= 10 || promedio === '–' ? 'text-secondary' : 'text-error'}`;
+      
+      document.getElementById('modal-estudiante-movil').showModal();
+  }
+
+
+  let _estudiantesAct = [];
+  let _evaluacionesAct = [];
+  let _notasAct = {};
+
+  function abrirModalActividades(docenteId, docenteNombre) {
+      const modal = document.getElementById('modal-actividades');
+      document.getElementById('modal-docente-nombre').textContent = docenteNombre;
+      
+      // reset view
+      document.getElementById('vista-inicial-cal').classList.remove('hidden');
+      document.getElementById('vista-tabla-cal').classList.add('hidden');
+      document.getElementById('grid-asignaciones').innerHTML = '';
+      document.getElementById('grid-asignaciones').classList.add('hidden');
+      document.getElementById('empty-asignaciones').classList.add('hidden');
+      document.getElementById('loader-asignaciones').classList.remove('hidden');
+      
+      resetMobileView();
+      modal.showModal();
+      cargarAsignaciones(docenteId);
+  }
+
+  function cerrarModalActividades() {
+      document.getElementById('modal-actividades').close();
+  }
+
+  function resetMobileView() {
+      const pIzq = document.getElementById('panel-izquierdo');
+      const pDer = document.getElementById('panel-derecho');
+      if (window.innerWidth < 768) {
+          pIzq.style.display = 'flex';
+          pDer.style.display = 'none';
+      } else {
+          pIzq.style.display = '';
+          pDer.style.display = '';
+      }
+  }
+
+  function volverAListado() {
+      if (window.innerWidth < 768) {
+          const pIzq = document.getElementById('panel-izquierdo');
+          const pDer = document.getElementById('panel-derecho');
+          pIzq.style.display = 'flex';
+          pDer.style.display = 'none';
+      }
+  }
+
+  function mostrarVistaCalificaciones() {
+      document.getElementById('vista-inicial-cal').classList.add('hidden');
+      document.getElementById('vista-tabla-cal').classList.remove('hidden');
+      
+      if (window.innerWidth < 768) {
+          const pIzq = document.getElementById('panel-izquierdo');
+          const pDer = document.getElementById('panel-derecho');
+          pIzq.style.display = 'none';
+          pDer.style.display = 'flex';
+      }
+  }
+
+  // Handle window resizing to restore normal layout when expanding to desktop
+  window.addEventListener('resize', function() {
+      const modal = document.getElementById('modal-actividades');
+      if (modal.open) {
+          const pIzq = document.getElementById('panel-izquierdo');
+          const pDer = document.getElementById('panel-derecho');
+          if (window.innerWidth >= 768) {
+              pIzq.style.display = '';
+              pDer.style.display = '';
+          } else {
+              // If an assignment was active, show detail, otherwise show list
+              const vistaTablaHidden = document.getElementById('vista-tabla-cal').classList.contains('hidden');
+              if (vistaTablaHidden) {
+                  pIzq.style.display = 'flex';
+                  pDer.style.display = 'none';
+              } else {
+                  pIzq.style.display = 'none';
+                  pDer.style.display = 'flex';
+              }
+          }
+      }
+  });
+
+  async function cargarAsignaciones(docenteId) {
+      try {
+          const resp = await fetch(`/docentes/api/asignaciones/${docenteId}/`);
+          const data = await resp.json();
+          
+          document.getElementById('loader-asignaciones').classList.add('hidden');
+          
+          if (data.asignaciones && data.asignaciones.length > 0) {
+              const grid = document.getElementById('grid-asignaciones');
+              grid.innerHTML = data.asignaciones.map(a => `
+                  <div onclick="cargarCalificaciones(${a.asignatura_id}, ${a.periodo_id}, '${a.seccion}', '${a.ano_grado}', '${a.asignatura_nombre}')"
+                       class="group relative bg-gradient-to-br from-surface-element to-surface-container border border-border hover:border-primary/50 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-[0_4px_20px_rgba(var(--color-accent-rgb),0.15)] hover:-translate-y-1 overflow-hidden">
+                       <div class="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                       
+                       <div class="flex items-center justify-between mb-3 relative z-10">
+                           <span class="inline-flex items-center justify-center bg-primary text-white font-extrabold text-sm w-10 h-10 rounded-xl shadow-md">
+                               ${a.ano_grado}-${a.seccion}
+                           </span>
+                           <span class="text-[10px] font-bold text-text-muted bg-surface-container border border-border px-2 py-1 rounded-md uppercase tracking-wider">
+                               ${a.periodo_nombre}
+                           </span>
+                       </div>
+                       <div class="relative z-10">
+                           <h4 class="font-headline font-bold text-text-main text-base group-hover:text-primary transition-colors line-clamp-1" title="${a.asignatura_nombre}">
+                               ${a.asignatura_nombre}
+                           </h4>
+                           <div class="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+                               <span>Ver Registro</span>
+                               <ion-icon name="arrow-forward-outline" class="transition-transform group-hover:translate-x-1"></ion-icon>
+                           </div>
+                       </div>
+                  </div>
+              `).join('');
+              grid.classList.remove('hidden');
+          } else {
+              document.getElementById('empty-asignaciones').classList.remove('hidden');
+          }
+      } catch (e) {
+          console.error(e);
+          document.getElementById('loader-asignaciones').classList.add('hidden');
+          alert("Error al cargar asignaciones.");
+      }
+  }
+
+  async function cargarCalificaciones(asignaturaId, periodoId, seccion, anoGrado, materiaNombre) {
+      mostrarVistaCalificaciones();
+      document.getElementById('loader-notes').classList.remove('hidden');
+      
+      document.getElementById('cal-titulo-materia').textContent = materiaNombre;
+      document.getElementById('cal-sub-materia').textContent = `Año: ${anoGrado} · Sección: ${seccion}`;
+      document.getElementById('cal-ponderacion').textContent = '0%';
+      document.getElementById('cal-thead').innerHTML = '';
+      document.getElementById('cal-tbody').innerHTML = '';
+
+      try {
+          const [rEst, rEval] = await Promise.all([
+              fetch(`/docentes/api/estudiantes/?periodo_id=${periodoId}&ano_grado=${anoGrado}&seccion=${seccion}&asignatura_id=${asignaturaId}`),
+              fetch(`/docentes/api/evaluaciones/?asignatura_id=${asignaturaId}&periodo_id=${periodoId}&seccion=${seccion}`)
+          ]);
+          const dEst = await rEst.json();
+          const dEval = await rEval.json();
+
+          _estudiantesAct = dEst.estudiantes || [];
+          _evaluacionesAct = dEval.evaluaciones || [];
+          _notasAct = dEval.notas || {};
+          
+          document.getElementById('cal-ponderacion').textContent = `${(dEval.suma_ponderacion || 0).toFixed(1)}%`;
+          
+          renderTablaCalificaciones();
+      } catch (e) {
+          console.error(e);
+          alert("Error al cargar calificaciones.");
+      } finally {
+          document.getElementById('loader-notes').classList.add('hidden');
+      }
+  }
+
+  function renderTablaCalificaciones() {
+      const thead = document.getElementById('cal-thead');
+      const tbody = document.getElementById('cal-tbody');
+      const mobileList = document.getElementById('mobile-estudiantes-lista');
+      
+      let trHead = `<tr class="bg-surface-element/80 border-b border-border text-[10px] uppercase tracking-wider text-text-muted">
+          <th class="px-4 py-3 sticky left-0 bg-surface-element z-10 min-w-[200px] border-r border-border shadow-[2px_0_5px_rgba(0,0,0,0.02)]">Estudiante</th>`;
+      
+      _evaluacionesAct.forEach(ev => {
+          trHead += `<th class="px-3 py-3 text-center min-w-[160px] border-r border-border/50">
+              <div class="truncate max-w-[140px] mx-auto text-text-muted font-bold text-xs" title="${ev.nombre}">${ev.nombre}</div>
+              <div class="text-primary font-bold mt-0.5 text-xs">${ev.ponderacion}%</div>
+              <div class="flex justify-center gap-4 mt-2 text-[10px] text-text-muted/70 font-semibold tracking-wider">
+                  <span class="w-10 text-center">NOTA</span>
+                  <span class="w-10 text-center">PTOS</span>
+              </div>
+          </th>`;
+      });
+      trHead += `<th class="px-4 py-3 text-right text-primary font-extrabold bg-primary/5 min-w-[100px] tracking-wider">PROMEDIO</th></tr>`;
+      thead.innerHTML = trHead;
+
+      if (_estudiantesAct.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="${_evaluacionesAct.length + 2}" class="text-center py-10 text-text-muted italic">No hay estudiantes en esta sección.</td></tr>`;
+          mobileList.innerHTML = `<div class="text-center py-10 text-text-muted italic text-xs">No hay estudiantes en esta sección.</div>`;
+          return;
+      }
+
+      let tbodyHTML = '';
+      let mobileHTML = '';
+      _estudiantesAct.forEach(est => {
+          let sumaPond = 0, sumaNotas = 0, hayNotas = false;
+          
+          let tr = `<tr class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+              <td class="px-4 py-3 sticky left-0 bg-surface-container z-10 border-r border-border shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                  <div class="font-semibold text-text-main text-xs">${est.nombre}</div>
+                  <div class="text-[10px] text-text-muted font-mono mt-0.5">V-${est.cedula}</div>
+              </td>`;
+              
+          _evaluacionesAct.forEach(ev => {
+              const key = `${est.estudiante_id}_${ev.id}`;
+              const existente = _notasAct[key];
+              
+              if (existente && existente.nota !== null) {
+                  const val = parseFloat(existente.nota);
+                  const pond = parseFloat(ev.ponderacion);
+                  sumaNotas += val * (pond / 100);
+                  sumaPond += pond;
+                  hayNotas = true;
+                  
+                  let textColor = 'text-text-main';
+                  if (val < 10) textColor = 'text-error';
+                  else if (val >= 19) textColor = 'text-secondary';
+                  
+                  const ptos = (val * pond / 100).toFixed(1);
+                  
+                  let statusDetail = [];
+                  if (existente.es_borrador) statusDetail.push("Borrador");
+                  if (existente.asistencia === false) statusDetail.push("Ausente");
+                  if (existente.observacion) statusDetail.push(`Obs: ${existente.observacion}`);
+                  const tooltipText = statusDetail.length > 0 ? statusDetail.join(" | ") : "Cargada";
+                  
+                  const hasSpecialStatus = existente.asistencia === false || (existente.observacion && existente.observacion.trim() !== '');
+                  const dotHtml = hasSpecialStatus ? `<span class="w-1.5 h-1.5 rounded-full bg-blue-500 absolute -top-0.5 -right-0.5"></span>` : '';
+
+                  tr += `<td class="px-2 py-3 text-center border-r border-border/50">
+                      <div class="flex items-center justify-center gap-2">
+                          <!-- Nota Box -->
+                          <div class="w-12 py-1.5 bg-surface-element border border-border rounded-xl text-center font-bold text-sm ${textColor} shadow-sm">
+                              ${val}
+                          </div>
+                          <!-- Ptos Box -->
+                          <div class="w-12 py-1.5 text-center font-bold text-sm text-text-main">
+                              ${ptos}
+                          </div>
+                          <!-- Info/Observation Icon -->
+                          <div onclick="verDetallesNota('${est.nombre.replace(/'/g, "\\'")}', '${ev.nombre.replace(/'/g, "\\'")}', ${val}, ${existente.asistencia !== false}, '${(existente.observacion || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')"
+                               class="relative flex items-center text-text-muted hover:text-text-main cursor-pointer" 
+                               title="${tooltipText.replace(/"/g, '&quot;')}">
+                              <ion-icon name="information-circle" class="text-lg text-text-muted/40 hover:text-text-main transition-colors"></ion-icon>
+                              ${dotHtml}
+                          </div>
+                      </div>
+                  </td>`;
+              } else {
+                  tr += `<td class="px-3 py-3 text-center border-r border-border/50 text-text-muted/40 font-bold">-</td>`;
+              }
+          });
+          
+          let promHtml = `<span class="text-text-muted/40 font-bold">–</span>`;
+          let promVal = 0;
+          if (hayNotas && sumaPond > 0) {
+              const promedio = (sumaNotas / sumaPond) * 20;
+              promVal = promedio / 5;
+              promHtml = `<span class="text-sm font-extrabold text-primary font-mono">${promVal.toFixed(2)}</span>`;
+          }
+          
+          tr += `<td class="px-4 py-3 text-right bg-primary/5">${promHtml}</td></tr>`;
+          tbodyHTML += tr;
+          
+          // Renderizar fila móvil
+          mobileHTML += `
+          <div onclick="abrirDetallesEstudianteMovil('${est.nombre.replace(/'/g, "\\'")}', '${est.cedula}', '${est.estudiante_id}', '${promVal ? promVal.toFixed(2) : '–'}')"
+               class="p-4 bg-surface-element border border-border hover:border-primary/50 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div class="min-w-0 pr-4">
+                  <h5 class="font-bold text-text-main text-xs truncate">${est.nombre}</h5>
+                  <p class="text-[10px] text-text-muted mt-0.5">V-${est.cedula}</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                  <div class="text-right">
+                      <p class="text-[9px] text-text-muted font-bold uppercase tracking-wider">Promedio</p>
+                      <p class="text-xs font-extrabold ${promVal >= 2 ? 'text-secondary' : 'text-error'}">${promVal ? promVal.toFixed(2) : '–'}</p>
+                  </div>
+                  <ion-icon name="chevron-forward-outline" class="text-text-muted text-base"></ion-icon>
+              </div>
+          </div>`;
+      });
+      tbody.innerHTML = tbodyHTML;
+      mobileList.innerHTML = mobileHTML;
+  }
+
+  // Close modal on click outside
+  document.getElementById('modal-actividades').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalActividades();
+  });
+
+  function toggleHelpModal() {
+      const modal = document.getElementById('helpModal');
+      if (modal) { modal.classList.toggle('hidden'); }
+  }
+</script>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Actividades de Docentes</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">monitoring</span> 1. ¿Qué muestra esta sección?
+                </h4>
+                <p class="text-xs">Aquí supervisas en <strong>tiempo real</strong> la actividad de carga de calificaciones de cada docente. La tabla principal presenta una fila por docente con las siguientes columnas:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Docente:</strong> usuario y nombre completo registrado.</li>
+                    <li><strong>Asignaciones Activas:</strong> año, sección y asignatura que tiene a su cargo en el período actual.</li>
+                    <li><strong>Notas Confirm.:</strong> cantidad de calificaciones ya confirmadas (definitivas).</li>
+                    <li><strong>Borradores:</strong> notas guardadas sin confirmar.</li>
+                    <li><strong>Estado:</strong> <strong>Completa</strong>, <strong>Borrador</strong> o <strong>Sin Cargar</strong>.</li>
+                    <li><strong>Última Actividad:</strong> fecha y hora del último registro del docente.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">search</span> 2. Buscar un docente
+                </h4>
+                <p class="text-xs">Usa el <strong>buscador</strong> superior para filtrar por <strong>usuario</strong> o <strong>nombre</strong> del docente. Escribe el término y presiona <strong>Buscar</strong>. Para volver al listado completo, limpia la búsqueda o usa el enlace "Ver todos los docentes".</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">visibility</span> 3. Ver las actividades de un docente
+                </h4>
+                <p class="text-xs">El botón <strong>Ver Actividades</strong> abre una ventana donde, al seleccionar una asignatura y sección a la izquierda, verás el <strong>registro de calificaciones</strong> de los estudiantes en <strong>modo solo lectura</strong>: nota, ponderación, puntos y promedio. Toca el ícono de información de cada nota para consultar su <strong>asistencia</strong> y <strong>observaciones</strong>.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">delete</span> 4. Eliminar evaluaciones (solo personal autorizado)
+                </h4>
+                <p class="text-xs">Los roles <strong>Administrativo</strong>, <strong>Personal</strong> y <strong>Desarrollador</strong> disponen del botón <strong>Eliminar Evaluación</strong>. Selecciona el docente, el año y la sección, marca las evaluaciones deseadas y confirma. <strong>Atención:</strong> esta acción elimina de forma permanente las evaluaciones y todas sus notas cargadas.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+                Entendido
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

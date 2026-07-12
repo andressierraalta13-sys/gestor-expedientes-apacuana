@@ -1,0 +1,499 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="p-6 max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6 drop-shadow">
+        <div>
+            <h2 class="text-3xl font-black text-black dark:text-text-main drop-shadow-md pb-1">Servicios y Gastos Operativos</h2>
+            <p class="text-gray-500 dark:text-gray-400 text-sm font-semibold" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Gestión financiera y operativa institucional ({{ mes_actual }})
+                <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+                </button>
+            </p>
+        </div>
+        <button onclick="abrirModalGasto()" class="bg-primary hover:bg-primary-glow text-text-main font-bold px-6 py-3 rounded-xl shadow-neon-primary transition flex items-center gap-2">
+            <ion-icon name="add-circle-outline" class="text-xl"></ion-icon>
+            Registrar Pago / Gasto
+        </button>
+    </div>
+
+    <!-- Dashboard Financiero -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-surface-container border border-border rounded-2xl p-6 shadow-md flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-error/20 flex items-center justify-center text-error text-2xl">
+                <ion-icon name="cash-outline"></ion-icon>
+            </div>
+            <div>
+                <p class="text-sm text-text-muted font-bold uppercase tracking-wide">Gasto Total del Mes</p>
+                <h3 class="text-2xl font-black text-text-main mt-1"><span class="currency-display" data-value="{{ total_mes }}"></span> Bs</h3>
+            </div>
+        </div>
+
+        <div class="bg-surface-container border border-border rounded-2xl p-6 shadow-md flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-tertiary/20 flex items-center justify-center text-tertiary text-2xl">
+                <ion-icon name="trending-up-outline"></ion-icon>
+            </div>
+            <div>
+                <p class="text-sm text-text-muted font-bold uppercase tracking-wide">Gasto Más Alto</p>
+                <h3 class="text-2xl font-black text-text-main mt-1"><span class="currency-display" data-value="{{ gasto_mas_alto }}"></span> Bs</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros Inteligentes -->
+    <div class="bg-surface-container border border-border rounded-2xl p-4 shadow-md mb-6 flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex gap-4 items-center w-full md:w-auto">
+            <ion-icon name="filter-outline" class="text-text-muted text-xl"></ion-icon>
+            <input type="text" id="buscadorGastos" onkeyup="filtrarTabla()" placeholder="Buscar por motivo, ref o cédula..." class="bg-surface-element border border-border rounded-lg px-4 py-2 text-sm text-text-main focus:outline-none focus:border-primary/50 w-64">
+            
+            <select id="filtroCategoria" onchange="filtrarTabla()" class="bg-surface-element border border-border rounded-lg px-4 py-2 text-sm text-text-main focus:outline-none focus:border-primary/50">
+                <option value="ALL">Todas las Categorías</option>
+                {% for cat in categorias %}
+                <option value="{{ cat.nombre }}">{{ cat.nombre }}</option>
+                {% endfor %}
+            </select>
+            
+            <select id="filtroEstado" onchange="filtrarTabla()" class="bg-surface-element border border-border rounded-lg px-4 py-2 text-sm text-text-main focus:outline-none focus:border-primary/50">
+                <option value="ALL">Todos los Estados</option>
+                <option value="PENDIENTE">Pendientes</option>
+                <option value="APROBADO">Aprobados</option>
+                <option value="PAGADO">Pagados</option>
+                <option value="RECHAZADO">Rechazados</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Tabla de Gastos -->
+    <div class="bg-surface-container border border-border rounded-2xl shadow-md overflow-hidden">
+        <table class="w-full text-left border-collapse" id="tablaGastos">
+            <thead class="bg-surface-element text-text-muted text-xs uppercase tracking-wider">
+                <tr>
+                    <th class="p-4 font-bold border-b border-border">Fecha / Motivo</th>
+                    <th class="p-4 font-bold border-b border-border">Beneficiario / Ref</th>
+                    <th class="p-4 font-bold border-b border-border">Categoría</th>
+                    <th class="p-4 font-bold border-b border-border text-right">Monto</th>
+                    <th class="p-4 font-bold border-b border-border text-center">Estado</th>
+                    <th class="p-4 font-bold border-b border-border text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm divide-y divide-white/5">
+                {% for g in gastos %}
+                <tr class="hover:bg-surface-element transition group" data-categoria="{{ g.categoria.nombre }}" data-estado="{{ g.estado }}">
+                    <td class="p-4">
+                        <div class="font-bold text-text-main g-motivo">{{ g.razon }}</div>
+                        <div class="text-xs text-text-muted mt-1 font-mono flex items-center gap-1">
+                            <ion-icon name="calendar-outline"></ion-icon> {{ g.fecha_pago|date:"d/m/Y" }}
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="font-semibold text-text-main g-beneficiario">{{ g.beneficiario_cedula_rif }}</div>
+                        <div class="text-xs text-text-muted mt-1 uppercase g-ref">
+                            {{ g.get_metodo_pago_display }} | {{ g.referencia|default:"S/R" }}
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-md bg-surface-element border border-border text-xs font-semibold text-text-main">
+                            {{ g.categoria.nombre }}
+                        </span>
+                    </td>
+                    <td class="p-4 text-right">
+                        <div class="font-black text-text-main text-base"><span class="currency-display" data-value="{{ g.monto }}"></span> {{ g.moneda }}</div>
+                        <div class="text-[10px] text-text-muted font-bold">~ <span class="currency-display" data-value="{{ g.equivalente_bs }}"></span> Bs</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        {% if g.estado == 'PENDIENTE' %}
+                        <span class="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold tracking-wide">Pendiente</span>
+                        {% elif g.estado == 'APROBADO' %}
+                        <span class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold tracking-wide">Aprobado</span>
+                        {% elif g.estado == 'PAGADO' %}
+                        <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold tracking-wide">Pagado</span>
+                        {% else %}
+                        <span class="px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold tracking-wide">Rechazado</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            {% if g.comprobante %}
+                            <a href="{{ g.comprobante.url }}" target="_blank" class="p-2 bg-surface-element hover:bg-surface-element rounded-lg text-text-muted hover:text-text-main transition" title="Ver Comprobante">
+                                <ion-icon name="document-attach-outline"></ion-icon>
+                            </a>
+                            {% endif %}
+                            
+                            {% if request.user.rol != 'PERSONAL' %}
+                                {% if g.estado == 'PENDIENTE' %}
+                                <button onclick="cambiarEstado({{ g.id }}, 'APROBADO')" class="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 transition border border-blue-500/20" title="Aprobar">
+                                    <ion-icon name="checkmark-outline"></ion-icon>
+                                </button>
+                                <button onclick="cambiarEstado({{ g.id }}, 'RECHAZADO')" class="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition border border-red-500/20" title="Rechazar">
+                                    <ion-icon name="close-outline"></ion-icon>
+                                </button>
+                                {% elif g.estado == 'APROBADO' %}
+                                <button onclick="cambiarEstado({{ g.id }}, 'PAGADO')" class="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg text-emerald-400 transition border border-emerald-500/20" title="Marcar como Pagado">
+                                    <ion-icon name="cash-outline"></ion-icon>
+                                </button>
+                                {% endif %}
+                                <button onclick="eliminarGasto({{ g.id }})" class="p-2 bg-error/10 hover:bg-error/20 rounded-lg text-error transition border border-error/20" title="Eliminar Registro">
+                                    <ion-icon name="trash-outline"></ion-icon>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-text-muted font-bold">No hay gastos registrados en este periodo.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Registrar Gasto -->
+<dialog id="modalGasto" class="m-auto bg-surface-container/95 backdrop-blur-2xl p-0 rounded-2xl shadow-md w-[800px] border border-border text-text-main overflow-hidden">
+    <div class="p-6 border-b border-border bg-surface-element/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h3 class="font-black text-2xl text-primary drop-shadow-md">Registrar Gasto Operativo</h3>
+            <p class="text-sm text-text-muted font-semibold mt-1">Ingresa los detalles del servicio o gasto.</p>
+        </div>
+        <div id="tasaBCV" class="px-4 py-2 bg-surface-element border border-border rounded-xl font-mono text-sm text-emerald-400 font-bold shadow-inner flex items-center gap-2">
+            <ion-icon name="sync-outline" class="animate-spin"></ion-icon> Cargando tasas BCV...
+        </div>
+    </div>
+
+    <form id="formGasto" onsubmit="enviarGasto(event)" class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <!-- Razón -->
+        <div class="col-span-1 sm:col-span-2">
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Razón o Motivo del Gasto</label>
+            <input type="text" id="g_razon" required placeholder="Ej. Reparación de aire acondicionado PB" class="w-full bg-surface-element border border-border rounded-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition">
+        </div>
+
+        <!-- Categoría y Fecha -->
+        <div>
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Categoría</label>
+            <select id="g_categoria" required class="w-full bg-surface-element border border-border rounded-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 transition">
+                {% for cat in categorias %}
+                <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Fecha de Pago/Ejecución</label>
+            <input type="date" id="g_fecha" required class="w-full bg-surface-element border border-border rounded-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 transition">
+        </div>
+
+        <!-- Monto y Moneda -->
+        <div>
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Monto</label>
+            <div class="flex relative">
+                <input type="text" id="g_monto" required placeholder="0,00" oninput="window.maskCurrency(this); calcularEquivalente()" class="w-full bg-surface-element border border-border rounded-l-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 font-mono text-lg">
+                <select id="g_moneda" onchange="validarMonedaMetodo(); calcularEquivalente()" class="bg-surface-element border border-y-white/10 border-r-white/10 border-l-0 rounded-r-lg px-3 py-3 text-text-main focus:outline-none font-bold">
+                    <option value="BS">Bs</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                </select>
+            </div>
+            <p id="calc_equiv" class="text-xs text-emerald-400 font-bold mt-2 h-4"></p>
+            <p id="error_moneda" class="text-[10px] text-red-400 font-bold mt-1 hidden"></p>
+        </div>
+
+        <!-- Beneficiario -->
+        <div>
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Beneficiario (Cédula/RIF)</label>
+            <input type="text" id="g_beneficiario" required placeholder="V-12345678 o J-12345678-9" class="w-full bg-surface-element border border-border rounded-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 transition uppercase">
+        </div>
+
+        <!-- Metodo y Referencia -->
+        <div>
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Método de Pago</label>
+            <select id="g_metodo" required onchange="validarMonedaMetodo()" class="w-full bg-surface-element border border-border rounded-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 transition">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="PAGO_MOVIL">Pago Móvil</option>
+                <option value="ZELLE">Zelle</option>
+                <option value="BINANCE">Binance</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">N° Referencia</label>
+            <input type="text" id="g_referencia" placeholder="Opcional" class="w-full bg-surface-element border border-border rounded-lg px-4 py-3 text-text-main focus:outline-none focus:border-primary/50 transition">
+        </div>
+
+        <!-- Archivo Adjunto -->
+        <div class="col-span-1 sm:col-span-2">
+            <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Comprobante / Factura (PDF o IMG)</label>
+            <input type="file" id="g_comprobante" accept="image/*,.pdf" class="block w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 transition">
+        </div>
+
+    </form>
+    
+    <div class="p-6 border-t border-border bg-surface-element/30 flex justify-end gap-3">
+        <button onclick="document.getElementById('modalGasto').close()" class="px-6 py-2.5 text-text-muted font-bold hover:text-text-main transition">Cancelar</button>
+        <button form="formGasto" type="submit" class="px-6 py-2.5 bg-primary hover:bg-primary-glow text-text-main rounded-xl font-black shadow-lg shadow-primary/20 transition flex items-center gap-2">
+            <ion-icon name="save-outline"></ion-icon> Guardar Registro
+        </button>
+    </div>
+</dialog>
+
+<script>
+    let tasasDiarias = { USD: 1, EUR: 1 };
+
+    // Fetch DolarAPI
+    async function obtenerTasas() {
+        try {
+            let rs = await fetch("https://ve.dolarapi.com/v1/cotizaciones");
+            let data = await rs.json();
+            let bcv_usd = data.find(i => i.moneda === 'USD' && i.fuente === 'oficial') || data.find(i => i.moneda === 'USD');
+            let bcv_eur = data.find(i => i.moneda === 'EUR' && i.fuente === 'oficial') || data.find(i => i.moneda === 'EUR');
+            
+            tasasDiarias.USD = bcv_usd ? bcv_usd.promedio : 1;
+            tasasDiarias.EUR = bcv_eur ? bcv_eur.promedio : 1;
+
+            document.getElementById('tasaBCV').innerHTML = `
+                <ion-icon name="cash-outline" class="text-lg"></ion-icon> 
+                USD: ${tasasDiarias.USD} Bs &bull; EUR: ${tasasDiarias.EUR} Bs
+            `;
+        } catch (e) {
+            document.getElementById('tasaBCV').innerHTML = "⚠️ Error obteniendo tasa BCV";
+        }
+    }
+
+    function abrirModalGasto() {
+        document.getElementById('formGasto').reset();
+        document.getElementById('g_fecha').valueAsDate = new Date();
+        document.getElementById('calc_equiv').innerText = '';
+        obtenerTasas();
+        document.getElementById('modalGasto').showModal();
+    }
+
+    function calcularEquivalente() {
+        let monto = window.unmaskCurrency(document.getElementById('g_monto').value);
+        let moneda = document.getElementById('g_moneda').value;
+        let p = document.getElementById('calc_equiv');
+
+        if (moneda === 'USD') {
+            let eq = monto * tasasDiarias.USD;
+            p.innerText = `Equivale a: ~${window.formatCurrency(eq)} Bs (Tasa: ${window.formatCurrency(tasasDiarias.USD)})`;
+        } else if (moneda === 'EUR') {
+            let eq = monto * tasasDiarias.EUR;
+            p.innerText = `Equivale a: ~${window.formatCurrency(eq)} Bs (Tasa: ${window.formatCurrency(tasasDiarias.EUR)})`;
+        } else {
+            let eq = monto / tasasDiarias.USD;
+            p.innerText = `Equivale a: ~${window.formatCurrency(eq)} USD (Tasa: ${window.formatCurrency(tasasDiarias.USD)})`;
+        }
+    }
+
+    function validarMonedaMetodo() {
+        const metodo = document.getElementById('g_metodo').value;
+        const moneda = document.getElementById('g_moneda').value;
+        const errorP = document.getElementById('error_moneda');
+        
+        const metodosBs = ['EFECTIVO', 'TRANSFERENCIA', 'PAGO_MOVIL'];
+        let error = "";
+
+        if (moneda === 'BS' && !metodosBs.includes(metodo)) {
+            error = "⚠️ Bolívares solo permitidos para Efectivo, Transferencia o Pago Móvil.";
+        } else if ((moneda === 'USD' || moneda === 'EUR') && metodosBs.includes(metodo) && metodo !== 'EFECTIVO') {
+            // Nota: Permitimos Efectivo en USD, pero no Transferencia/Pago Movil en USD (asumiendo que son locales)
+            // Según el prompt: "Bolívar (Bs) solo pueda utilizarse cuando el método de pago sea 'Efectivo', 'Transferencia' o 'Pago Móvil', mientras que cualquier otro método... exclusivamente en USD"
+            // Entonces si no es Bs, y es Transferencia/PagoMovil -> Error.
+            // Si es Efectivo -> puede ser Bs o USD.
+        }
+        
+        if (metodo !== 'EFECTIVO' && !metodosBs.includes(metodo) && moneda === 'BS') {
+             error = "⚠️ Métodos internacionales solo operan en USD/EUR.";
+        }
+        
+        // Re-ajustando a la regla exacta del prompt:
+        // Bs -> SOLO [Efectivo, Transferencia, Pago Movil]
+        // Otros metodos -> SOLO USD
+        
+        if (moneda === 'BS' && !metodosBs.includes(metodo)) {
+            error = "⚠️ El Bolívar solo se permite con Efectivo, Transferencia o Pago Móvil.";
+        }
+        if (metodo !== 'EFECTIVO' && metodo !== 'TRANSFERENCIA' && metodo !== 'PAGO_MOVIL' && moneda === 'BS') {
+            error = "⚠️ Este método requiere USD o EUR.";
+        }
+
+        if (error) {
+            errorP.innerText = error;
+            errorP.classList.remove('hidden');
+            return false;
+        } else {
+            errorP.classList.add('hidden');
+            return true;
+        }
+    }
+
+    async function enviarGasto(e) {
+        e.preventDefault();
+        
+        const fd = new FormData();
+        if (!validarMonedaMetodo()) {
+            alert("Error: " + document.getElementById('error_moneda').innerText);
+            return;
+        }
+
+        fd.append('categoria_id', document.getElementById('g_categoria').value);
+        fd.append('razon', document.getElementById('g_razon').value);
+        fd.append('monto', window.unmaskCurrency(document.getElementById('g_monto').value));
+        
+        let moneda = document.getElementById('g_moneda').value;
+        fd.append('moneda', moneda);
+        fd.append('tasa_cambio', moneda === 'USD' ? tasasDiarias.USD : (moneda === 'EUR' ? tasasDiarias.EUR : tasasDiarias.USD));
+        
+        fd.append('fecha_pago', document.getElementById('g_fecha').value);
+        fd.append('beneficiario_cedula_rif', document.getElementById('g_beneficiario').value);
+        fd.append('metodo_pago', document.getElementById('g_metodo').value);
+        fd.append('referencia', document.getElementById('g_referencia').value);
+
+        const fileInput = document.getElementById('g_comprobante');
+        if (fileInput.files.length > 0) {
+            fd.append('comprobante', fileInput.files[0]);
+        }
+
+        try {
+            let res = await fetch("{% url 'api_registrar_gasto' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                body: fd
+            });
+            let data = await res.json();
+            if (res.ok) {
+                if(data.alertas && data.alertas.length > 0) {
+                    alert("Gasto Registrado con Advertencias:\n- " + data.alertas.join("\n- "));
+                }
+                location.reload();
+            } else {
+                alert(data.error || "Error al registrar");
+            }
+        } catch (err) {
+            alert("Error de red.");
+        }
+    }
+
+    async function cambiarEstado(id, nuevoEstado) {
+        if(!confirm(`¿Estás seguro de cambiar el estado a ${nuevoEstado}?`)) return;
+        
+        try {
+            let res = await fetch(`/pagos/api/servicios/${id}/estado/`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ estado: nuevoEstado })
+            });
+            let data = await res.json();
+            if (res.ok) location.reload();
+            else alert(data.error);
+        } catch(e) { alert("Error de red"); }
+    }
+
+    async function eliminarGasto(id) {
+        if(!confirm(`⚠️ ATENCIÓN: Estás a punto de eliminar este registro permanentemente. Esta acción será auditada y quedará reflejada en tu expediente de usuario. ¿Deseas proceder?`)) return;
+        
+        try {
+            let res = await fetch(`/pagos/api/servicios/${id}/eliminar/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            });
+            let data = await res.json();
+            if (res.ok) location.reload();
+            else alert(data.error);
+        } catch(e) { alert("Error de red"); }
+    }
+
+    function filtrarTabla() {
+        let text = document.getElementById('buscadorGastos').value.toLowerCase();
+        let cat = document.getElementById('filtroCategoria').value;
+        let est = document.getElementById('filtroEstado').value;
+        
+        let filas = document.querySelectorAll('#tablaGastos tbody tr');
+        filas.forEach(f => {
+            if (f.children.length > 1) { // ignorar tr vacío
+                let matchText = f.innerText.toLowerCase().includes(text);
+                let matchCat = cat === 'ALL' || f.dataset.categoria === cat;
+                let matchEst = est === 'ALL' || f.dataset.estado === est;
+                f.style.display = (matchText && matchCat && matchEst) ? '' : 'none';
+            }
+        });
+    }
+
+    // Formatear monedas sin usar document.write (compatible con Turbo)
+    function renderCurrencies() {
+        document.querySelectorAll('.currency-display').forEach(el => {
+            if (el.dataset.value) {
+                el.innerText = window.formatCurrency(el.dataset.value);
+            }
+        });
+    }
+    
+    // Ejecutar al cargar la vista y después de que Turbo renderice
+    document.addEventListener("turbo:load", renderCurrencies);
+    renderCurrencies();
+
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Servicios y Gastos Operativos</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">payments</span> 1. ¿Qué hace esta sección?
+                </h4>
+                <p class="text-xs">Aquí se registra y controla todo el <strong>gasto operativo de la institución</strong>: pagos de servicios (electricidad, agua, internet), reparaciones, compras y demás egresos. El panel superior muestra el <strong>Gasto Total del Mes</strong> y el <strong>Gasto Más Alto</strong> para tener una visión rápida de las finanzas.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">add_circle</span> 2. Registrar un pago o gasto
+                </h4>
+                <p class="text-xs">Pulse el botón <strong>«Registrar Pago / Gasto»</strong> y complete el formulario. Tenga en cuenta las reglas de moneda:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li>El <strong>Bolívar (Bs)</strong> solo se permite con Efectivo, Transferencia o Pago Móvil.</li>
+                    <li>Métodos como <strong>Zelle o Binance</strong> requieren USD o EUR.</li>
+                    <li>El sistema calcula el <strong>equivalente en Bs</strong> usando la tasa del BCV obtenida automáticamente.</li>
+                    <li>Adjunte siempre el <strong>comprobante o factura</strong> (PDF o imagen) cuando lo tenga.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">fact_check</span> 3. Flujo de aprobación de estados
+                </h4>
+                <p class="text-xs">Cada registro avanza por estados. Según su rol podrá gestionarlos desde la columna <strong>Acciones</strong>:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Pendiente</strong>: recién registrado, espera revisión.</li>
+                    <li><strong>Aprobado</strong>: autorizado para pago.</li>
+                    <li><strong>Pagado</strong>: egreso ejecutado.</li>
+                    <li><strong>Rechazado</strong>: no procede.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">filter_alt</span> 4. Buscar, filtrar y eliminar
+                </h4>
+                <p class="text-xs">Use el <strong>buscador</strong> (motivo, referencia o cédula) y los filtros de <strong>Categoría</strong> y <strong>Estado</strong> para ubicar registros rápidamente. La <strong>eliminación es permanente y queda auditada</strong> en su expediente de usuario, por lo que debe usarse con responsabilidad.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

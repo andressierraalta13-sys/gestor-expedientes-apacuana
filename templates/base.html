@@ -1,0 +1,2011 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light" data-accent="emerald" data-density="comfortable">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>{% block title %}Control Estudios | Intranet{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+
+    <!-- Ionicons (kept for backwards compatibility) -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+
+    <!-- Design System + Components -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/components.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}" />
+
+    <!-- Theme Manager (loads before DOM to prevent flash) -->
+    <script src="{% static 'js/theme-manager.js' %}"></script>
+
+    <!-- Tailwind CSS (utilities only — layout helpers) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            corePlugins: { preflight: false },
+            darkMode: ["class", '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    colors: {
+                        background: "var(--color-bg)",
+                        surface: "var(--color-surface)",
+                        "surface-container": "var(--color-surface-container)",
+                        "surface-element": "var(--color-surface-element)",
+                        "text-main": "var(--color-text-main)",
+                        "text-muted": "var(--color-text-secondary)",
+                        border: "var(--color-border)",
+                        primary: "var(--color-accent)",
+                        secondary: "var(--color-success)",
+                        error: "var(--color-error)",
+                        warning: "var(--color-warning)"
+                    },
+                    boxShadow: {
+                        glass: "var(--shadow-md)"
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Global Currency Formatting -->
+    <script>
+        window.formatCurrency = function (value) {
+            if (value === null || value === undefined || value === "") return "0,00";
+            if (typeof value === 'string') {
+                if (value.includes(',')) {
+                    value = parseFloat(value.replace(/\./g, '').replace(',', '.'));
+                } else {
+                    value = parseFloat(value);
+                }
+            }
+            if (isNaN(value)) return "0,00";
+            return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+        };
+        window.maskCurrency = function (input) {
+            let value = input.value.replace(/\D/g, "");
+            if (value === "") { input.value = ""; return; }
+            value = (parseFloat(value) / 100).toFixed(2);
+            let [intPart, decPart] = value.split(".");
+            intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            input.value = intPart + "," + decPart;
+        };
+        window.unmaskCurrency = function (formattedValue) {
+            if (!formattedValue) return 0;
+            return parseFloat(formattedValue.replace(/\./g, "").replace(",", "."));
+        };
+    </script>
+
+    <!-- PWA & Premium Navigation -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="view-transition" content="same-origin" />
+    <meta name="turbo-prefetch" content="true">
+    <meta name="turbo-cache-control" content="no-cache">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-esm.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js').then(reg => {
+                    console.log('ServiceWorker registered:', reg.scope);
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+    </script>
+
+    <!-- ═══ GLOBAL BUTTON FIXES (LIGHT & DARK MODE) ═══════════════════════════════ -->
+    <style>
+        /* ── 1. Universal: Remove border outlines from ALL buttons in both modes ── */
+        [data-theme="dark"] button, [data-theme="light"] button,
+        [data-theme="dark"] .btn, [data-theme="light"] .btn,
+        [data-theme="dark"] a.btn, [data-theme="light"] a.btn {
+            border-color: transparent !important;
+        }
+        /* Keep border-border for surface/structural elements that need subtle separation */
+        [data-theme="dark"] button.border-border,
+        [data-theme="dark"] .border-border {
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+        [data-theme="light"] button.border-border,
+        [data-theme="light"] .border-border {
+            border-color: rgba(0,0,0,0.1) !important;
+        }
+
+        /* ── 2. Auditoría: "Limpiar" → Opaque red bg + white text ── */
+        [data-theme="dark"] button[onclick="limpiarAuditoria()"],
+        [data-theme="light"] button[onclick="limpiarAuditoria()"] {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+            border-color: transparent !important;
+        }
+        [data-theme="dark"] button[onclick="limpiarAuditoria()"]:hover,
+        [data-theme="light"] button[onclick="limpiarAuditoria()"]:hover {
+            background: #b91c1c !important;
+        }
+
+        /* ── 3. Horarios Dashboard: action buttons ── */
+        [data-theme="dark"] #btnExportarExcel, [data-theme="light"] #btnExportarExcel,
+        [data-theme="dark"] #btnDejarEnBlanco, [data-theme="light"] #btnDejarEnBlanco,
+        [data-theme="dark"] #btnAgregarBloqueMenu, [data-theme="light"] #btnAgregarBloqueMenu,
+        [data-theme="dark"] #btnGuardarHorarioFinal, [data-theme="light"] #btnGuardarHorarioFinal {
+            border-color: transparent !important;
+        }
+        [data-theme="dark"] #btnDejarEnBlanco {
+            color: #ffffff !important;
+        }
+        [data-theme="dark"] #btnDejarEnBlanco * {
+            color: #ffffff !important;
+        }
+
+        /* ── 4. Horarios Lista: "Borrar Horario" ── */
+        [data-theme="dark"] #btnModoRestablecer,
+        [data-theme="light"] #btnModoRestablecer {
+            border-color: transparent !important;
+        }
+
+        /* ── 5. Docentes Gestion: "Buscar" → Opaque primary + white text ── */
+        [data-theme="dark"] button[type="submit"].text-primary.bg-primary\/10,
+        [data-theme="dark"] button[type="submit"].text-primary.bg-primary\/20,
+        [data-theme="light"] button[type="submit"].text-primary.bg-primary\/10,
+        [data-theme="light"] button[type="submit"].text-primary.bg-primary\/20 {
+            background: var(--color-accent) !important;
+            color: #ffffff !important;
+            border-color: transparent !important;
+        }
+
+        /* ── 6. Asistencias Personal: "Asistió" & "Ausente" → Opaque in both modes ── */
+        [data-theme="dark"] .btn-asistio, [data-theme="light"] .btn-asistio {
+            border-color: transparent !important;
+        }
+        [data-theme="dark"] .btn-asistio:not(.bg-secondary\/20),
+        [data-theme="light"] .btn-asistio:not(.bg-secondary\/20) {
+            background: rgba(128,128,128,0.2) !important;
+            color: var(--color-text-main) !important;
+        }
+        [data-theme="dark"] .btn-asistio.bg-secondary\/20,
+        [data-theme="light"] .btn-asistio.bg-secondary\/20 {
+            background: #059669 !important;
+            color: #ffffff !important;
+        }
+        [data-theme="dark"] .btn-ausente, [data-theme="light"] .btn-ausente {
+            border-color: transparent !important;
+        }
+        [data-theme="dark"] .btn-ausente:not(.bg-error\/20),
+        [data-theme="light"] .btn-ausente:not(.bg-error\/20) {
+            background: rgba(128,128,128,0.2) !important;
+            color: var(--color-text-main) !important;
+        }
+        [data-theme="dark"] .btn-ausente.bg-error\/20,
+        [data-theme="light"] .btn-ausente.bg-error\/20 {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+        }
+
+        /* ── 7. Pagos: ALL buttons ── */
+        [data-theme="dark"] .bg-indigo-600, [data-theme="light"] .bg-indigo-600,
+        [data-theme="dark"] .bg-emerald-600, [data-theme="light"] .bg-emerald-600 {
+            border-color: transparent !important;
+        }
+        [data-theme="dark"] .bg-blue-500\/10, [data-theme="light"] .bg-blue-500\/10,
+        [data-theme="dark"] .bg-red-500\/10, [data-theme="light"] .bg-red-500\/10,
+        [data-theme="dark"] .bg-emerald-500\/10, [data-theme="light"] .bg-emerald-500\/10 {
+            border-color: transparent !important;
+        }
+
+        /* ── 8. Usuarios: ALL buttons + Revocar special ── */
+        [data-theme="dark"] .bg-error, [data-theme="light"] .bg-error,
+        [data-theme="dark"] .bg-secondary, [data-theme="light"] .bg-secondary,
+        [data-theme="dark"] .bg-primary, [data-theme="light"] .bg-primary {
+            border-color: transparent !important;
+        }
+        /* Revocar button: dark gray bg + white text in dark mode */
+        [data-theme="dark"] button[onclick*="toggleUsuario"].bg-error {
+            background: #374151 !important;
+            color: #ffffff !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        [data-theme="dark"] button[onclick*="toggleUsuario"].bg-error:hover {
+            background: #4b5563 !important;
+        }
+        /* Revocar button: black bg + white text in light mode */
+        [data-theme="light"] button[onclick*="toggleUsuario"].bg-error {
+            background: #1f2937 !important;
+            color: #ffffff !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        [data-theme="light"] button[onclick*="toggleUsuario"].bg-error:hover {
+            background: #374151 !important;
+        }
+
+        /* ── 9. Expediente: Análisis Conductual buttons ── */
+        [data-theme="dark"] .obs-btn, [data-theme="light"] .obs-btn {
+            border-color: transparent !important;
+        }
+
+        /* ── 10. Carga Masiva: "Iniciar Búsqueda" ── */
+        [data-theme="dark"] button[type="submit"].bg-primary,
+        [data-theme="light"] button[type="submit"].bg-primary {
+            border-color: transparent !important;
+        }
+
+        /* ── 11. Docentes Notas/Actividades: ALL dialog buttons ── */
+        [data-theme="dark"] dialog button, [data-theme="light"] dialog button,
+        [data-theme="dark"] dialog .btn, [data-theme="light"] dialog .btn {
+            border-color: transparent !important;
+        }
+
+        /* ── 12. Horarios: Cargar/Actualizar Panel button ── */
+        [data-theme="dark"] #horarioForm button[type="submit"],
+        [data-theme="light"] #horarioForm button[type="submit"] {
+            border-color: transparent !important;
+        }
+
+        /* ── 13. "+Crear Horario Ahora" overlay button ── */
+        [data-theme="dark"] #advertenciaHorario button,
+        [data-theme="light"] #advertenciaHorario button {
+            border-color: transparent !important;
+        }
+
+        /* ── Fix: Limpiar Filtros in Auditoría ── */
+        [data-theme="dark"] button.bg-surface-element {
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+        [data-theme="light"] button.bg-surface-element {
+            border-color: rgba(0,0,0,0.1) !important;
+        }
+    </style>
+</head>
+
+<body class="app-layout">
+
+    <!-- ═══ SIDEBAR ═══════════════════════════════════════════════ -->
+    <aside class="sidebar" id="app-sidebar">
+        <!-- Collapse Toggle -->
+        <button class="sidebar-toggle" id="sidebar-toggle" title="Colapsar menú">
+            <span class="material-symbols-outlined" style="font-size:14px">chevron_left</span>
+        </button>
+
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <img src="{% static 'apacuana-logo.png' %}" alt="Apacuana" class="sidebar-brand-logo">
+            <div class="sidebar-brand-text">
+                <span class="sidebar-brand-name">Apacuana</span>
+                <span class="sidebar-brand-sub">Gestión de Estudio</span>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <!-- Dashboard -->
+            <a href="{% url 'home' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                data-tooltip="Dashboard">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">space_dashboard</span></span>
+                <span class="sidebar-link-text">Dashboard</span>
+            </a>
+
+            <!-- Expedientes -->
+            <a href="{% url 'expedientes' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'expedientes' %}active{% endif %}"
+                data-tooltip="Expedientes">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">folder_open</span></span>
+                <span class="sidebar-link-text">Expedientes</span>
+            </a>
+
+            <!-- Alumnos Dropdown -->
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'calificaciones,notas_calificaciones,notas_certificadas' %}true{% else %}false{% endif %}">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">groups</span></span>
+                <span class="sidebar-link-text">Carga Masiva</span>
+                <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'calificaciones,notas_calificaciones,notas_certificadas' %}open{% endif %}">
+                <a href="{% url 'calificaciones' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'calificaciones' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">upload_file</span></span>
+                    <span class="sidebar-link-text">Estudiantes</span>
+                </a>
+                <a href="{% url 'notas_calificaciones' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'notas_calificaciones' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">grading</span></span>
+                    <span class="sidebar-link-text">Calificaciones</span>
+                </a>
+                <a href="{% url 'notas_certificadas' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'notas_certificadas' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">verified</span></span>
+                    <span class="sidebar-link-text">Carga de Notas</span>
+                </a>
+            </div>
+
+            <!-- ─── HORARIOS & DOCENTES ─── -->
+
+            <!-- Horarios -->
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'horarios_lista,horarios_dashboard,horarios_dashboard_id' %}true{% else %}false{% endif %}">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">calendar_month</span></span>
+                <span class="sidebar-link-text">Horarios</span>
+                <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'horarios_lista,horarios_dashboard,horarios_dashboard_id' %}open{% endif %}">
+                <a href="{% url 'horarios_lista' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'horarios_lista' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">list</span></span>
+                    <span class="sidebar-link-text">Horarios</span>
+                </a>
+                <a href="{% url 'horarios_dashboard' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'horarios_dashboard' or request.resolver_match.url_name == 'horarios_dashboard_id' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">edit_calendar</span></span>
+                    <span class="sidebar-link-text">Gestor</span>
+                </a>
+            </div>
+
+            <!-- Docentes -->
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'notas_docentes,gestion_docentes,perfil_docente_admin' %}true{% else %}false{% endif %}">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">school</span></span>
+                <span class="sidebar-link-text">Docentes</span>
+                <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'notas_docentes,gestion_docentes,perfil_docente_admin' %}open{% endif %}">
+                <a href="{% url 'notas_docentes' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'notas_docentes' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">assignment</span></span>
+                    <span class="sidebar-link-text">Actividades</span>
+                </a>
+                <a href="{% url 'gestion_docentes' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'gestion_docentes' or request.resolver_match.url_name == 'perfil_docente_admin' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">group</span></span>
+                    <span class="sidebar-link-text">Gestión</span>
+                </a>
+            </div>
+
+            <!-- ─── ACTAS ─── -->
+            <div class="sidebar-section">Actas</div>
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'actas_consejos,actas_compromisos,actas_inasistencias' %}true{% else %}false{% endif %}">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">description</span></span>
+                <span class="sidebar-link-text">Actas</span>
+                <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'actas_consejos,actas_compromisos,actas_inasistencias' %}open{% endif %}">
+                <a href="{% url 'actas_consejos' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'actas_consejos' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">groups</span></span>
+                    <span class="sidebar-link-text">Consejos de Secciones</span>
+                </a>
+                <a href="{% url 'actas_compromisos' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'actas_compromisos' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">task</span></span>
+                    <span class="sidebar-link-text">Compromisos</span>
+                </a>
+                <a href="{% url 'actas_inasistencias' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'actas_inasistencias' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">person_off</span></span>
+                    <span class="sidebar-link-text">Inasistencias</span>
+                </a>
+            </div>
+
+            <!-- ─── ASISTENCIAS ─── -->
+            <div class="sidebar-section">Asistencias</div>
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'asistencias_personal,asistencias_registro,detalle_registro' %}true{% else %}false{% endif %}">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">fact_check</span></span>
+                <span class="sidebar-link-text">Asistencias</span>
+                <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'asistencias_personal,asistencias_registro,detalle_registro' %}open{% endif %}">
+                <a href="{% url 'asistencias_personal' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'asistencias_personal' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">badge</span></span>
+                    <span class="sidebar-link-text">Personal</span>
+                </a>
+                <a href="{% url 'asistencias_registro' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'asistencias_registro' or request.resolver_match.url_name == 'detalle_registro' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">schedule</span></span>
+                    <span class="sidebar-link-text">Registro</span>
+                </a>
+            </div>
+
+            <!-- ─── FINANZAS ─── -->
+            <div style="display: none;">
+            <div class="sidebar-section">Finanzas</div>
+            <button class="sidebar-submenu-btn" aria-expanded="{% if request.resolver_match.url_name in 'pagos_personal,pagos_estudiantes,pagos_servicios' %}true{% else %}false{% endif %}">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">payments</span></span>
+                <span class="sidebar-link-text">Pagos</span>
+                <span class="sidebar-submenu-arrow material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="sidebar-submenu {% if request.resolver_match.url_name in 'pagos_personal,pagos_estudiantes,pagos_servicios' %}open{% endif %}">
+                <a href="{% url 'pagos_personal' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'pagos_personal' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span
+                            class="material-symbols-outlined">account_balance_wallet</span></span>
+                    <span class="sidebar-link-text">Nómina</span>
+                </a>
+
+                <a href="{% url 'pagos_estudiantes' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'pagos_estudiantes' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">receipt_long</span></span>
+                    <span class="sidebar-link-text">Cobranza</span>
+                </a>
+                <a href="{% url 'pagos_servicios' %}"
+                    class="sidebar-link {% if request.resolver_match.url_name == 'pagos_servicios' %}active{% endif %}">
+                    <span class="sidebar-link-icon"><span class="material-symbols-outlined">build</span></span>
+                    <span class="sidebar-link-text">Servicios</span>
+                </a>
+            </div>
+            </div>
+
+            <!-- ─── ANALÍTICA & ADMIN ─── -->
+            <div class="sidebar-section">Analítica & Admin</div>
+
+            <a href="{% url 'ia_riesgos' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'ia_riesgos' %}active{% endif %}"
+                data-tooltip="IA & Riesgo">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">monitoring</span></span>
+                <span class="sidebar-link-text">IA & Riesgo</span>
+            </a>
+
+            <a href="{% url 'auditoria' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'auditoria' %}active{% endif %}"
+                data-tooltip="Auditoría">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">shield_person</span></span>
+                <span class="sidebar-link-text">Auditoría</span>
+            </a>
+
+            {% if request.user.rol != 'PERSONAL' %}
+            <a href="{% url 'usuarios' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'usuarios' %}active{% endif %}"
+                data-tooltip="Usuarios">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">people</span></span>
+                <span class="sidebar-link-text">Usuarios</span>
+            </a>
+            {% endif %}
+
+            {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+            <a href="{% url 'aprobaciones' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'aprobaciones' %}active{% endif %}"
+                data-tooltip="Aprobaciones">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">check_circle</span></span>
+                <span class="sidebar-link-text">Aprobaciones</span>
+                <span id="sidebar-badge-aprobaciones" class="sidebar-link-badge badge-dot badge-warning"
+                    style="display:none"></span>
+            </a>
+            {% endif %}
+
+            {% if request.user.rol == 'PERSONAL' %}
+            <a href="{% url 'notificaciones_personal' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'notificaciones_personal' %}active{% endif %}"
+                data-tooltip="Notificaciones">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">notifications</span></span>
+                <span class="sidebar-link-text">Notificaciones</span>
+                <span id="sidebar-badge-notificaciones" class="sidebar-link-badge badge-dot badge-accent"
+                    style="display:none"></span>
+            </a>
+            {% endif %}
+
+            {% if request.user.rol == 'DESARROLLADOR' %}
+            <div class="sidebar-section mobile-hide">Desarrollador</div>
+            <a href="{% url 'dev_panel' %}"
+                class="sidebar-link mobile-hide {% if request.resolver_match.url_name == 'dev_panel' %}active{% endif %}"
+                data-tooltip="Panel Dev">
+                <span class="sidebar-link-icon"><span class="material-symbols-outlined">terminal</span></span>
+                <span class="sidebar-link-text">Panel Dev</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <!-- User Footer -->
+        <div class="sidebar-footer mobile-hide">
+            <div class="sidebar-user">
+                <div class="sidebar-avatar">
+                    {% if request.user.is_authenticated %}{{ request.user.username|first|upper }}{% else %}A{% endif %}
+                </div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">{% if request.user.is_authenticated %}{{ request.user.nombre_completo|default:request.user.username|title }}{% else %}Admin{% endif %}</div>
+                    <div class="sidebar-user-role">{% if request.user.is_authenticated %}{{ request.user.get_rol_display }}{% else %}Administrador{% endif %}</div>
+                </div>
+                <a href="{% url 'logout' %}" class="sidebar-logout" title="Cerrar sesión">
+                    <span class="material-symbols-outlined" style="font-size:18px">logout</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- ═══ MAIN CONTENT AREA ═════════════════════════════════════ -->
+    <div class="app-main">
+
+        <!-- Header -->
+        <header class="app-header !hidden lg:!flex">
+            <!-- Mobile hamburger -->
+            <button class="header-mobile-toggle" onclick="Sidebar.toggleMobile()">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+
+            <!-- Search -->
+            <div class="header-search">
+                <form action="{% url 'expedientes' %}" method="GET" id="searchForm" style="position: relative; display: flex; align-items: center; width: 100%;">
+                    <span class="header-search-icon material-symbols-outlined">search</span>
+                    <input type="text" name="q" id="searchInput" value="{{ request.GET.q }}" autocomplete="off"
+                        placeholder="Buscar expediente..."
+                        class="header-search-input bg-surface-element text-text-main dark:text-white dark:bg-surface-element">
+                    <kbd class="header-search-kbd">Ctrl+K</kbd>
+                </form>
+                <!-- Search Results Dropdown -->
+                <div id="searchDropdown" class="header-search-dropdown">
+                    <div id="searchResults"></div>
+                </div>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="header-actions">
+                <!-- Chat IA Button -->
+                <button class="header-action-btn" onclick="toggleAsistente()" title="Tamarindo Chat">
+                    <span class="material-symbols-outlined" style="font-size:20px;color:var(--color-accent)">auto_awesome</span>
+                </button>
+
+                <!-- Notifications -->
+                <div style="position:relative" id="notif-wrapper">
+                    <button class="header-action-btn" id="notif-btn" onclick="toggleNotifPanel()"
+                        title="Notificaciones">
+                        <span class="material-symbols-outlined" style="font-size:20px">notifications</span>
+                        <span id="notif-badge" class="badge-dot badge-error"
+                            style="display:none;position:absolute;top:2px;right:2px;font-size:9px"></span>
+                    </button>
+                    <!-- Notification Panel -->
+                    <div id="notif-panel" class="notif-panel">
+                        <div class="notif-header">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="material-symbols-outlined"
+                                    style="font-size:16px;color:var(--color-accent)">notifications_active</span>
+                                <h4 style="font-size:14px;font-weight:600">Alertas del Sistema</h4>
+                            </div>
+                            <div style="display:flex;gap:12px">
+                                <button onclick="marcarTodosLeidos()" class="btn btn-ghost btn-sm"
+                                    style="font-size:11px;padding:2px 6px">Marcar ✓</button>
+                                <button onclick="vaciarNotificaciones()" class="btn btn-ghost btn-sm"
+                                    style="font-size:11px;padding:2px 6px;color:var(--color-error)">Vaciar</button>
+                            </div>
+                        </div>
+                        <ul id="notif-list" class="notif-list">
+                            <li id="notif-empty"
+                                style="padding:24px;text-align:center;font-size:13px;color:var(--color-text-tertiary)">
+                                <span class="material-symbols-outlined"
+                                    style="font-size:32px;display:block;margin:0 auto 8px;color:var(--color-success)">check_circle</span>
+                                Sin eventos pendientes
+                            </li>
+                        </ul>
+                        <div class="notif-footer">
+                            <a href="{% url 'auditoria' %}" style="font-size:12px;font-weight:500">Ver registro completo
+                                →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button class="header-action-btn" onclick="ThemeManager.toggleTheme()" title="Cambiar tema">
+                    <span class="material-symbols-outlined" style="font-size:20px"
+                        id="theme-toggle-icon">dark_mode</span>
+                </button>
+
+                <!-- Customize -->
+                <button class="header-action-btn" onclick="CustomizePanel.toggle()" title="Personalizar">
+                    <span class="material-symbols-outlined" style="font-size:20px">palette</span>
+                </button>
+
+                <!-- Mobile Profile Dropdown -->
+                <div class="header-profile-mobile">
+                    <button class="header-action-btn" onclick="document.getElementById('mobile-profile-dropdown').classList.toggle('show')" title="Perfil" style="background: var(--color-accent); color: white; border-radius: 50%; font-weight: bold; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: none; cursor: pointer; transition: transform 0.15s ease;">
+                        {% if request.user.is_authenticated %}{{ request.user.username|first|upper }}{% else %}A{% endif %}
+                    </button>
+                    <div id="mobile-profile-dropdown" class="profile-dropdown-menu">
+                        <a href="{% url 'logout' %}">
+                            <span class="material-symbols-outlined">logout</span> Cerrar sesión
+                        </a>
+                        {% if request.user.rol == 'DESARROLLADOR' %}
+                        <a href="{% url 'dev_panel' %}">
+                            <span class="material-symbols-outlined">terminal</span> Panel Dev
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Mobile Header (Redesigned) -->
+        <header class="app-header-mobile flex lg:hidden items-center gap-3 p-5 pt-7 pb-4 bg-[var(--color-bg)] sticky top-0 z-40 transition-all w-full">
+            <div id="mobile-search-container" class="bg-[var(--color-surface)] shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] rounded-full flex items-center px-4 py-2.5 transition-all focus-within:shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[var(--color-border-subtle)] min-w-0">
+                <span id="mobile-search-trigger-icon" class="material-symbols-outlined text-[var(--color-text-tertiary)]" style="font-size: 20px;">search</span>
+                <form action="{% url 'expedientes' %}" method="GET" class="w-full flex items-center m-0" id="mobileSearchForm">
+                    <input type="text" name="q" id="mobileSearchInput" placeholder="Buscar..." class="bg-transparent border-none outline-none text-[15px] w-full text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] p-0 focus:ring-0" autocomplete="off">
+                </form>
+            </div>
+
+            <!-- Spacer to push right-hand buttons to the far right when search is collapsed -->
+            <div id="mobile-header-spacer" class="flex-1"></div>
+
+            <!-- Mobile Search Dropdown Container -->
+            <div id="mobileSearchDropdown" class="mobile-search-dropdown"></div>
+
+            <!-- Chat IA Button Mobile -->
+            <button id="mobile-ia-btn" class="relative w-11 h-11 rounded-full bg-[var(--color-surface)] shadow-sm border border-[var(--color-border-subtle)] flex items-center justify-center text-[var(--color-text-secondary)] active:scale-95 transition-transform flex-shrink-0" onclick="toggleAsistente()" title="Tamarindo Chat">
+                <span class="material-symbols-outlined" style="font-size:22px;color:var(--color-accent)">auto_awesome</span>
+            </button>
+
+            <button class="relative w-11 h-11 rounded-full bg-[var(--color-surface)] shadow-sm border border-[var(--color-border-subtle)] flex items-center justify-center text-[var(--color-text-secondary)] active:scale-95 transition-transform flex-shrink-0" onclick="toggleNotifPanel()">
+                <span class="material-symbols-outlined" style="font-size:22px">notifications</span>
+                <span id="mobile-notif-badge-global" class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[var(--color-error)] rounded-full border-2 border-[var(--color-surface)]" style="display:none"></span>
+            </button>
+
+            <div class="relative flex-shrink-0">
+                <button class="w-11 h-11 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white font-bold text-base shadow-sm active:scale-95 transition-transform" onclick="document.getElementById('mobile-dropdown-menu-global').classList.toggle('hidden')">
+                    {% if request.user.is_authenticated %}{{ request.user.username|first|upper }}{% else %}A{% endif %}
+                </button>
+                
+                <div id="mobile-dropdown-menu-global" class="hidden fixed md:absolute right-4 top-[80px] md:right-0 md:top-[52px] w-64 bg-[var(--color-surface)] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.3)] border border-[var(--color-border-subtle)] p-2 z-[9999] transform origin-top-right transition-all">
+                    <div class="px-3 py-3 border-b border-[var(--color-border-subtle)] mb-1">
+                        <p class="font-semibold text-[var(--color-text-primary)] text-sm">{% if request.user.is_authenticated %}{{ request.user.nombre_completo|default:request.user.username|title }}{% else %}Admin{% endif %}</p>
+                        <p class="text-xs text-[var(--color-text-tertiary)]">{% if request.user.is_authenticated %}{{ request.user.get_rol_display }}{% else %}Administrador{% endif %}</p>
+                    </div>
+                    
+                    <a href="{% url 'logout' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-bg-secondary)] active:bg-[var(--color-bg-secondary)] transition-colors text-[var(--color-text-secondary)]">
+                        <span class="material-symbols-outlined text-[20px]">logout</span>
+                        <span class="text-sm font-medium">Cerrar sesión</span>
+                    </a>
+                    
+                    {% if request.user.rol == 'DESARROLLADOR' %}
+                    <a href="{% url 'dev_panel' %}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-bg-secondary)] active:bg-[var(--color-bg-secondary)] transition-colors text-[var(--color-text-secondary)]">
+                        <span class="material-symbols-outlined text-[20px]">terminal</span>
+                        <span class="text-sm font-medium">Panel dev</span>
+                    </a>
+                    {% endif %}
+                    
+                    <button onclick="CustomizePanel.toggle(); document.getElementById('mobile-dropdown-menu-global').classList.add('hidden')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-bg-secondary)] active:bg-[var(--color-bg-secondary)] transition-colors text-[var(--color-text-secondary)]">
+                        <span class="material-symbols-outlined text-[20px]">palette</span>
+                        <span class="text-sm font-medium">Personalizar</span>
+                    </button>
+                    
+                    <div class="flex items-center justify-between px-3 py-2.5 mt-1 border-t border-[var(--color-border-subtle)]">
+                        <div class="flex items-center gap-3 text-[var(--color-text-secondary)]">
+                            <span class="material-symbols-outlined text-[20px]">contrast</span>
+                            <span class="text-sm font-medium">Tema</span>
+                        </div>
+                        
+                        <label class="relative inline-flex items-center cursor-pointer m-0">
+                            <input type="checkbox" id="theme-toggle-checkbox-global" class="sr-only" onchange="toggleThemeSwitchGlobal(this)">
+                            <div class="theme-switch">
+                                <span class="material-symbols-outlined sun">light_mode</span>
+                                <span class="material-symbols-outlined moon">dark_mode</span>
+                                <div class="theme-switch-thumb"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <script>
+            document.addEventListener('click', function(event) {
+                const dropdown = document.getElementById('mobile-dropdown-menu-global');
+                const profileBtn = dropdown ? dropdown.previousElementSibling : null;
+                if (dropdown && profileBtn && !dropdown.contains(event.target) && !profileBtn.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const checkbox = document.getElementById('theme-toggle-checkbox-global');
+                if (checkbox) checkbox.checked = isDark;
+            });
+
+            function toggleThemeSwitchGlobal(checkbox) {
+                if (checkbox.checked) {
+                    ThemeManager.applyTheme('dark');
+                } else {
+                    ThemeManager.applyTheme('light');
+                }
+            }
+            
+            const themeObserverGlobal = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'data-theme') {
+                        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                        const checkbox = document.getElementById('theme-toggle-checkbox-global');
+                        if (checkbox && checkbox.checked !== isDark) {
+                            checkbox.checked = isDark;
+                        }
+                    }
+                });
+            });
+            themeObserverGlobal.observe(document.documentElement, { attributes: true });
+        </script>
+
+        <style>
+            /* Theme Toggle Switch Custom CSS */
+            .theme-switch {
+                position: relative;
+                width: 64px;
+                height: 34px;
+                background-color: var(--color-bg-secondary);
+                border-radius: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 6px;
+                border: 1px solid var(--color-border-subtle);
+                transition: background-color 0.3s ease, border-color 0.3s ease;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .theme-switch .sun, .theme-switch .moon {
+                font-size: 16px;
+                z-index: 1;
+                transition: opacity 0.3s ease;
+            }
+            .theme-switch .sun {
+                color: #F59E0B; /* amber-500 */
+            }
+            .theme-switch .moon {
+                color: #818CF8; /* indigo-400 */
+            }
+            .theme-switch-thumb {
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                width: 28px;
+                height: 28px;
+                background-color: white;
+                border-radius: 50%;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+                transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+                z-index: 2;
+            }
+            input:checked + .theme-switch .theme-switch-thumb {
+                transform: translateX(30px);
+                background-color: #1F2937; /* gray-800 */
+            }
+            input:checked + .theme-switch {
+                background-color: #374151; /* gray-700 */
+                border-color: #4B5563;
+            }
+        </style>
+
+        <!-- Django Messages Toast -->
+        {% if messages %}
+        <div id="django-toast-container" style="position: fixed; bottom: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; pointer-events: none;">
+            {% for message in messages %}
+            <div class="toast-msg" style="background: var(--color-surface); border: 1px solid {% if message.tags == 'success' %}var(--color-success){% elif message.tags == 'error' %}var(--color-error){% else %}var(--color-accent){% endif %}; border-radius: var(--radius-lg); padding: 12px 16px; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px; pointer-events: auto; animation: slideInUp 0.3s ease forwards;">
+                <span class="material-symbols-outlined" style="color: {% if message.tags == 'success' %}var(--color-success){% elif message.tags == 'error' %}var(--color-error){% else %}var(--color-accent){% endif %};">
+                    {% if message.tags == 'success' %}check_circle{% elif message.tags == 'error' %}error{% else %}info{% endif %}
+                </span>
+                <span style="color: var(--color-text-primary); font-size: 14px; font-weight: 500;">{{ message }}</span>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; cursor: pointer; color: var(--color-text-tertiary); margin-left: 12px;"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>
+            </div>
+            {% endfor %}
+        </div>
+        <script>
+            setTimeout(() => {
+                const toasts = document.querySelectorAll('.toast-msg');
+                toasts.forEach(t => {
+                    t.style.opacity = '0';
+                    t.style.transform = 'translateY(10px)';
+                    t.style.transition = 'all 0.3s ease';
+                    setTimeout(() => t.remove(), 300);
+                });
+            }, 5000);
+        </script>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="app-content">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    <!-- ═══ CUSTOMIZATION PANEL ═══════════════════════════════════ -->
+    <div class="customize-backdrop" id="customize-backdrop" onclick="CustomizePanel.close()"></div>
+    <div class="customize-panel" id="customize-panel">
+        <div class="customize-header">
+            <div>
+                <h3 style="font-size:16px;font-weight:600">Personalizar</h3>
+                <p style="font-size:13px;color:var(--color-text-secondary);margin-top:2px">Personaliza tu experiencia
+                </p>
+            </div>
+            <button class="modal-close" onclick="CustomizePanel.close()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="customize-body">
+            <!-- Theme -->
+            <div class="customize-section">
+                <div class="customize-section-title">Tema</div>
+                <div class="customize-options">
+                    <div class="customize-option" data-set-theme="light"
+                        onclick="ThemeManager.applyTheme('light');CustomizePanel._syncUI()">
+                        <span class="customize-option-icon material-symbols-outlined">light_mode</span>
+                        <span class="customize-option-label">Claro</span>
+                    </div>
+                    <div class="customize-option" data-set-theme="dark"
+                        onclick="ThemeManager.applyTheme('dark');CustomizePanel._syncUI()">
+                        <span class="customize-option-icon material-symbols-outlined">dark_mode</span>
+                        <span class="customize-option-label">Oscuro</span>
+                    </div>
+                    <div class="customize-option" data-set-theme="auto"
+                        onclick="ThemeManager.applyTheme('auto');CustomizePanel._syncUI()">
+                        <span class="customize-option-icon material-symbols-outlined">desktop_windows</span>
+                        <span class="customize-option-label">Sistema</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colors -->
+            <div class="customize-section">
+                <div class="customize-section-title">Color del sistema</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <div class="color-swatch" data-accent="emerald" style="background:#10B981"
+                        onclick="ThemeManager.applyAccent('emerald')"></div>
+                    <div class="color-swatch" data-accent="blue" style="background:#3B82F6"
+                        onclick="ThemeManager.applyAccent('blue')"></div>
+                    <div class="color-swatch" data-accent="violet" style="background:#8B5CF6"
+                        onclick="ThemeManager.applyAccent('violet')"></div>
+                    <div class="color-swatch" data-accent="rose" style="background:#F43F5E"
+                        onclick="ThemeManager.applyAccent('rose')"></div>
+                    <div class="color-swatch" data-accent="orange" style="background:#F97316"
+                        onclick="ThemeManager.applyAccent('orange')"></div>
+                    <div class="color-swatch" data-accent="slate" style="background:#64748B"
+                        onclick="ThemeManager.applyAccent('slate')"></div>
+                </div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+                    <label style="font-size:13px;color:var(--color-text-secondary);margin:0">Personalizado:</label>
+                    <input type="color" id="custom-color-picker" value="#10B981"
+                        style="width:32px;height:32px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px"
+                        onchange="ThemeManager.applyAccent(this.value)">
+                </div>
+            </div>
+
+            <!-- Sidebar Color -->
+            <div class="customize-section desktop-only">
+                <div class="customize-section-title">Color de la barra</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <div class="color-swatch sidebar-color-swatch" data-sidebar-color="#111827" style="background:#111827"
+                        onclick="ThemeManager.applySidebarColor('#111827');CustomizePanel._syncSidebarSwatches('#111827')"></div>
+                    <div class="color-swatch sidebar-color-swatch" data-sidebar-color="#1E293B" style="background:#1E293B"
+                        onclick="ThemeManager.applySidebarColor('#1E293B');CustomizePanel._syncSidebarSwatches('#1E293B')"></div>
+                    <div class="color-swatch sidebar-color-swatch" data-sidebar-color="#1E3A5F" style="background:#1E3A5F"
+                        onclick="ThemeManager.applySidebarColor('#1E3A5F');CustomizePanel._syncSidebarSwatches('#1E3A5F')"></div>
+                    <div class="color-swatch sidebar-color-swatch" data-sidebar-color="#1A1A2E" style="background:#1A1A2E"
+                        onclick="ThemeManager.applySidebarColor('#1A1A2E');CustomizePanel._syncSidebarSwatches('#1A1A2E')"></div>
+                    <div class="color-swatch sidebar-color-swatch" data-sidebar-color="#2D1B69" style="background:#2D1B69"
+                        onclick="ThemeManager.applySidebarColor('#2D1B69');CustomizePanel._syncSidebarSwatches('#2D1B69')"></div>
+                    <div class="color-swatch sidebar-color-swatch" data-sidebar-color="#1B2D2A" style="background:#1B2D2A"
+                        onclick="ThemeManager.applySidebarColor('#1B2D2A');CustomizePanel._syncSidebarSwatches('#1B2D2A')"></div>
+                </div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+                    <label style="font-size:13px;color:var(--color-text-secondary);margin:0">Personalizado:</label>
+                    <input type="color" id="sidebar-color-picker" value="#1E293B"
+                        style="width:32px;height:32px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px"
+                        onchange="ThemeManager.applySidebarColor(this.value);CustomizePanel._syncSidebarSwatches(this.value)">
+                </div>
+            </div>
+
+            <!-- Density -->
+            <div class="customize-section desktop-only">
+                <div class="customize-section-title">Densidad</div>
+                <div class="customize-options">
+                    <div class="customize-option" data-set-density="comfortable"
+                        onclick="ThemeManager.applyDensity('comfortable');CustomizePanel._syncUI()">
+                        <span class="customize-option-icon material-symbols-outlined">density_medium</span>
+                        <span class="customize-option-label">Normal</span>
+                    </div>
+                    <div class="customize-option" data-set-density="spacious"
+                        onclick="ThemeManager.applyDensity('spacious');CustomizePanel._syncUI()">
+                        <span class="customize-option-icon material-symbols-outlined">density_large</span>
+                        <span class="customize-option-label">Amplio</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset -->
+            <div style="margin-top:auto;padding-top:24px;border-top:1px solid var(--color-border)">
+                <button class="btn btn-secondary" style="width:100%"
+                    onclick="ThemeManager.resetAll();CustomizePanel._syncUI()">
+                    <span class="material-symbols-outlined" style="font-size:16px">restart_alt</span>
+                    Restaurar valores predeterminados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ AI ASSISTANT (Tamarindo Chat) ═════════════════════════ -->
+    <style>
+        #ia-assistant-wrapper {
+            position: fixed;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+        }
+        #asistente-panel {
+            display: none;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            flex-direction: column;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow-xl);
+        }
+        @media (max-width: 1024px) {
+            #ia-assistant-wrapper {
+                bottom: 90px;
+                right: 16px;
+            }
+            #asistente-panel {
+                width: calc(100vw - 32px);
+                height: 500px;
+                max-height: calc(100vh - 180px);
+            }
+        }
+        @media (min-width: 1025px) {
+            #ia-assistant-wrapper {
+                bottom: 24px;
+                right: 24px;
+            }
+            #asistente-panel {
+                width: 400px;
+                height: 560px;
+                max-height: calc(100vh - 120px);
+            }
+        }
+    </style>
+    <div id="ia-assistant-wrapper" data-turbo-permanent="true">
+        <!-- Chat Window -->
+        <div id="asistente-panel">
+            <!-- Header -->
+            <div
+                style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--color-border);background:var(--color-bg-secondary)">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div
+                        style="width:32px;height:32px;border-radius:var(--radius-lg);background:var(--color-accent-subtle);display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined"
+                            style="font-size:18px;color:var(--color-accent)">auto_awesome</span>
+                    </div>
+                    <div>
+                        <div style="font-size:14px;font-weight:600;color:var(--color-text-primary)">Tamarindo Chat</div>
+                        <div style="font-size:11px;color:var(--color-text-tertiary)">Asistente IA</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-icon btn-sm" onclick="toggleAsistente()">
+                    <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                </button>
+            </div>
+            <!-- Messages -->
+            <div id="ia-messages"
+                style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--color-bg)">
+                <div
+                    style="text-align:center;padding:16px;border-radius:var(--radius-lg);background:var(--color-accent-subtle);font-size:13px;color:var(--color-accent-text)">
+                    <span class="material-symbols-outlined"
+                        style="font-size:28px;display:block;margin:0 auto 8px;color:var(--color-accent)">auto_awesome</span>
+                    Hola, soy <strong>Tamarindo</strong>. Pregúntame sobre datos del sistema, reportes o análisis.
+                </div>
+            </div>
+            <!-- Input -->
+            <div
+                style="padding:12px 16px;border-top:1px solid var(--color-border);background:var(--color-bg-secondary)">
+                <div style="display:flex;gap:8px;align-items:end">
+                    <textarea id="ia-input" rows="1" placeholder="Escribe un mensaje..." onkeydown="handleIaKey(event)"
+                        oninput="autoResizeInput(this)"
+                        style="flex:1;resize:none;padding:8px 12px;border-radius:var(--radius-lg);font-size:14px;max-height:120px;min-height:36px;border:1px solid var(--color-border);outline:none;background:var(--color-surface);color:var(--color-text-primary);"></textarea>
+                    <button id="ia-send-btn" class="btn btn-primary btn-icon" onclick="sendIaMessage()"
+                        style="flex-shrink:0">
+                        <span class="material-symbols-outlined" style="font-size:18px">send</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAB -->
+        <button id="asistente-fab" onclick="toggleAsistente()"
+            style="display: none !important; width:52px;height:52px;border-radius:var(--radius-full);background:var(--color-accent);color:white;border:none;box-shadow:var(--shadow-lg);align-items:center;justify-content:center;cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease"
+            onmouseenter="this.style.transform='scale(1.08)';this.style.boxShadow='var(--shadow-xl)'"
+            onmouseleave="this.style.transform='scale(1)';this.style.boxShadow='var(--shadow-lg)'">
+            <span class="material-symbols-outlined" id="fab-icon"
+                style="font-size:24px;font-variation-settings:'FILL' 1">auto_awesome</span>
+        </button>
+    </div>
+
+    <!-- ═══ SCRIPTS ═══════════════════════════════════════════════ -->
+    <script src="{% static 'js/sidebar.js' %}"></script>
+    <script src="{% static 'js/table-utils.js' %}"></script>
+
+    <script data-turbo-eval="false">
+        // ═══ APPROVAL SYSTEM — Global Helper ═══
+        async function solicitarAccion({ accion, modulo, descripcion, payload = null, onSuccess = null }) {
+            const confirmMsg = `⚠️ Esta acción requiere aprobación del Administrativo.\n\n"${descripcion}"\n\n¿Deseas enviar la solicitud?`;
+            if (!confirm(confirmMsg)) return;
+            try {
+                const resp = await fetch('/auditoria/api/solicitudes/crear/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _getCsrf() },
+                    body: JSON.stringify({ accion, modulo, descripcion, payload })
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    Toast.success(`Solicitud enviada. Expira: ${data.expira_en || '48h'}.`);
+                    if (onSuccess) onSuccess(data);
+                } else {
+                    Toast.error(data.error || 'No se pudo enviar la solicitud.');
+                }
+            } catch (err) {
+                Toast.error('Error de conexión al enviar la solicitud.');
+            }
+        }
+
+        function _getCsrf() {
+            const cookies = document.cookie.split(';');
+            for (let c of cookies) {
+                const [key, val] = c.trim().split('=');
+                if (key === 'csrftoken') return decodeURIComponent(val);
+            }
+            return '';
+        }
+
+        // ═══ SIDEBAR BADGE POLLING ═══
+        async function actualizarBadgeSolicitudes() {
+            try {
+                const resp = await fetch('/auditoria/api/solicitudes/conteo/');
+                const data = await resp.json();
+                
+                const badges = [
+                    document.getElementById('sidebar-badge-aprobaciones'),
+                    document.getElementById('sidebar-badge-notificaciones'),
+                    document.getElementById('mobile-badge-aprobaciones-nav'),
+                    document.getElementById('mobile-badge-aprobaciones-popover'),
+                    document.getElementById('mobile-badge-aprobaciones-mfm')
+                ];
+                
+                badges.forEach(badge => {
+                    if (badge) {
+                        if (data.total > 0) {
+                            badge.textContent = data.total > 99 ? '99+' : data.total;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                });
+            } catch (e) { /* silent */ }
+        }
+
+        // ═══ TURBO INITIALIZATION WRAPPER ═══
+        let _appScriptsInitialized = false;
+
+        document.addEventListener('turbo:load', function() {
+            // ═══ LIVE SEARCH ═══
+            const searchInput = document.getElementById('searchInput');
+            const searchDropdown = document.getElementById('searchDropdown');
+            const searchResults = document.getElementById('searchResults');
+            let searchTimeout;
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                if (query.length < 2) { searchDropdown.classList.remove('open'); return; }
+                searchTimeout = setTimeout(() => {
+                    fetch(`/api/buscar/?q=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            searchResults.innerHTML = '';
+                            if (data.resultados.length > 0) {
+                                data.resultados.forEach(item => {
+                                    searchResults.innerHTML += `
+                                        <a href="${item.url}" class="header-search-result">
+                                            <div style="width:32px;height:32px;border-radius:var(--radius-full);background:var(--color-accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                                <span class="material-symbols-outlined" style="font-size:16px;color:var(--color-accent)">person</span>
+                                            </div>
+                                            <div style="flex:1;min-width:0">
+                                                <div style="font-size:14px;font-weight:500;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.nombres}</div>
+                                                <div style="font-size:12px;color:var(--color-text-tertiary)">V-${item.cedula}</div>
+                                            </div>
+                                            <span class="badge ${item.estatus === 'Solvente' ? 'badge-success' : 'badge-warning'}">${item.estatus}</span>
+                                        </a>`;
+                                });
+                                searchDropdown.classList.add('open');
+                            } else {
+                                searchResults.innerHTML = `<div style="padding:20px;text-align:center;font-size:13px;color:var(--color-text-tertiary)">No se encontraron resultados.</div>`;
+                                searchDropdown.classList.add('open');
+                            }
+                        }).catch(err => console.error("Search Error:", err));
+                }, 300);
+            });
+            if (!_appScriptsInitialized) {
+                document.addEventListener('click', (e) => {
+                    const currentSearchInput = document.getElementById('searchInput');
+                    const currentSearchDropdown = document.getElementById('searchDropdown');
+                    if (currentSearchInput && currentSearchDropdown && !currentSearchInput.contains(e.target) && !currentSearchDropdown.contains(e.target)) {
+                        currentSearchDropdown.classList.remove('open');
+                    }
+                });
+                
+                // Keyboard shortcut for search (Ctrl+K or /)
+                document.addEventListener('keydown', (e) => {
+                    const currentSearchInput = document.getElementById('searchInput');
+                    if (currentSearchInput && ((e.ctrlKey && e.key === 'k') || (e.key === '/' && document.activeElement !== currentSearchInput && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'))) {
+                        e.preventDefault();
+                        currentSearchInput.focus();
+                        currentSearchInput.select();
+                    }
+                });
+            }
+        } // End if (searchInput)
+
+        // ═══ MOBILE EXPANDABLE SEARCH & HISTORY ═══
+        const mobileSearchContainer = document.getElementById('mobile-search-container');
+        const mobileSearchInput = document.getElementById('mobileSearchInput');
+        const mobileSearchDropdown = document.getElementById('mobileSearchDropdown');
+        const mobileSearchForm = document.getElementById('mobileSearchForm');
+        let mobileSearchTimeout;
+
+        if (mobileSearchContainer && mobileSearchInput && mobileSearchDropdown) {
+            // Function to get history from localStorage
+            function getSearchHistory() {
+                const history = localStorage.getItem('mobile_search_history');
+                return history ? JSON.parse(history) : [];
+            }
+
+            // Function to save search to history
+            function saveSearchToHistory(query) {
+                if (!query || query.trim().length === 0) return;
+                let history = getSearchHistory();
+                // Remove if already exists to push it to top
+                history = history.filter(item => item.toLowerCase() !== query.toLowerCase());
+                history.unshift(query);
+                // Limit to 10 items
+                if (history.length > 10) history.pop();
+                localStorage.setItem('mobile_search_history', JSON.stringify(history));
+            }
+
+            // Function to delete item from history
+            function deleteHistoryItem(index, event) {
+                if (event) event.stopPropagation();
+                let history = getSearchHistory();
+                history.splice(index, 1);
+                localStorage.setItem('mobile_search_history', JSON.stringify(history));
+                renderMobileSearchDropdown();
+                mobileSearchInput.focus();
+            }
+
+            // Function to render mobile search dropdown (recent history + results)
+            function renderMobileSearchDropdown() {
+                const query = mobileSearchInput.value.trim();
+                mobileSearchDropdown.innerHTML = '';
+
+                if (query.length < 2) {
+                    // Show history
+                    const history = getSearchHistory();
+                    if (history.length > 0) {
+                        let html = '<div class="mobile-search-section-title">Historial reciente</div>';
+                        history.forEach((item, index) => {
+                            html += `
+                                <div class="mobile-search-history-item">
+                                    <span class="mobile-search-history-item-text" onclick="applyHistorySearch('${item.replace(/'/g, "\\'")}')">${item}</span>
+                                    <span class="material-symbols-outlined mobile-search-history-delete" onclick="deleteHistoryItem(${index}, event)">close</span>
+                                </div>
+                            `;
+                        });
+                        mobileSearchDropdown.innerHTML = html;
+                        mobileSearchDropdown.classList.add('open');
+                    } else {
+                        mobileSearchDropdown.classList.remove('open');
+                    }
+                }
+            }
+
+            // Apply search from history selection
+            window.applyHistorySearch = function(query) {
+                mobileSearchInput.value = query;
+                saveSearchToHistory(query);
+                mobileSearchForm.submit();
+            }
+
+            window.deleteHistoryItem = deleteHistoryItem;
+
+            // Trigger Expand
+            mobileSearchContainer.addEventListener('click', function(e) {
+                // If already expanded, don't re-trigger unless they click the input or back button
+                if (!mobileSearchContainer.classList.contains('expanded')) {
+                    mobileSearchContainer.classList.add('expanded');
+                    const header = document.querySelector('header.app-header-mobile');
+                    if (header) header.classList.add('mobile-search-active');
+                    mobileSearchInput.focus();
+                    renderMobileSearchDropdown();
+                }
+            });
+
+            // Trigger Collapse
+            function collapseMobileSearch() {
+                mobileSearchContainer.classList.remove('expanded');
+                const header = document.querySelector('header.app-header-mobile');
+                if (header) header.classList.remove('mobile-search-active');
+                mobileSearchInput.value = '';
+                mobileSearchDropdown.classList.remove('open');
+            }
+
+            if (!_appScriptsInitialized) {
+                // Click outside to collapse
+                document.addEventListener('click', function(e) {
+                    const mContainer = document.getElementById('mobile-search-container');
+                    const mDropdown = document.getElementById('mobileSearchDropdown');
+                    if (mContainer && mContainer.classList.contains('expanded')) {
+                        if (!mContainer.contains(e.target) && (!mDropdown || !mDropdown.contains(e.target))) {
+                            mContainer.classList.remove('expanded');
+                            const header = document.querySelector('header.app-header-mobile');
+                            if (header) header.classList.remove('mobile-search-active');
+                            const mInput = document.getElementById('mobileSearchInput');
+                            if(mInput) mInput.value = '';
+                            if(mDropdown) mDropdown.classList.remove('open');
+                        }
+                    }
+                });
+            }
+
+            // Prevent container click from bubbling if click is on input or form elements
+            mobileSearchInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            // Live Search results
+            mobileSearchInput.addEventListener('input', function() {
+                clearTimeout(mobileSearchTimeout);
+                const query = this.value.trim();
+
+                if (query.length < 2) {
+                    renderMobileSearchDropdown();
+                    return;
+                }
+
+                mobileSearchTimeout = setTimeout(() => {
+                    fetch(`/api/buscar/?q=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            mobileSearchDropdown.innerHTML = '';
+                            if (data.resultados.length > 0) {
+                                let html = '<div class="mobile-search-section-title">Resultados</div>';
+                                data.resultados.forEach(item => {
+                                    html += `
+                                        <a href="${item.url}" class="mobile-search-result-item" onclick="saveSearchToHistory('${item.nombres.replace(/'/g, "\\'")}')">
+                                            <div style="width:32px;height:32px;border-radius:var(--radius-full);background:var(--color-accent-subtle);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                                <span class="material-symbols-outlined" style="font-size:16px;color:var(--color-accent)">person</span>
+                                            </div>
+                                            <div style="flex:1;min-width:0">
+                                                <div style="font-size:14px;font-weight:500;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.nombres}</div>
+                                                <div style="font-size:12px;color:var(--color-text-tertiary)">V-${item.cedula}</div>
+                                            </div>
+                                            <span class="badge ${item.estatus === 'Solvente' ? 'badge-success' : 'badge-warning'}">${item.estatus}</span>
+                                        </a>`;
+                                });
+                                mobileSearchDropdown.innerHTML = html;
+                                mobileSearchDropdown.classList.add('open');
+                            } else {
+                                mobileSearchDropdown.innerHTML = `<div style="padding:20px;text-align:center;font-size:13px;color:var(--color-text-tertiary)">No se encontraron resultados.</div>`;
+                                mobileSearchDropdown.classList.add('open');
+                            }
+                        }).catch(err => console.error("Mobile Search Error:", err));
+                }, 300);
+            });
+
+            // Form Submit handler
+            mobileSearchForm.addEventListener('submit', function(e) {
+                const query = mobileSearchInput.value.trim();
+                if (query.length > 0) {
+                    saveSearchToHistory(query);
+                }
+            });
+            
+            // Expose globally to be used inside inline HTML event handlers
+            window.saveSearchToHistory = saveSearchToHistory;
+        } // End mobile search
+
+        // Trigger on load
+        actualizarBadgeSolicitudes();
+        actualizarConteo();
+
+        // Mark as initialized
+        _appScriptsInitialized = true;
+    }); // END turbo:load
+
+        // ═══ NOTIFICATION SYSTEM ═══
+        const NOTIF_POLL_INTERVAL = 30000;
+        let _notifPanelOpen = false;
+        let _lastNotifCount = -1;
+
+        window.playNotifSound = function() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1046.50, ctx.currentTime); // C6
+                osc.frequency.exponentialRampToValueAtTime(1318.51, ctx.currentTime + 0.1); // E6
+                
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch(e) {}
+        };
+
+        const RIESGO_ESTILOS = {
+            'CRITICO': { badge: 'badge-error', icon: 'warning' },
+            'ADVERTENCIA': { badge: 'badge-warning', icon: 'info' },
+            'INFORMATIVO': { badge: 'badge-info', icon: 'check_circle' },
+        };
+
+        function toggleNotifPanel() {
+            _notifPanelOpen = !_notifPanelOpen;
+            document.getElementById('notif-panel').classList.toggle('open', _notifPanelOpen);
+            if (_notifPanelOpen) cargarNotificaciones();
+        }
+
+        document.addEventListener('click', function (e) {
+            const wrapper = document.getElementById('notif-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                _notifPanelOpen = false;
+                const panel = document.getElementById('notif-panel');
+                if(panel) panel.classList.remove('open');
+            }
+        });
+
+        async function cargarNotificaciones() {
+            try {
+                const res = await fetch('/auditoria/api/recientes/');
+                const data = await res.json();
+                renderNotificaciones(data.eventos || []);
+            } catch (e) { console.warn('[Notif] Error:', e); }
+        }
+
+        async function actualizarConteo() {
+            try {
+                const res = await fetch('/auditoria/api/conteo/');
+                const data = await res.json();
+                const badge = document.getElementById('notif-badge');
+                
+                if (_lastNotifCount !== -1 && data.total > _lastNotifCount) {
+                    // New notification arrived!
+                    if (window.playNotifSound) window.playNotifSound();
+                }
+                _lastNotifCount = data.total;
+
+                if (data.total > 0) {
+                    badge.textContent = data.total > 99 ? '99+' : data.total;
+                    badge.style.display = 'inline-flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) { /* silent */ }
+        }
+
+        function renderNotificaciones(eventos) {
+            const list = document.getElementById('notif-list');
+            const empty = document.getElementById('notif-empty');
+            Array.from(list.querySelectorAll('li:not(#notif-empty)')).forEach(el => el.remove());
+            if (eventos.length === 0) { empty.style.display = ''; return; }
+            empty.style.display = 'none';
+            eventos.forEach(ev => {
+                const estilo = RIESGO_ESTILOS[ev.nivel_riesgo] || RIESGO_ESTILOS['INFORMATIVO'];
+                const li = document.createElement('li');
+                li.dataset.id = ev.id;
+                li.className = `notif-item ${ev.leido ? 'read' : ''}`;
+                li.style.cursor = 'pointer';
+                li.onclick = () => {
+                    if (ev.origen === 'SISTEMA') {
+                        window.location.href = '/notificaciones/centro/';
+                    } else {
+                        window.location.href = '/auditoria/';
+                    }
+                };
+                li.innerHTML = `
+                    <div style="margin-top:2px;flex-shrink:0">
+                        <span class="material-symbols-outlined" style="font-size:16px;color:var(--color-${estilo.badge.replace('badge-', '')})">${estilo.icon}</span>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                            <span class="badge ${estilo.badge}" style="font-size:10px">${ev.nivel_riesgo}</span>
+                            <span style="font-size:12px;font-weight:500;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.titulo}</span>
+                        </div>
+                        <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.4;margin:0">${ev.mensaje}</p>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+                            <span style="font-size:11px;color:var(--color-text-tertiary)">${ev.modulo ? ev.modulo + ' · ' : ''}${ev.timestamp}</span>
+                            ${!ev.leido ? `<button onclick="event.stopPropagation();marcarLeido(${ev.id},this)" style="font-size:11px;color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0">Marcar ✓</button>` : ''}
+                        </div>
+                    </div>`;
+                list.appendChild(li);
+            });
+        }
+
+        async function marcarLeido(id, btn) {
+            try {
+                await fetch(`/auditoria/api/marcar-leido/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': _getCsrf() } });
+                const li = btn ? btn.closest('li') : document.querySelector(`li[data-id="${id}"]`);
+                if (li) li.classList.add('read');
+                if (btn) btn.remove();
+                actualizarConteo();
+            } catch (e) { console.warn('[Notif] Error:', e); }
+        }
+
+        async function marcarTodosLeidos() {
+            try {
+                await fetch('/auditoria/api/marcar-todos/', { method: 'POST', headers: { 'X-CSRFToken': _getCsrf() } });
+                document.querySelectorAll('#notif-list li[data-id]').forEach(li => li.classList.add('read'));
+                document.getElementById('notif-badge').style.display = 'none';
+            } catch (e) { console.warn('[Notif] Error:', e); }
+        }
+
+        async function eliminarNotificacion(id, btn) {
+            try {
+                await fetch(`/auditoria/api/eliminar/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': _getCsrf() } });
+                const li = btn.closest('li');
+                li.style.opacity = '0';
+                li.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    li.remove();
+                    if (!document.querySelectorAll('#notif-list li[data-id]').length) {
+                        document.getElementById('notif-empty').style.display = '';
+                    }
+                    actualizarConteo();
+                }, 300);
+            } catch (e) { console.warn('[Notif] Error:', e); }
+        }
+
+        async function vaciarNotificaciones() {
+            if (!confirm('¿Eliminar todas las notificaciones?')) return;
+            try {
+                await fetch('/auditoria/api/vaciar/', { method: 'POST', headers: { 'X-CSRFToken': _getCsrf() } });
+                document.querySelectorAll('#notif-list li[data-id]').forEach(li => li.remove());
+                document.getElementById('notif-empty').style.display = '';
+                document.getElementById('notif-badge').style.display = 'none';
+            } catch (e) { console.warn('[Notif] Error:', e); }
+        }
+
+        // ═══ AI ASSISTANT ═══
+        // State lives on `window` so Turbo script re-eval doesn't reset it.
+        if (typeof window._iaOpen === 'undefined') {
+            window._iaOpen = false;
+            window._iaHistory = [];
+            window._iaSending = false;
+            window._iaHistoryLoaded = false;
+        }
+
+        function toggleAsistente() {
+            window._iaOpen = !window._iaOpen;
+            localStorage.setItem('ia_chat_open', window._iaOpen ? 'true' : 'false');
+            const panel = document.getElementById('asistente-panel');
+            const fabIcon = document.getElementById('fab-icon');
+            if (window._iaOpen) {
+                panel.style.display = 'flex';
+                if (fabIcon) fabIcon.innerText = 'close';
+                setTimeout(() => { const i = document.getElementById('ia-input'); if (i) i.focus(); }, 200);
+            } else {
+                panel.style.display = 'none';
+                if (fabIcon) fabIcon.innerText = 'auto_awesome';
+            }
+        }
+
+        function autoResizeInput(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        function handleIaKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendIaMessage(); }
+        }
+
+        function appendMsg(role, text) {
+            const container = document.getElementById('ia-messages');
+            if (!container) return null;
+            const wrapper = document.createElement('div');
+            const isUser = role === 'user';
+            wrapper.className = 'ia-chat-msg';
+            wrapper.style.cssText = `display:flex;flex-direction:column;${isUser ? 'align-self:flex-end;align-items:flex-end' : 'align-self:flex-start;align-items:flex-start'};max-width:85%;gap:4px`;
+            wrapper.innerHTML = `
+                <div style="padding:10px 14px;border-radius:${isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};background:${isUser ? 'var(--color-accent-subtle)' : 'var(--color-bg-secondary)'};color:var(--color-text-primary);font-size:14px;line-height:1.5;white-space:pre-wrap;width:fit-content;text-align:left">${isUser ? text : text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>
+                <span style="font-size:10px;color:var(--color-text-tertiary);padding:0 4px">${isUser ? 'Tú' : 'Tamarindo'} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+            container.appendChild(wrapper);
+            container.scrollTop = container.scrollHeight;
+            return wrapper;
+        }
+
+        function showTyping() {
+            const container = document.getElementById('ia-messages');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.id = 'ia-typing-indicator';
+            div.style.cssText = 'display:flex;gap:4px;padding:4px';
+            div.innerHTML = `<div style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);animation:spin 1s ease infinite"></div><div style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);opacity:.6;animation:spin 1s ease .15s infinite"></div><div style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);opacity:.3;animation:spin 1s ease .3s infinite"></div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideTyping() { const el = document.getElementById('ia-typing-indicator'); if (el) el.remove(); }
+
+        async function sendIaMessage() {
+            if (window._iaSending) return;
+            const input = document.getElementById('ia-input');
+            if (!input) return;
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+            input.value = ''; input.style.height = 'auto';
+            appendMsg('user', mensaje);
+            window._iaSending = true;
+            const btn = document.getElementById('ia-send-btn');
+            if (btn) btn.disabled = true;
+            showTyping();
+            try {
+                const resp = await fetch('/api/asistente/chat/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _getCsrf() },
+                    body: JSON.stringify({ mensaje, historial: window._iaHistory.slice(-10) }),
+                });
+                hideTyping();
+                if (!resp.ok) {
+                    appendMsg('bot', '⚠️ Error del servidor. Por favor, intenta de nuevo.');
+                    return;
+                }
+                const data = await resp.json();
+                const respuesta = data.respuesta || data.error || '⚠️ Respuesta no disponible.';
+                appendMsg('bot', respuesta);
+                window._iaHistory.push({ role: 'user', text: mensaje }, { role: 'model', text: respuesta });
+                saveIaHistory();
+            } catch (err) {
+                hideTyping();
+                appendMsg('bot', '⚠️ Error de conexión.');
+            } finally {
+                window._iaSending = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        // ═══ PERSISTENCE ═══
+        function loadIaHistory() {
+            if (window._iaHistoryLoaded) return;
+            window._iaHistoryLoaded = true;
+            try {
+                const saved = localStorage.getItem('ia_chat_history');
+                if (saved) {
+                    window._iaHistory = JSON.parse(saved);
+                    window._iaHistory.forEach(msg => {
+                        appendMsg(msg.role === 'model' ? 'bot' : 'user', msg.text);
+                    });
+                }
+                if (localStorage.getItem('ia_chat_open') === 'true') {
+                    window._iaOpen = true;
+                    const panel = document.getElementById('asistente-panel');
+                    if (panel) panel.style.display = 'flex';
+                    const fabIcon = document.getElementById('fab-icon');
+                    if (fabIcon) fabIcon.innerText = 'close';
+                }
+            } catch (e) { console.warn('Error loading IA history', e); }
+        }
+
+        function saveIaHistory() {
+            if (window._iaHistory.length > 20) window._iaHistory = window._iaHistory.slice(-20);
+            localStorage.setItem('ia_chat_history', JSON.stringify(window._iaHistory));
+        }
+
+        // Load on first page load AND on turbo navigations
+        document.addEventListener('DOMContentLoaded', loadIaHistory);
+        document.addEventListener('turbo:load', loadIaHistory);
+
+        // ═══ GLOBAL DATA ═══
+        let _globalDataInitialized = false;
+        function initGlobalData() {
+            actualizarBadgeSolicitudes();
+            actualizarConteo();
+            if (!_globalDataInitialized) {
+                setInterval(actualizarBadgeSolicitudes, 30000);
+                setInterval(actualizarConteo, NOTIF_POLL_INTERVAL);
+                _globalDataInitialized = true;
+            }
+        }
+        
+        document.addEventListener('turbo:load', initGlobalData);
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof Turbo === 'undefined') initGlobalData();
+
+            // Clear chat state on logout
+            document.querySelectorAll(`a[href="{% url 'logout' %}"]`).forEach(link => {
+                link.addEventListener('click', () => {
+                    localStorage.removeItem('ia_chat_history');
+                    localStorage.removeItem('ia_chat_open');
+                });
+            });
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+
+    <!-- ═══ POPOVERS WRAPPER (Outside of overflow and backdrop-filter to prevent Safari bugs) ═══ -->
+    <div class="nav-popovers-wrapper lg:hidden" id="navPopoversWrapper">
+        <div class="nav-popover" id="popover-carga">
+            <a href="{% url 'calificaciones' %}"><span class="material-symbols-outlined">upload_file</span> Estudiantes</a>
+            <a href="{% url 'notas_calificaciones' %}"><span class="material-symbols-outlined">grading</span> Calificaciones</a>
+            <a href="{% url 'notas_certificadas' %}"><span class="material-symbols-outlined">verified</span> Notas Cert.</a>
+        </div>
+        <div class="nav-popover" id="popover-horarios">
+            <a href="{% url 'horarios_lista' %}"><span class="material-symbols-outlined">calendar_month</span> Horarios</a>
+            <a href="{% url 'horarios_dashboard' %}"><span class="material-symbols-outlined">dashboard</span> Gestor</a>
+        </div>
+        <div class="nav-popover" id="popover-docentes">
+            <a href="{% url 'gestion_docentes' %}"><span class="material-symbols-outlined">manage_accounts</span> Docentes</a>
+            <a href="{% url 'notas_docentes' %}"><span class="material-symbols-outlined">grade</span> Notas</a>
+        </div>
+        <div class="nav-popover" id="popover-actas">
+            <a href="{% url 'actas_consejos' %}"><span class="material-symbols-outlined">groups</span> Consejos</a>
+            <a href="{% url 'actas_compromisos' %}"><span class="material-symbols-outlined">task</span> Compromisos</a>
+            <a href="{% url 'actas_inasistencias' %}"><span class="material-symbols-outlined">person_off</span> Faltas</a>
+        </div>
+        <div class="nav-popover" id="popover-asistencias">
+            <a href="{% url 'asistencias_personal' %}"><span class="material-symbols-outlined">badge</span> Personal</a>
+            <a href="{% url 'asistencias_registro' %}"><span class="material-symbols-outlined">schedule</span> Registro</a>
+        </div>
+        <div class="nav-popover" id="popover-finanzas">
+            <a href="{% url 'pagos_personal' %}"><span class="material-symbols-outlined">account_balance_wallet</span> Nómina</a>
+            <a href="{% url 'pagos_estudiantes' %}"><span class="material-symbols-outlined">receipt_long</span> Cobranza</a>
+            <a href="{% url 'pagos_servicios' %}"><span class="material-symbols-outlined">build</span> Servicios</a>
+        </div>
+        <div class="nav-popover" id="popover-admin">
+            <a href="{% url 'ia_riesgos' %}"><span class="material-symbols-outlined">monitoring</span> IA & Riesgo</a>
+            <a href="{% url 'auditoria' %}"><span class="material-symbols-outlined">shield_person</span> Auditoría</a>
+            {% if request.user.rol != 'PERSONAL' %}
+            <a href="{% url 'usuarios' %}"><span class="material-symbols-outlined">people</span> Usuarios</a>
+            {% endif %}
+            {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+            <a href="{% url 'aprobaciones' %}" style="display:flex;align-items:center;gap:6px">
+                <span class="material-symbols-outlined">check_circle</span> 
+                <span style="flex:1">Aprobaciones</span> 
+                <span id="mobile-badge-aprobaciones-popover" class="badge-dot badge-warning" style="display:none;padding:2px 4px;font-size:10px"></span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ═══ MOBILE BOTTOM NAVIGATION BAR ═══ -->
+    <div class="mobile-nav-container">
+        <nav class="mobile-bottom-nav" id="mobileBottomNav">
+            <a class="nav-item nav-item-snap {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                <span class="material-symbols-outlined nav-icon">space_dashboard</span>
+                <span class="nav-label">Inicio</span>
+            </a>
+            
+            <a class="nav-item nav-item-snap {% if request.resolver_match.url_name == 'expedientes' %}active{% endif %}" href="{% url 'expedientes' %}">
+                <span class="material-symbols-outlined nav-icon">folder_open</span>
+                <span class="nav-label">Exped.</span>
+            </a>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger" onclick="toggleNavPopover('popover-carga', this)">
+                    <span class="material-symbols-outlined nav-icon">groups</span>
+                    <span class="nav-label">Masiva</span>
+                </button>
+            </div>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger" onclick="toggleNavPopover('popover-horarios', this)">
+                    <span class="material-symbols-outlined nav-icon">calendar_month</span>
+                    <span class="nav-label">Horarios</span>
+                </button>
+            </div>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger" onclick="toggleNavPopover('popover-docentes', this)">
+                    <span class="material-symbols-outlined nav-icon">school</span>
+                    <span class="nav-label">Docentes</span>
+                </button>
+            </div>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger" onclick="toggleNavPopover('popover-actas', this)">
+                    <span class="material-symbols-outlined nav-icon">description</span>
+                    <span class="nav-label">Actas</span>
+                </button>
+            </div>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger" onclick="toggleNavPopover('popover-asistencias', this)">
+                    <span class="material-symbols-outlined nav-icon">fact_check</span>
+                    <span class="nav-label">Asist.</span>
+                </button>
+            </div>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger" onclick="toggleNavPopover('popover-finanzas', this)">
+                    <span class="material-symbols-outlined nav-icon">payments</span>
+                    <span class="nav-label">Pagos</span>
+                </button>
+            </div>
+
+            <div class="nav-item-group">
+                <button class="nav-item popover-trigger relative" onclick="toggleNavPopover('popover-admin', this)">
+                    <span class="material-symbols-outlined nav-icon">monitoring</span>
+                    <span class="nav-label">Admin</span>
+                    <span id="mobile-badge-aprobaciones-nav" class="badge-dot badge-warning absolute" style="display:none;top:2px;right:calc(50% - 14px);font-size:8px;padding:2px"></span>
+                </button>
+            </div>
+
+            <a class="nav-item nav-item-snap" href="#" onclick="toggleMobileMenu(); return false;">
+                <span class="material-symbols-outlined nav-icon">menu</span>
+                <span class="nav-label">Menú</span>
+            </a>
+        </nav>
+    </div>
+    <!-- ═══ MOBILE FULLSCREEN MENU ═══ -->
+    <div id="mobile-fullscreen-menu" class="mobile-fullscreen-menu">
+        <div class="mfm-header">
+            <div class="mfm-title">
+                <img src="{% static 'apacuana-logo.png' %}" alt="Apacuana" style="width:32px;height:32px;object-fit:contain;border-radius:8px">
+                <span>Apacuana</span>
+            </div>
+            <button class="btn btn-ghost btn-icon" onclick="toggleMobileMenu()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="mfm-body">
+            <!-- Expendientes -->
+            <a class="mfm-item" href="{% url 'expedientes' %}">
+                <span class="material-symbols-outlined">folder_open</span>
+                <span>Expedientes</span>
+            </a>
+            
+            <!-- Carga Masiva Accordion -->
+            <div class="mfm-accordion">
+                <button class="mfm-accordion-btn" onclick="toggleMfmAccordion(this)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span class="material-symbols-outlined">groups</span>
+                        <span>Carga Masiva</span>
+                    </div>
+                    <span class="material-symbols-outlined mfm-chevron">expand_more</span>
+                </button>
+                <div class="mfm-accordion-content">
+                    <a href="{% url 'calificaciones' %}">Estudiantes</a>
+                    <a href="{% url 'notas_calificaciones' %}">Calificaciones</a>
+                    <a href="{% url 'notas_certificadas' %}">Notas Certificadas</a>
+                </div>
+            </div>
+
+            <!-- Académico Accordion -->
+            <div class="mfm-accordion">
+                <button class="mfm-accordion-btn" onclick="toggleMfmAccordion(this)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span class="material-symbols-outlined">school</span>
+                        <span>Académico</span>
+                    </div>
+                    <span class="material-symbols-outlined mfm-chevron">expand_more</span>
+                </button>
+                <div class="mfm-accordion-content">
+                    <a href="{% url 'horarios_lista' %}">Horarios</a>
+                    <a href="{% url 'notas_docentes' %}">Docentes</a>
+                </div>
+            </div>
+
+            <!-- Actas Accordion -->
+            <div class="mfm-accordion">
+                <button class="mfm-accordion-btn" onclick="toggleMfmAccordion(this)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span class="material-symbols-outlined">description</span>
+                        <span>Actas</span>
+                    </div>
+                    <span class="material-symbols-outlined mfm-chevron">expand_more</span>
+                </button>
+                <div class="mfm-accordion-content">
+                    <a href="{% url 'actas_consejos' %}">Consejos</a>
+                    <a href="{% url 'actas_compromisos' %}">Compromisos</a>
+                    <a href="{% url 'actas_inasistencias' %}">Faltas</a>
+                </div>
+            </div>
+
+            <!-- Asistencias Accordion -->
+            <div class="mfm-accordion">
+                <button class="mfm-accordion-btn" onclick="toggleMfmAccordion(this)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span class="material-symbols-outlined">fact_check</span>
+                        <span>Asistencias</span>
+                    </div>
+                    <span class="material-symbols-outlined mfm-chevron">expand_more</span>
+                </button>
+                <div class="mfm-accordion-content">
+                    <a href="{% url 'asistencias_personal' %}">Personal</a>
+                    <a href="{% url 'asistencias_registro' %}">Registro</a>
+                </div>
+            </div>
+
+            <!-- Finanzas Accordion -->
+            <div class="mfm-accordion">
+                <button class="mfm-accordion-btn" onclick="toggleMfmAccordion(this)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span class="material-symbols-outlined">payments</span>
+                        <span>Finanzas</span>
+                    </div>
+                    <span class="material-symbols-outlined mfm-chevron">expand_more</span>
+                </button>
+                <div class="mfm-accordion-content">
+                    <a href="{% url 'pagos_personal' %}">Nómina</a>
+                    <a href="{% url 'pagos_estudiantes' %}">Cobranza</a>
+                    <a href="{% url 'pagos_servicios' %}">Servicios</a>
+                </div>
+            </div>
+
+            <!-- Admin Accordion -->
+            <div class="mfm-accordion">
+                <button class="mfm-accordion-btn" onclick="toggleMfmAccordion(this)">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span class="material-symbols-outlined">monitoring</span>
+                        <span>Admin & Riesgo</span>
+                    </div>
+                    <span class="material-symbols-outlined mfm-chevron">expand_more</span>
+                </button>
+                <div class="mfm-accordion-content">
+                    <a href="{% url 'ia_riesgos' %}">IA & Riesgo</a>
+                    <a href="{% url 'auditoria' %}">Auditoría</a>
+                    {% if request.user.rol != 'PERSONAL' %}
+                    <a href="{% url 'usuarios' %}">Usuarios</a>
+                    {% endif %}
+                    {% if request.user.rol == 'ADMINISTRATIVO' or request.user.rol == 'DESARROLLADOR' %}
+                    <a href="{% url 'aprobaciones' %}" style="display:flex;align-items:center;justify-content:space-between">
+                        Aprobaciones
+                        <span id="mobile-badge-aprobaciones-mfm" class="badge-dot badge-warning" style="display:none;padding:2px 6px"></span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ═══ POPOVERS (Bottom Nav) ═══
+        function toggleNavPopover(id, btnElement) {
+            const popover = document.getElementById(id);
+            const isShowing = popover.classList.contains('show');
+            
+            // Close all popovers
+            document.querySelectorAll('.nav-popover.show').forEach(p => p.classList.remove('show'));
+            document.querySelectorAll('.popover-trigger.active-popover').forEach(b => b.classList.remove('active-popover'));
+            
+            // If it wasn't open, open it and position horizontally above the button
+            if (!isShowing && popover && btnElement) {
+                const rect = btnElement.getBoundingClientRect();
+                const centerX = rect.left + (rect.width / 2);
+                
+                // Vertical positioning is handled by CSS wrapper (bottom: 80px)
+                popover.style.left = centerX + 'px';
+                
+                popover.classList.add('show');
+                btnElement.classList.add('active-popover');
+            }
+        }
+
+        // Close popovers on scroll (user is navigating away)
+        const bottomNavElement = document.getElementById('mobileBottomNav');
+        if (bottomNavElement) {
+            bottomNavElement.addEventListener('scroll', () => {
+                document.querySelectorAll('.nav-popover.show').forEach(p => p.classList.remove('show'));
+                document.querySelectorAll('.popover-trigger.active-popover').forEach(b => b.classList.remove('active-popover'));
+            });
+        }
+
+        // Close popovers when tapping outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.nav-popover') && !e.target.closest('.popover-trigger')) {
+                document.querySelectorAll('.nav-popover.show').forEach(p => p.classList.remove('show'));
+                document.querySelectorAll('.popover-trigger.active-popover').forEach(b => b.classList.remove('active-popover'));
+            }
+        });
+
+        // ═══ FULLSCREEN MOBILE MENU ═══
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-fullscreen-menu');
+            menu.classList.toggle('open');
+            if (menu.classList.contains('open')) {
+                document.body.style.overflow = 'hidden'; // Bloquear scroll del body
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+
+        function toggleMfmAccordion(btn) {
+            const content = btn.nextElementSibling;
+            const isOpen = content.classList.contains('open');
+            
+            // Cerrar otros (opcional)
+            document.querySelectorAll('.mfm-accordion-content.open').forEach(c => {
+                if (c !== content) c.classList.remove('open');
+            });
+            document.querySelectorAll('.mfm-accordion-btn').forEach(b => {
+                if (b !== btn) b.classList.remove('active');
+            });
+
+            if (isOpen) {
+                content.classList.remove('open');
+                btn.classList.remove('active');
+            } else {
+                content.classList.add('open');
+                btn.classList.add('active');
+            }
+        }
+
+        // Auto-scroll mobile bottom nav to active item
+        function initBottomNavScroll() {
+            const bottomNav = document.getElementById('mobileBottomNav');
+            if (!bottomNav) return;
+
+            const currentPath = window.location.pathname;
+            let activeItem = null;
+            let maxMatchLength = 0;
+
+            // 1. Check direct links in bottom nav
+            bottomNav.querySelectorAll('a.nav-item').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && href !== '#' && href !== '/' && currentPath.startsWith(href)) {
+                    if (href.length > maxMatchLength) {
+                        activeItem = a;
+                        maxMatchLength = href.length;
+                    }
+                } else if (href === '/' && currentPath === '/') {
+                    activeItem = a;
+                    maxMatchLength = 1;
+                }
+            });
+
+            // 2. Check popovers if no long match
+            document.querySelectorAll('.nav-popover a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && href !== '#' && href !== '/' && currentPath.startsWith(href)) {
+                    if (href.length > maxMatchLength) {
+                        const popoverId = a.closest('.nav-popover').id;
+                        activeItem = bottomNav.querySelector(`button[onclick*="'${popoverId}'"]`);
+                        maxMatchLength = href.length;
+                    }
+                }
+            });
+
+            if (activeItem) {
+                // Ensure it is visually active
+                document.querySelectorAll('.nav-item.active').forEach(el => el.classList.remove('active'));
+                activeItem.classList.add('active');
+                
+                // Scroll to center it in the bottom nav
+                setTimeout(() => {
+                    const navRect = bottomNav.getBoundingClientRect();
+                    const itemRect = activeItem.getBoundingClientRect();
+                    // offsetLeft gives position relative to the scroll container
+                    const scrollAmount = activeItem.offsetLeft - (navRect.width / 2) + (itemRect.width / 2);
+                    bottomNav.scrollTo({
+                        left: scrollAmount > 0 ? scrollAmount : 0,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            }
+        }
+        
+        document.addEventListener('turbo:load', initBottomNavScroll);
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof Turbo === 'undefined') initBottomNavScroll();
+        });
+    </script>
+</body>
+</html>

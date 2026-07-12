@@ -1,0 +1,2409 @@
+/* ═══════════════════════════════════════════════════════════════
+   GESTOR APACUANA — Responsive Layer (v2 — Full System)
+   ─────────────────────────────────────────────────────────────
+   Mobile & tablet adaptations for the ENTIRE main system.
+   ALL rules are inside @media queries — ZERO impact on Desktop.
+
+   Loaded AFTER design-system.css and components.css.
+
+   Breakpoints:
+     1024px — Tablets / small laptops (sidebar becomes drawer)
+      768px — Tablets portrait / large phones
+      640px — Mobile landscape
+      480px — Mobile standard
+      375px — Mobile compact
+      320px — Mobile minimum
+   ═══════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   1. SIDEBAR — Drawer Offcanvas (<=1024px)
+   NOTE: The base sidebar mobile rules (position:fixed, left:-260px)
+   are now in components.css at 1024px. This section adds refinements
+   that only apply when the sidebar is in drawer mode.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  /* Collapsed text should be visible in mobile drawer */
+  .collapsed .sidebar-brand-text,
+  .collapsed .sidebar-link-text,
+  .collapsed .sidebar-user-info {
+    opacity: 1;
+    width: auto;
+  }
+  .collapsed .sidebar-section {
+    font-size: 10px;
+    text-align: left;
+  }
+  .collapsed .sidebar-section::after {
+    display: none;
+  }
+  .collapsed .sidebar-submenu-arrow {
+    display: inline;
+  }
+  .collapsed .sidebar-submenu {
+    display: none !important;
+  }
+  .collapsed .sidebar-submenu.open {
+    display: flex !important;
+  }
+  .collapsed .sidebar-link-badge {
+    position: static;
+    margin-left: auto;
+  }
+  .collapsed .sidebar-logout {
+    margin-left: auto;
+  }
+  .collapsed .sidebar-brand-logo {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   2. HEADER — Compact Mode (<=768px)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .app-header {
+    height: 52px;
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+  }
+
+  /* Pill-shaped Glassmorphism Search Bar */
+  .header-search-input {
+    font-size: 16px;
+    padding: 8px 16px 8px 36px;
+    border-radius: 9999px !important;
+    background: rgba(128, 128, 128, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  .header-search-icon {
+    font-size: 18px;
+    left: 12px;
+    color: var(--color-text-tertiary);
+  }
+
+  .header-search-kbd {
+    display: none;
+  }
+
+  /* Compact action buttons */
+  .header-action-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .header-actions {
+    gap: var(--space-1);
+  }
+
+  /* Content area adjustment for smaller header */
+  .app-content {
+    padding: var(--space-4);
+  }
+}
+
+/* Ocultar botones por defecto de busqueda en webkit */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance:none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   3. NOTIFICATION PANEL — Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .notif-panel {
+    width: calc(100vw - 24px);
+    right: -8px;
+    max-height: 70vh;
+  }
+
+  .notif-list {
+    max-height: 50vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .notif-panel {
+    position: fixed;
+    top: 52px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 64px);
+    border-radius: var(--radius-xl);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   4. TABLES — Responsive Scroll & Layout
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  /* Ensure horizontal scroll with momentum */
+  .table-scroll {
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Minimum table width so content stays readable */
+  .table-scroll table {
+    min-width: 640px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Toolbar stacks vertically */
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .table-search {
+    max-width: none;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .table-filters {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .table-count {
+    margin-left: 0;
+    text-align: center;
+    font-size: 12px;
+  }
+
+  /* Compact table cells */
+  thead th {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
+  tbody td {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Pagination stacks on small screens */
+  .table-pagination {
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    text-align: center;
+  }
+
+  .pagination-pages {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .pagination-btn {
+    min-width: 36px;
+    height: 36px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   5. FORMS — Touch Optimization (<=768px)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Prevent iOS auto-zoom — minimum 16px on all inputs */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch-friendly checkboxes & radios */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+  }
+
+  /* Ensure form labels have good spacing */
+  label {
+    font-size: 14px;
+    margin-bottom: var(--space-2);
+  }
+
+  /* Touch-friendly buttons (44px minimum touch target) */
+  .btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+
+  .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn-icon.btn-sm {
+    min-width: 36px;
+    min-height: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Form grids already collapse at 640px — enhance spacing */
+  .form-grid {
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  /* Page action buttons stack and fill width */
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  /* Full-width primary buttons */
+  .page-actions .btn-primary {
+    width: 100%;
+    order: -1;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   6. MODALS — Fullscreen on Mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: var(--space-3);
+  }
+
+  .modal {
+    max-height: 85vh;
+  }
+
+  .modal-header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .modal-body {
+    padding: var(--space-4);
+  }
+
+  .modal-footer {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  /* Modals created with Tailwind classes in templates */
+  [class*="max-w-3xl"],
+  [class*="max-w-2xl"],
+  [class*="max-w-xl"],
+  [class*="max-w-lg"] {
+    max-width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    height: auto;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+    animation: modalSlideUpMobile var(--transition-slow);
+  }
+
+  .modal-sm,
+  .modal-md,
+  .modal-lg {
+    max-width: 100%;
+  }
+
+  .modal-header {
+    position: sticky;
+    top: 0;
+    background: var(--color-surface);
+    z-index: 2;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--color-surface);
+    z-index: 2;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+  }
+
+  /* Tailwind modals — bottom sheet style */
+  [class*="max-w-3xl"],
+  [class*="max-w-2xl"],
+  [class*="max-w-xl"],
+  [class*="max-w-lg"],
+  [class*="max-w-md"] {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+@keyframes modalSlideUpMobile {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   7. CUSTOMIZE PANEL — Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .customize-section.desktop-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .customize-panel {
+    width: 100vw;
+    right: -100vw;
+  }
+
+  .customize-panel.open {
+    right: 0;
+  }
+
+  .customize-options {
+    justify-content: center;
+  }
+
+  .customize-option {
+    min-width: 70px;
+    padding: var(--space-2);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   8. AI CHAT (Tamarindo) — Responsive
+   Overrides inline styles using ID selectors + !important.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  #asistente-panel {
+    width: calc(100vw - 32px) !important;
+    max-width: 400px !important;
+    height: 50vh !important;
+    min-height: 380px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Bottom sheet pattern — slides up from bottom */
+  #asistente-panel {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 80vh !important;
+    min-height: none !important;
+    border-radius: 16px 16px 0 0 !important;
+    z-index: 10001 !important;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.3) !important;
+  }
+
+  /* FAB position adjustment */
+  #asistente-fab {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   9. TOAST — Full Width on Mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .toast-container {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-3);
+  }
+
+  .toast {
+    min-width: unset;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   10. KPI CARDS — Responsive Refinement
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .kpi-card {
+    padding: var(--space-4);
+  }
+
+  .kpi-value {
+    font-size: 26px;
+  }
+
+  .kpi-trend {
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-value {
+    font-size: 24px;
+  }
+
+  .kpi-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   11. PAGE HEADER — Stack on Small Screens
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .page-header {
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 375px) {
+  .page-title {
+    font-size: 18px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   12. CARDS — Compact on Mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .card {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .card-header {
+    margin-bottom: var(--space-3);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   13. ALERTS — Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .alert {
+    padding: var(--space-3);
+    font-size: 13px;
+  }
+
+  .alert-icon {
+    font-size: 18px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   14. TABS — Scrollable on Mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    padding: var(--space-2) var(--space-3);
+    font-size: 13px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   15. DROPDOWN — Responsive Position
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .dropdown-menu {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 60vh;
+    overflow-y: auto;
+    animation: modalSlideUpMobile var(--transition-slow);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   16. BADGES — Touch friendly
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .badge {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   17. INLINE STYLE GRID OVERRIDES — Dashboard & Detail Views
+   These target inline style="grid-template-columns:..." patterns
+   used across templates (home.html, detalle.html, etc.)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  /* 4-column KPI grids → 2 columns on tablet */
+  [style*="grid-template-columns:repeat(4"],
+  [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* 7fr 5fr content grid → single column */
+  [style*="grid-template-columns:7fr 5fr"],
+  [style*="grid-template-columns: 7fr 5fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* General gap reduction */
+  [style*="gap:20px"] {
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Header action buttons in detail views — wrap into grid */
+  .app-content > div:first-child > .flex.gap-3,
+  .app-content > div:first-child > div > .flex.gap-3 {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 4-column KPI grids → single column on mobile */
+  [style*="grid-template-columns:repeat(4"],
+  [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  [style*="gap:20px"] {
+    gap: 8px !important;
+  }
+
+  /* 3-column grids → single column */
+  [style*="grid-template-columns:repeat(3"],
+  [style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 2-column and explicit grids → single column */
+  [style*="grid-template-columns:repeat(2"],
+  [style*="grid-template-columns: repeat(2"],
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   18. TAILWIND LAYOUT OVERRIDES
+   Targets common Tailwind patterns used in templates like
+   detalle.html, horarios/dashboard.html, etc.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  /* grid-cols-12 layouts (detalle.html profile) */
+  .grid.grid-cols-12 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .col-span-12.md\:col-span-4,
+  .col-span-12.md\:col-span-8 {
+    grid-column: span 12 / span 12 !important;
+  }
+
+  /* flex lg:flex-row → stack on tablet (horarios dashboard) */
+  .flex.flex-col.lg\:flex-row {
+    flex-direction: column !important;
+  }
+
+  /* Sidebar panel in horarios should be full width */
+  .w-full.lg\:w-80 {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Ensure Tailwind flex gap patterns wrap on mobile */
+  .flex.gap-3,
+  .flex.gap-4,
+  .flex.gap-6 {
+    flex-wrap: wrap;
+  }
+
+  /* Text size reductions for headings */
+  .text-3xl {
+    font-size: 1.5rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.125rem !important;
+  }
+
+  /* Profile card sizing */
+  .w-36 {
+    width: 7rem !important;
+  }
+  .h-36 {
+    height: 7rem !important;
+  }
+
+  /* Tailwind mb-8 → smaller on mobile */
+  .mb-8 {
+    margin-bottom: 1.25rem !important;
+  }
+
+  /* gap-8 → smaller */
+  .gap-8 {
+    gap: 1rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Profile card further reduced */
+  .w-36 {
+    width: 5rem !important;
+  }
+  .h-36 {
+    height: 5rem !important;
+  }
+
+  .text-5xl {
+    font-size: 2rem !important;
+  }
+
+  /* Card padding on Tailwind styled cards */
+  .p-8 {
+    padding: 1rem !important;
+  }
+
+  .p-6 {
+    padding: 0.875rem !important;
+  }
+
+  /* Rounded corners — use consistent mobile values */
+  .rounded-3xl {
+    border-radius: 1rem !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   19. DETALLE.HTML — Student Profile Responsive
+   Targets the complex profile layout in expedientes/detalle.html
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Profile header action buttons — stack and fill */
+  .mb-8.flex.justify-between.items-end {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+
+  .mb-8.flex.justify-between.items-end > .flex.gap-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .mb-8.flex.justify-between.items-end > .flex.gap-3 > .btn,
+  .mb-8.flex.justify-between.items-end > .flex.gap-3 > a {
+    justify-content: center;
+    text-align: center;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Single column buttons */
+  .mb-8.flex.justify-between.items-end > .flex.gap-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   20. CALIFICACIONES — Custom CSS Responsive
+   Targets .calif-*, .nc-* classes used in
+   calificaciones/notas_calificaciones.html
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .calif-wrapper {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .calif-page-title {
+    font-size: 1.25rem;
+  }
+
+  .calif-card {
+    padding: 1rem;
+  }
+
+  .calif-dropzone {
+    padding: 1.25rem 1rem;
+  }
+
+  .calif-dropzone h3 {
+    font-size: 0.85rem;
+  }
+
+  .calif-dropzone p code {
+    font-size: 0.65rem;
+    word-break: break-all;
+  }
+
+  /* Period form grid inside calificaciones */
+  .calif-card [style*="grid-template-columns:1fr 1fr"],
+  .calif-card [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* nc- result cards — 2 columns on tablet */
+  .nc-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* nc- tables */
+  .nc-table {
+    font-size: 0.72rem;
+  }
+
+  .nc-table th,
+  .nc-table td {
+    padding: 0.35rem;
+  }
+
+  .nc-panel {
+    padding: 0.75rem;
+  }
+
+  /* Radio labels in lapso selector */
+  .calif-card [style*="display:flex"][style*="gap:1.5rem"] {
+    gap: 0.5rem !important;
+    flex-direction: column !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .calif-page-title {
+    font-size: 1.1rem;
+  }
+
+  /* nc- result cards — single column */
+  .nc-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Make tables scrollable */
+  .nc-panel {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nc-panel .nc-table {
+    min-width: 400px;
+  }
+
+  /* Calificaciones toast */
+  .nc-toast {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    max-width: none;
+  }
+
+  /* Periodo modal inside calificaciones */
+  .glass-panel,
+  [class*="glass-panel"] {
+    max-width: calc(100vw - 2rem) !important;
+    padding: 1.25rem !important;
+    border-radius: 1rem !important;
+  }
+
+  /* Grid 1.5fr 1fr 1fr → single column in period form */
+  [style*="grid-template-columns:1.5fr 1fr 1fr"],
+  [style*="grid-template-columns: 1.5fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   21. HORARIOS — Dashboard Responsive
+   Targets the calendar layout in horarios/dashboard.html
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  /* Calendar container height override */
+  #calendar-container,
+  .h-\[600px\] {
+    height: 450px !important;
+  }
+
+  /* FullCalendar slot height adjustment */
+  .fc .fc-timegrid-slot {
+    height: 4em !important;
+  }
+
+  /* FullCalendar header text size */
+  .fc .fc-col-header-cell-cushion {
+    font-size: 0.65rem !important;
+    padding: 6px 0 !important;
+  }
+
+  .fc .fc-timegrid-slot-label-cushion {
+    font-size: 0.6rem !important;
+  }
+
+  .fc-event-main {
+    font-size: 0.7rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #calendar-container,
+  .h-\[600px\] {
+    height: 380px !important;
+  }
+
+  /* Horarios saved list cards */
+  .space-y-1\.5 a {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #calendar-container,
+  .h-\[600px\] {
+    height: 320px !important;
+  }
+
+  .fc .fc-timegrid-slot {
+    height: 3em !important;
+  }
+
+  /* Horarios modal — full width */
+  #bloqueModal > div,
+  #bloqueModalContent {
+    max-width: calc(100vw - 2rem) !important;
+    border-radius: 1rem !important;
+  }
+
+  #bloqueModal .p-6 {
+    padding: 1rem !important;
+  }
+
+  /* Horarios block form: flex gap-4 → stack */
+  #bloqueForm .flex.gap-4 {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Horarios block form: action buttons */
+  #bloqueForm .flex.gap-3 {
+    flex-direction: column !important;
+  }
+
+  #bloqueForm .flex.gap-3 > button,
+  #bloqueForm .flex.gap-3 > .flex-1 {
+    width: 100% !important;
+  }
+
+  /* Advertencia overlay text */
+  #advertenciaHorario .max-w-md {
+    max-width: calc(100vw - 3rem) !important;
+    padding: 1.5rem !important;
+  }
+
+  #advertenciaHorario .text-2xl {
+    font-size: 1.25rem !important;
+  }
+
+  /* New period modal */
+  #modalNuevoPeriodo > div,
+  #modalNuevoPeriodoContent {
+    max-width: calc(100vw - 2rem) !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   22. PAGOS / ASISTENCIAS — Table-Heavy Pages
+   Ensures pagos and attendance views remain usable on mobile.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Fix inline flex gap patterns in pagos templates */
+  [style*="display:flex"][style*="gap:12px"],
+  [style*="display:flex"][style*="gap: 12px"] {
+    flex-wrap: wrap;
+  }
+
+  /* Inline grid overrides for pagos/servicios modals */
+  [style*="grid-template-columns:1fr 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Pagos action buttons — full width */
+  [style*="display:flex"][style*="justify-content:center"][style*="gap:1rem"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Make action column buttons vertical */
+  td [style*="display:flex"][style*="gap:4px"] {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   23. AUDITORIA / APROBACIONES — Special Views
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Timeline items in audit log — flexible layout */
+  [style*="display:flex"][style*="align-items:flex-start"][style*="gap:12px"] {
+    gap: 8px;
+  }
+
+  /* Approval cards */
+  [style*="display:flex"][style*="gap:12px"][style*="padding:12px"] {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   24. SEARCH DROPDOWN — Full width on mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .header-search-dropdown {
+    max-height: 50vh;
+  }
+
+  .header-search-result {
+    padding: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .header-search-dropdown {
+    position: fixed;
+    top: 52px;
+    left: var(--space-3);
+    right: var(--space-3);
+    max-height: calc(100vh - 120px);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   25. EMPTY STATES — Compact on Mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .empty-state {
+    padding: var(--space-8) var(--space-4);
+  }
+
+  .empty-state-icon {
+    font-size: 36px;
+  }
+
+  .empty-state-title {
+    font-size: 15px;
+  }
+
+  .empty-state-text {
+    font-size: 13px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   26. SIDEBAR FOOTER — Safe area on short screens
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-height: 600px) {
+  .sidebar-footer {
+    padding: var(--space-2);
+  }
+
+  .sidebar-user-name {
+    font-size: 12px;
+  }
+
+  .sidebar-user-role {
+    font-size: 10px;
+  }
+
+  .sidebar-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   27. FIXED MODALS (Inline Style Overrides)
+   Targets modals built entirely with inline styles in templates
+   like calificaciones periodos, document emission, etc.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Full-screen inline modals — ensure they're usable */
+  [style*="position:fixed"][style*="inset:0"][style*="z-index:99999"],
+  [style*="position: fixed"][style*="inset: 0"] {
+    padding: 0.75rem !important;
+  }
+
+  /* Modal content panels with max-width */
+  [style*="max-width:650px"],
+  [style*="max-width: 650px"],
+  [style*="max-width:600px"],
+  [style*="max-width: 600px"] {
+    max-width: calc(100vw - 1.5rem) !important;
+    padding: 1.25rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Inline styled modals → bottom-aligned like sheets */
+  [style*="position:fixed"][style*="inset:0"][style*="align-items:center"] {
+    align-items: flex-end !important;
+  }
+
+  [style*="max-width:650px"],
+  [style*="max-width: 650px"],
+  [style*="max-width:600px"],
+  [style*="max-width: 600px"],
+  [style*="max-width:550px"],
+  [style*="max-width: 550px"],
+  [style*="max-width:500px"],
+  [style*="max-width: 500px"] {
+    max-width: 100% !important;
+    border-radius: 1rem 1rem 0 0 !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   28. Tailwind Modal Overlays (.fixed.inset-0)
+   Used in horarios/dashboard.html, gestion_docentes, etc.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .fixed.inset-0[class*="items-center"][class*="justify-center"] {
+    padding: 0.75rem !important;
+  }
+
+  /* Inner modal content */
+  .fixed.inset-0 > .bg-surface,
+  .fixed.inset-0 > [class*="bg-surface"] {
+    max-width: 100% !important;
+    border-radius: 1rem !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   29. LOGIN PAGE — Responsive
+   This targets the standalone login page (login.html) which
+   does NOT use base.html but uses its own Tailwind config.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* These rules use high specificity to override Tailwind utilities
+   on the login page. They are harmless on other pages as selectors
+   won't match anything outside login context. */
+
+@media (max-width: 480px) {
+  /* Login card — reduce padding and sizing */
+  .bg-\[rgba\(15\2c 18\2c 23\2c 0\.65\)\] {
+    padding: 24px !important;
+  }
+
+  /* Logo — smaller on mobile */
+  main .h-24 {
+    height: 4rem !important;
+  }
+
+  /* Input fields — ensure no zoom */
+  .bg-\[rgba\(0\2c 0\2c 0\2c 0\.4\)\] {
+    font-size: 16px !important;
+  }
+
+  /* Main container padding */
+  .p-gutter {
+    padding: 12px !important;
+  }
+
+  /* Headline — smaller on mobile */
+  .text-headline-lg {
+    font-size: 24px !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   30. UTILITY — iOS Safe Areas & Touch Optimization
+   ═══════════════════════════════════════════════════════════════ */
+
+/* iOS safe area support for bottom-positioned elements */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media (max-width: 768px) {
+    .sidebar-footer,
+    .modal-footer {
+      padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    }
+
+    #asistente-fab {
+      margin-bottom: env(safe-area-inset-bottom);
+    }
+
+    .toast-container {
+      bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* Prevent text size inflation on orientation change */
+@media (max-width: 1024px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+/* Touch action optimization — prevent unintentional zooming */
+@media (max-width: 1024px) {
+  .sidebar-link,
+  .sidebar-submenu-btn,
+  .btn,
+  .header-action-btn,
+  .pagination-btn,
+  .tab,
+  .dropdown-item,
+  .notif-item,
+  .customize-option,
+  .color-swatch,
+  .calif-btn,
+  .nc-card,
+  .calif-dropzone {
+    touch-action: manipulation;
+  }
+}
+
+/* Better scrolling on mobile */
+@media (max-width: 768px) {
+  .app-content {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-nav {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   31. EXPEDIENTE FORMS — nuevo.html, editar.html
+   Ensure the max-width cards don't clip on small screens.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .card[style*="max-width:800px"],
+  .card[style*="max-width: 800px"] {
+    max-width: 100% !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   32. CORRECCIONES DOCX UI/UX (Puntos 1-12)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Punto 12: Scroll fluido global + GPU acceleration ── */
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  /* Use high refresh rate friendly transitions everywhere */
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 1024px) {
+  /* GPU acceleration for sidebar drawer, header, and modals */
+  .sidebar {
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .sidebar-submenu {
+    will-change: contents;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .modal, dialog {
+    will-change: transform, opacity;
+  }
+
+  /* ── Punto 1 & 9: Block horizontal scroll on ALL pages ── */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  .app-main {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  .app-content {
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* ── Punto 2: Responsive Profile and Sidebar adjustments ── */
+/* Hide desktop profile components on mobile */
+@media (max-width: 1024px) {
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* Hide mobile profile component on desktop */
+@media (min-width: 1025px) {
+  .header-profile-mobile {
+    display: none !important;
+  }
+}
+
+.header-profile-mobile {
+  position: relative;
+}
+
+.profile-dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 45px;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  width: 180px;
+  z-index: 1000;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.profile-dropdown-menu.show {
+  display: flex;
+}
+
+.profile-dropdown-menu a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--color-text-primary) !important;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s ease;
+}
+
+.profile-dropdown-menu a:hover {
+  background: var(--color-surface-hover) !important;
+}
+
+.profile-dropdown-menu a:not(:last-child) {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+
+/* ── Punto 3: Pagos modals — grids too small, currencies unreadable ──
+   Targets the <dialog> elements with fixed widths in pagos/agenda_personal.html:
+   - #modalPagos   (w-[900px]) — Pagar Seleccionados
+   - #modalHistorial (w-[600px]) — Historial de pagos
+   - #modalAddPersonal (w-[500px]) — Agregar Personal
+   Also targets the JS-generated grid-cols-5 rows inside #contenedorPagos */
+@media (max-width: 768px) {
+  /* Force all pagos dialogs to fit screen */
+  #modalPagos,
+  #modalHistorial,
+  #modalAddPersonal {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+    padding: 1rem !important;
+  }
+
+  /* The JS-generated payment rows use grid-cols-5. Stack them. */
+  .payload-empleado {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Name column should not be truncated */
+  .payload-empleado > div:first-child {
+    font-size: 14px !important;
+  }
+
+  /* All inputs/selects in the payment row: full width */
+  .payload-empleado input,
+  .payload-empleado select {
+    width: 100% !important;
+    font-size: 16px !important; /* prevent iOS zoom */
+  }
+
+  /* Tasa del día indicator: stack below title */
+  #tasasDelDia {
+    margin-top: 0.75rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Modal header: stack vertically */
+  #modalPagos > .flex.justify-between {
+    flex-direction: column !important;
+  }
+
+  /* Registration form: single column on mobile */
+  #formAgregar .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #modalPagos,
+  #modalHistorial,
+  #modalAddPersonal {
+    width: calc(100vw - 16px) !important;
+    margin: auto !important;
+    border-radius: 1rem !important;
+  }
+}
+
+
+/* ── Punto 4 & 5: Sidebar submenus — poor spacing, items overlap ──
+   The submenu is .sidebar-submenu with .sidebar-link children.
+   In components.css: gap: var(--space-0-5), child padding: 6px var(--space-3)
+   We increase both for touch-friendly tapping. */
+@media (max-width: 1024px) {
+  .sidebar-submenu {
+    gap: 4px !important; /* Was 2px (--space-0-5), now 4px for visual separation */
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 28px !important; /* Slightly less indent for more room on mobile */
+  }
+
+  .sidebar-submenu .sidebar-link {
+    padding: 10px var(--space-3) !important; /* Was 6px — now 10px for 44px touch target */
+    font-size: 14px !important; /* Was 13px — slightly larger for readability */
+    border-radius: var(--radius-md);
+  }
+
+  /* Visual separator between sidebar sections when all submenus expanded */
+  .sidebar-section {
+    margin-top: 12px !important;
+    padding-top: 8px !important;
+    border-top: 1px solid var(--sidebar-border, rgba(255,255,255,0.06));
+  }
+
+  /* First section shouldn't have top border */
+  .sidebar-nav > .sidebar-section:first-child {
+    border-top: none !important;
+    margin-top: 0 !important;
+  }
+}
+
+
+/* ── Punto 6: Asistencias > Personal — table content clipped ──
+   Tables need horizontal scroll within their container, NOT the page.
+   The page already has overflow-x:hidden from Punto 1, so tables
+   must be inside a scrollable wrapper. */
+@media (max-width: 768px) {
+  /* Generic: any element wrapping a table should scroll */
+  .overflow-x-auto,
+  [class*="overflow-x-auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tables inside .app-content that aren't in a scroll wrapper */
+  .app-content table {
+    display: table; /* Keep table display, don't break to block */
+    min-width: 600px; /* Force minimum readable width */
+  }
+
+  /* The direct parent of a table should handle horizontal scroll */
+  .app-content > div > div:has(> table),
+  .app-content > div:has(> table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Also target Tailwind's overflow-x-auto directly */
+  .p-6 > .overflow-x-auto,
+  div[class*="overflow-x-auto"] {
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+}
+
+
+/* ── Punto 7: Horarios lista — "0 Seleccionados" bar obstructing ──
+   The #footerEliminar is already position:fixed at bottom in the HTML.
+   On mobile it just needs sizing adjustments so it doesn't look broken. */
+@media (max-width: 768px) {
+  #footerEliminar {
+    left: 16px !important;
+    right: 16px !important;
+    transform: none;
+    translate: 0 0; /* override -translate-x-1/2 */
+    padding: 12px 16px !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    justify-content: center !important;
+    border-radius: 16px !important;
+  }
+
+  /* When hidden (translate-y-32), keep it off screen */
+  #footerEliminar.translate-y-32 {
+    transform: translateY(128px) !important;
+    translate: 0 0;
+  }
+
+  /* "Restablecer Horario" button — full width on mobile */
+  #btnModoRestablecer {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
+/* ── Punto 8: Horarios > Gestor Académico — calendar too small ──
+   FullCalendar renders inside #calendar div. On mobile, it must
+   allow horizontal scrolling so the user can swipe through days. */
+@media (max-width: 768px) {
+  /* The calendar's parent flex container — horarios/dashboard.html
+     uses: <div class="flex flex-col lg:flex-row gap-6"> */
+
+  /* Calendar area: make it scrollable */
+  .h-\[600px\],
+  [class*="h-[600px]"] {
+    height: 400px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* FullCalendar internal elements */
+  .fc {
+    min-width: 580px; /* Force natural width so user swipes */
+  }
+
+  .fc .fc-col-header-cell-cushion {
+    font-size: 0.65rem !important;
+    padding: 4px 0 !important;
+  }
+
+  .fc .fc-timegrid-slot-label-cushion {
+    font-size: 0.6rem !important;
+  }
+
+  .fc-event-main {
+    font-size: 0.65rem !important;
+    padding: 1px 2px !important;
+  }
+
+  /* The left panel (horarios config) */
+  .w-full.lg\:w-80 {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .h-\[600px\],
+  [class*="h-[600px]"] {
+    height: 320px !important;
+  }
+}
+
+
+/* ── Punto 9: Carga Masiva > Calificaciones — horizontal scroll ──
+   The calif-wrapper uses max-width:720px and is centered.
+   On mobile, child elements (dropzones, forms) may overflow. */
+@media (max-width: 768px) {
+  .calif-wrapper {
+    max-width: 100% !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .calif-card {
+    overflow-x: hidden;
+    word-break: break-word;
+  }
+
+  /* Inline grids inside calificaciones forms */
+  .calif-card [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .calif-card [style*="display:flex"][style*="gap"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* 1. Matriz Documental - Fix card padding and button wrap */
+  .grid-cols-1 > .flex.items-center.justify-between.p-4 {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px !important;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .grid-cols-1 > .flex.items-center.justify-between.p-4 > div {
+    justify-content: center;
+  }
+  .grid-cols-1 > .flex.items-center.justify-between.p-4 .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* 2. Análisis Conductual - Header wrap and flex list items */
+  .card > .flex.items-center.justify-between.mb-6 {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .card > .flex.items-center.justify-between.mb-6 button {
+    width: auto;
+  }
+  #listaObservaciones > div, .card-body > div.flex.items-center {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Round Icon Buttons for Observaciones on Mobile */
+  .obs-btn {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-shrink: 0;
+  }
+  .obs-btn .obs-text {
+    display: none !important;
+  }
+  .obs-btn ion-icon {
+    margin: 0 !important;
+    font-size: 18px !important;
+  }
+  
+  .obs-ver {
+    background: #10B981 !important; /* Solid emerald */
+    color: #ffffff !important;
+  }
+  .obs-notificar {
+    background: #3B82F6 !important; /* Solid blue */
+    color: #ffffff !important;
+  }
+  .obs-eliminar {
+    background: #EF4444 !important; /* Solid red */
+    color: #ffffff !important;
+  }
+
+  /* 3. Módulo Académico (Calificaciones) - Allow horizontal scroll */
+  .card.overflow-hidden {
+    overflow: visible !important;
+  }
+  .card-body, .overflow-x-auto, .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+/* ── Punto 11: Remove search magnifying glass icon on mobile ── */
+@media (max-width: 1024px) {
+  .header-search-icon {
+    display: none !important;
+  }
+
+  .header-search-input {
+    padding-left: 14px !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   33. STITCH UI/UX MOBILE REDESIGN (Responsive Premium)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  :root[data-theme="dark"], body[data-theme="dark"] {
+    /* Quiet Luxury Colors */
+    --color-primary: #10b981 !important;
+    --color-secondary: #3b82f6 !important;
+    --color-surface: #131314 !important;
+    --color-surface-container: #201f20 !important;
+    --color-surface-container-high: #2a2a2b !important;
+    --color-surface-element: #1c1b1c !important; 
+    --color-border: rgba(255, 255, 255, 0.08) !important; 
+    --color-text-main: #e5e2e3 !important;
+    --color-text-secondary: #bbcabf !important;
+    --color-text-tertiary: #86948a !important;
+  }
+
+  /* Bottom Navigation Bar Container (Scrollable) */
+  .mobile-nav-container {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    z-index: 1000;
+    background: var(--color-surface); /* Adapts to light/dark mode */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--color-border);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
+
+  .mobile-bottom-nav {
+    display: flex !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    align-items: center;
+    height: 72px;
+    padding: 0 8px;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .mobile-bottom-nav::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+
+  /* Items and Groups */
+  .nav-item-group, .nav-item-snap {
+    position: relative;
+    scroll-snap-align: start;
+  }
+
+  .mobile-bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    font-family: 'Geist', 'Inter', sans-serif;
+    transition: all 0.2s ease;
+    padding: 6px 12px;
+    border-radius: 12px;
+    min-width: 68px; /* Ensure touch target size */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .mobile-bottom-nav .nav-item.active,
+  .mobile-bottom-nav .nav-item.active-popover {
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+  }
+
+  .mobile-bottom-nav .nav-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+
+  .mobile-bottom-nav .nav-item.active .nav-icon,
+  .mobile-bottom-nav .nav-item.active-popover .nav-icon {
+    font-variation-settings: 'FILL' 1;
+  }
+
+  .mobile-bottom-nav .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Popovers Wrapper - Safely outside of everything */
+  .nav-popovers-wrapper {
+    position: fixed;
+    bottom: 80px; /* Sits above the nav bar */
+    left: 0;
+    width: 100%;
+    z-index: 1010;
+    pointer-events: none;
+  }
+
+  @media (min-width: 1025px) {
+    .nav-popovers-wrapper {
+      display: none !important;
+    }
+  }
+
+  /* Popovers (Globos Emergentes) */
+  .nav-popover {
+    position: absolute;
+    bottom: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) translateY(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 200px;
+    white-space: nowrap;
+    pointer-events: auto;
+  }
+
+  /* Triangle pointer */
+  .nav-popover::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: var(--color-surface-container-high);
+    border-right: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav-popover.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .nav-popover a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--color-text-main);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+  }
+
+  .nav-popover a:active {
+    background: var(--color-surface-element);
+    color: var(--color-primary);
+  }
+
+  .nav-popover a .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--color-text-secondary);
+  }
+
+  .nav-popover a:active .material-symbols-outlined {
+    color: var(--color-primary);
+  }
+
+  /* Elevate AI button so it doesn't block bottom nav */
+  #ia-assistant-wrapper {
+    bottom: 100px !important;
+  }
+
+  /* Hide hamburger and make room for bottom nav */
+  .header-mobile-toggle {
+    display: none !important;
+  }
+  
+  .app-content {
+    padding-bottom: 100px !important; /* space for bottom nav + safe area */
+  }
+
+  /* Fix Sidebar Scroll on Mobile */
+  .sidebar {
+    overflow-y: auto !important;
+    max-height: 100vh !important;
+    padding-bottom: 80px !important; /* avoid overlapping with bottom nav if any */
+  }
+
+  /* Cards & Glassmorphism redesign for mobile */
+  .card {
+    background: var(--color-surface) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    box-shadow: none !important;
+  }
+
+  /* Revert Floating Action Button (FAB) to normal inline button */
+  .btn-primary.fab-mobile {
+    position: static !important;
+    width: auto !important;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--color-accent) !important;
+    color: #ffffff !important;
+  }
+  .btn-primary.fab-mobile .fab-icon {
+    display: inline-block !important;
+    margin-right: 4px;
+    font-size: 18px !important;
+  }
+  .btn-primary.fab-mobile .fab-text {
+    display: inline-block !important;
+    font-size: 14px;
+  }
+
+  /* Matriz Documental & Conduct Analysis layout fixes for Stitch UX */
+  .matriz-grid {
+    gap: 16px !important;
+  }
+  .doc-item {
+    background: var(--color-surface-container) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 12px !important;
+  }
+
+  /* ═══ MOBILE FULLSCREEN MENU ═══ */
+  .mobile-fullscreen-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background: var(--color-surface);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobile-fullscreen-menu.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .mfm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .mfm-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-main);
+  }
+
+  .mfm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 100px;
+  }
+
+  .mfm-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mfm-accordion-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px 20px;
+    background: var(--color-surface-container);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    color: var(--color-text-main);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .mfm-item:active, .mfm-accordion-btn:active {
+    background: var(--color-surface-element);
+  }
+
+  .mfm-item .material-symbols-outlined, 
+  .mfm-accordion-btn .material-symbols-outlined:not(.mfm-chevron) {
+    color: var(--color-accent);
+  }
+
+  .mfm-chevron {
+    color: var(--color-text-tertiary);
+    transition: transform 0.3s ease;
+  }
+
+  .mfm-accordion-btn.active .mfm-chevron {
+    transform: rotate(180deg);
+  }
+
+  .mfm-accordion-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+  }
+
+  .mfm-accordion-content.open {
+    max-height: 400px;
+    padding: 12px 0 8px 16px;
+  }
+
+  .mfm-accordion-content a {
+    padding: 12px 16px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 15px;
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .mfm-accordion-content a:active {
+    color: var(--color-accent);
+    border-left-color: var(--color-accent);
+    background: rgba(255,255,255,0.03);
+  }
+}
+
+/* Hide mobile-only elements on desktop (screens wider than 768px) */
+@media (min-width: 769px) {
+  .mobile-nav-container {
+    display: none !important;
+  }
+  .mobile-fullscreen-menu {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   34. PRINT — Ensure no responsive overrides leak to print
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  .sidebar,
+  .app-header,
+  .header-mobile-toggle,
+  .sidebar-overlay,
+  #asistente-panel,
+  #asistente-fab,
+  #ai-chat-wrapper,
+  .toast-container,
+  .customize-panel,
+  .customize-backdrop {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   19. CORRECCIONES RESPONSIVAS ADICIONALES (Móvil)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Aplicar al contenedor del formulario de crear horario */
+.contenedor-crear-horario {
+    width: 100% !important;
+    max-width: 500px; /* Tamaño máximo en pantallas grandes */
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* Ajuste para inputs dentro del formulario en pantallas pequeñas */
+@media (max-width: 576px) {
+    .contenedor-crear-horario {
+        padding: 10px;
+    }
+    .contenedor-crear-horario input, 
+    .contenedor-crear-horario select {
+        width: 100% !important; /* Forzar que los campos ocupen todo el ancho disponible */
+    }
+}
+
+/* Asegurar que el contenedor de Foto + Nombre no rompa la línea */
+.celda-usuario-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap; /* Evita que el texto salte hacia abajo */
+}
+
+.celda-usuario-info .nombre-texto {
+    white-space: normal; /* Si es extremadamente largo, que rompa pero con espacio */
+    word-break: break-word;
+}
+
+/* Hacer la tabla responsiva si hay muchas columnas en el admin */
+@media (max-width: 768px) {
+    .tabla-admin-usuarios-contenedor {
+        overflow-x: auto; /* Permite scroll horizontal suave solo en la tabla */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Darle un ancho mínimo interno a la columna del nombre para que no se aplaste */
+    .columna-nombre-usuario {
+        min-width: 200px !important; 
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   20. PARCHE DE FUERZA BRUTA PARA ANULAR JS (Móvil)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 576px) {
+    .contenedor-crear-horario, 
+    .card, 
+    .modal-content { 
+        width: 100% !important;
+        min-width: 0 !important;   /* Mata cualquier min-width en px heredado u oculto */
+        max-width: 92vw !important; /* Deja un pequeño margen de respiro en los bordes del teléfono */
+        transform: none !important; /* Evita desvíos si JS calcula mal el centrado por pixeles */
+        left: 0 !important;
+        right: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Evitar que elementos hijos fuercen al contenedor a estirarse */
+    .contenedor-crear-horario * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Forzar a la fila de botones o grupos a romper hacia abajo si no caben */
+    .d-flex, .form-row, .row, .flex, .flex-row {
+        flex-wrap: wrap !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   21. EXPANDABLE MOBILE SEARCH BAR WITH HISTORY (Exclusive to Mobile)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  /* Ensure mobile header never wraps its children */
+  .app-header-mobile {
+    flex-wrap: nowrap !important;
+  }
+
+  /* Search Container is default collapsed as a button */
+  #mobile-search-container {
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 9999px !important;
+    cursor: pointer !important;
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border-subtle) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden !important;
+    min-width: unset !important;
+    flex-wrap: nowrap !important; /* Fix wrapping issue with form and icon */
+  }
+
+  /* When search is collapsed, hide form/input/close button */
+  #mobile-search-container form {
+    display: none !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    transition: opacity 0.2s ease !important;
+  }
+
+  #mobile-search-container.expanded {
+    width: 100% !important;
+    max-width: 220px !important; /* expands slightly, preserving right icons */
+    flex-grow: 0 !important;
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    padding: 0 16px !important;
+    justify-content: flex-start !important;
+    border-radius: 9999px !important;
+  }
+
+  #mobile-search-container.expanded form {
+    display: flex !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+  
+  /* Fix input styling to remove green border/outline and positioning */
+  #mobileSearchInput, #mobileSearchInput:focus, #mobileSearchInput:active {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding-left: 8px !important; /* Space between icon and text */
+    flex-grow: 1 !important;
+  }
+
+  /* Hide IA Chat button when search is active */
+  .mobile-search-active #mobile-ia-btn {
+    display: none !important;
+  }
+
+  /* Notice: #mobile-header-spacer is kept visible so right-side icons don't move */
+
+  /* Mobile Search Dropdown Styles */
+  .mobile-search-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 20px !important;
+    right: 20px !important;
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border-subtle) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    z-index: 99999 !important;
+    max-height: 350px !important;
+    overflow-y: auto !important;
+    display: none !important;
+    padding: 12px 0 !important;
+  }
+
+  .mobile-search-dropdown.open {
+    display: block !important;
+  }
+
+  .mobile-search-section-title {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: var(--color-text-secondary) !important;
+    padding: 8px 16px !important;
+    border-bottom: 1px solid var(--color-border-subtle) !important;
+    margin-bottom: 4px !important;
+  }
+
+  .mobile-search-history-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 8px 16px !important;
+    color: var(--color-text-primary) !important;
+    font-size: 14px !important;
+    transition: background-color 0.2s ease !important;
+  }
+
+  .mobile-search-history-item:hover {
+    background-color: var(--color-bg-secondary) !important;
+  }
+
+  .mobile-search-history-item-text {
+    flex-grow: 1 !important;
+    cursor: pointer !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-search-history-delete {
+    color: var(--color-text-secondary) !important;
+    cursor: pointer !important;
+    font-size: 18px !important;
+    padding: 4px !important;
+    border-radius: 50% !important;
+    transition: background-color 0.2s ease, color 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .mobile-search-history-delete:hover {
+    background-color: rgba(220, 38, 38, 0.1) !important;
+    color: var(--color-error) !important;
+  }
+
+  .mobile-search-result-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 10px 16px !important;
+    text-decoration: none !important;
+    transition: background-color 0.2s ease !important;
+  }
+
+  .mobile-search-result-item:hover {
+    background-color: var(--color-bg-secondary) !important;
+  }
+}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+  <meta charset='utf-8'>
+  <title>Autorización</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin-top: 0.5in;
+      margin-bottom: 0.5in;
+      margin-left: 0.7in;
+      margin-right: 0.7in;
+    }
+
+    body {
+      font-family: "Times New Roman", serif;
+      background-color: #ffffff;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+
+    .logo-cell { width: 20%; vertical-align: middle; text-align: left; }
+    .logo-img { width: 90px; height: auto; }
+    .header-text-cell { width: 60%; vertical-align: middle; text-align: center; }
+    .empty-cell { width: 20%; }
+
+    .header-title {
+      font-size: 10.5pt;
+      font-weight: bold;
+      line-height: 1.2;
+      margin: 0;
+      text-align: center;
+    }
+
+    .header-subtitle {
+      font-size: 9pt;
+      font-weight: normal;
+      line-height: 1.2;
+      margin: 0;
+      text-align: center;
+    }
+
+    /* Estilos nuevos para las firmas perfectamente alineadas */
+    .signature-table {
+      width: 100%;
+      margin-top: 50px;
+      border-collapse: collapse;
+    }
+
+    .signature-cell {
+      width: 50%;
+      text-align: center;
+      vertical-align: bottom;
+    }
+  </style>
+</head>
+
+<body>
+  <table class="header-table">
+    <tr>
+      <td class="logo-cell">
+        <img src="{{ logo_path }}" class="logo-img" alt="Logo" />
+      </td>
+      <td class="header-text-cell">
+        <div class="header-title">
+          REPÚBLICA BOLIVARIANA DE VENEZUELA<br />
+          MINISTERIO DEL PODER POPULAR PARA LA EDUCACIÓN<br />
+          UEN. APACUANA
+        </div>
+        <div class="header-subtitle">
+          CHARALLAVE – ESTADO MIRANDA<br />
+          CÓDIGO DEA: OD24061508
+        </div>
+      </td>
+      <td class="empty-cell"></td>
+    </tr>
+  </table>
+
+  <p style='text-align: center;'><strong>AUTORIZACIÓN</strong></p>
+  
+  <div style='height: 20px;'></div>
+  
+  <p style='text-align: justify;'>
+    La presente es para hacer constancia de que el (la) estudiante <strong>{{ nombres }} {{ apellidos }}</strong>, cursante del <strong>{{ grado_ano }} año</strong> sección <strong>{{ seccion|default:"-" }}</strong>, posee el permiso de su representante <strong>{{ representante_nombre }}</strong>, titular de la Cédula de Identidad N° <strong>{{ representante_cedula }}</strong>, para participar activamente en las actividades culturales dentro y fuera de la institución educativa.
+  </p>
+
+  <table class="signature-table">
+    <tr>
+      <td class="signature-cell">
+        <p>_____________________________</p>
+        <p></strong><br>REPRESENTANTE</p>
+      </td>
+      <td class="signature-cell">
+        <p>_____________________________</p>
+        <p></strong><br>DIRECTOR(A)</p>
+      </td>
+    </tr>
+  </table>
+
+  <div style='height: 60px;'></div>
+  <p style='text-align: center; font-size: 12px;'>Nota: esta constancia se expide sin errores ni enmiendas.</p>
+  
+</body>
+</html>

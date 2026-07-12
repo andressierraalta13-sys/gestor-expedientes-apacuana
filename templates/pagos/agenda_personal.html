@@ -1,0 +1,503 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% block content %}
+<div class="p-6 relative">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 drop-shadow gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-black dark:text-text-main drop-shadow-md pb-1">Nómina del Personal</h2>
+            <p class="text-text-muted text-sm mt-1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Gestiona al personal, registra pagos de sueldos y consulta el historial de nómina.
+                <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+                </button>
+            </p>
+        </div>
+        <div class="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto md:justify-end">
+            <div class="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
+                <button onclick="document.getElementById('modalAddPersonal').showModal()"
+                    class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-white font-semibold rounded-lg shadow transition flex-1 sm:flex-none">Agregar Personal</button>
+                <button onclick="abrirModalPagosMasivos()"
+                    class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-white font-semibold rounded-lg shadow transition flex-1 sm:flex-none">Pagar Seleccionados</button>
+            </div>
+            <input type="text" id="buscadorPersonal" onkeyup="buscarEnNomina()" placeholder="Buscar nombre o cédula..."
+                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-border bg-white/50 dark:bg-surface-element dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500 dark:placeholder-gray-400 w-full sm:w-auto order-2 sm:order-1 min-w-[250px]">
+        </div>
+    </div>
+
+    <div
+        class="bg-white/40 dark:bg-surface-element backdrop-blur-xl border border-border shadow-xl rounded-2xl p-6 overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-white/30 dark:bg-surface-element text-gray-700 dark:text-gray-300 border-b border-border">
+                <tr>
+                    <th class="p-3 w-10"><input type="checkbox" onchange="toggleAll(this)" id="checkAll"></th>
+                    <th class="p-3">Personal</th>
+                    <th class="p-3">Cargo</th>
+                    <th class="p-3">¿En Gestión Docente?</th>
+                    <th class="p-3">Antigüedad</th>
+                    <th class="p-3 text-center">Historial de pagos</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-personal">
+                {% for persona in empleados %}
+                <tr class="border-b border-border hover:bg-surface-element transition group text-gray-800 dark:text-gray-300"
+                    data-id="{{ persona.id }}" data-nombre="{{ persona.nombre_completo }}"
+                    data-salario="{{ persona.salario_base }}">
+
+                    <td class="p-3"><input type="checkbox" class="chk-empleado" value="{{ persona.id }}"></td>
+                    <td class="p-3 font-semibold">{{ persona.nombre_completo }} <span
+                            class="text-xs text-gray-500 block">V-{{persona.cedula|formato_cedula}}</span></td>
+                    <td class="p-3">{{ persona.cargo }}</td>
+                    <td class="p-3">
+                        {% if persona.esta_en_gestion_docentes %}
+                        <span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded border border-emerald-500/20">SÍ</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-slate-500/10 text-slate-400 text-[10px] font-bold rounded border border-slate-500/20">NO</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-3 text-sm text-gray-600 dark:text-gray-400 font-mono calc-antiguedad"
+                        data-fecha="{{ persona.fecha_ingreso|date:'Y-m-d' }}">Calculando...</td>
+                    <td class="p-3 text-center">
+                        <button onclick="verHistorial({{ persona.id }}, '{{ persona.nombre_completo }}')"
+                            class="bg-slate-600 hover:bg-slate-700 dark:bg-surface-element dark:hover:bg-white/20 dark:hover:border-emerald-500 dark:hover:text-emerald-400 text-white dark:text-gray-300 px-3 py-1 rounded shadow transition text-sm flex items-center gap-1 mx-auto border border-slate-500 dark:border-border">
+                            <ion-icon name="time-outline"></ion-icon> Ver
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="p-4 text-center">No hay personal activo.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Agregar -->
+<dialog id="modalAddPersonal"
+    class="m-auto bg-white/80 dark:bg-black/80 backdrop-blur-xl p-6 rounded-2xl shadow-window w-[500px] border border-border text-gray-800 dark:text-gray-200">
+    <h3 class="font-bold text-xl mb-4">Registro de Empleado</h3>
+    <form id="formAgregar" onsubmit="event.preventDefault(); guardarPersonal();">
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+                <label class="text-sm">Nombres y Apellidos</label>
+                <input required type="text" id="add_nombre"
+                    class="w-full bg-white/50 dark:bg-surface-element p-2 rounded border">
+            </div>
+            <div>
+                <label class="text-sm">Cédula</label>
+                <div style="display: flex; border: 1px solid var(--color-border); border-radius: 0.25rem; overflow: hidden; background: transparent;" class="bg-white/50 dark:bg-surface-element border-gray-200 dark:border-border">
+                    <span style="padding: 0 12px; font-weight: 600; color: inherit; background: rgba(0,0,0,0.05); border-right: 1px solid inherit; display: flex; align-items: center;" class="border-gray-200 dark:border-border text-gray-500 dark:text-gray-400">V-</span>
+                    <input required type="text" id="add_cedula"
+                        class="w-full bg-transparent p-2 focus:outline-none" style="border: none; border-radius: 0; outline: none; width: 100%;">
+                </div>
+            </div>
+            <div>
+                <label class="text-sm">Cargo</label>
+                <select required id="add_cargo" class="w-full bg-transparent p-2 rounded border">
+                    <option class="text-black" value="Director">Director</option>
+                    <option class="text-black" value="Sub-Director">Sub-Director</option>
+                    <option class="text-black" value="Administración">Administración</option>
+                    <option class="text-black" value="Docente">Docente</option>
+                    <option class="text-black" value="Limpieza">Est. Limpieza</option>
+                    <option class="text-black" value="Cocina">Cocina</option>
+                    <option class="text-black" value="Mantenimiento">Mantenimiento</option>
+                    <option class="text-black" value="Psicólogo">Psicólogo</option>
+                    <option class="text-black" value="Prefecto">Prefecto</option>
+                    <option class="text-black" value="Coordinador">Coordinador</option>
+                    <option class="text-black" value="Secretaria">Secretaria</option>
+                    <option class="text-black" value="Enfermería">Enfermería</option>
+                    <option class="text-black" value="Transporte">Transporte</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm">Fecha Ingreso</label>
+                <input required type="date" id="add_fecha"
+                    class="w-full bg-white/50 dark:bg-surface-element p-2 rounded border">
+            </div>
+            <div>
+                <label class="text-sm">¿Está agregado en la gestión de docentes?</label>
+                <select required id="add_docente_gest" class="w-full bg-transparent p-2 rounded border">
+                    <option class="text-black" value="false">No</option>
+                    <option class="text-black" value="true">Sí</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+            <button type="button" onclick="document.getElementById('modalAddPersonal').close()"
+                class="px-4 py-2 text-gray-400">Cancelar</button>
+            <button type="submit" class="px-4 py-2 bg-indigo-500 rounded text-text-main font-bold">Guardar</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Modal Pagos Múltiples -->
+<dialog id="modalPagos"
+    class="m-auto bg-[#111417]/90 backdrop-blur-xl p-6 rounded-2xl shadow-window w-[900px] border border-border text-text-main">
+    <div class="flex justify-between items-start mb-2">
+        <div>
+            <h3 class="font-bold text-xl text-emerald-400">Pagar a Seleccionados</h3>
+            <p class="text-sm text-gray-400">Ajusta los saldos y calcula la tasa a (BCV) con el monto
+                provisto en Bs.</p>
+        </div>
+        <div id="tasasDelDia"
+            class="px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700 font-mono text-sm shadow-inner text-emerald-300">
+            <!-- Tasa vía JS -->
+        </div>
+    </div>
+
+    <div class="max-h-64 overflow-y-auto custom-scrollbar mb-4" id="contenedorPagos">
+        <!-- Renderizado Vía JS -->
+    </div>
+
+    <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-border">
+        <button onclick="document.getElementById('modalPagos').close()"
+            class="px-4 py-2 text-gray-400">Cancelar</button>
+        <button onclick="ejecutarPagos()"
+            class="px-4 py-2 bg-emerald-500 rounded text-text-main font-bold shadow-lg hover:bg-emerald-600">Procesar
+            Nómina</button>
+    </div>
+</dialog>
+
+<!-- Modal Historial -->
+<dialog id="modalHistorial"
+    class="m-auto bg-[#111417]/95 backdrop-blur-2xl p-6 rounded-2xl shadow-window w-[600px] border border-border text-text-main">
+    <div class="flex justify-between items-start mb-4 pb-2 border-b border-border">
+        <div>
+            <h3 class="font-bold text-xl text-primary" id="historialNombre">Estado de Cuenta</h3>
+            <p class="text-sm text-gray-400">Últimos 2 meses de nómina.</p>
+        </div>
+        <button onclick="document.getElementById('modalHistorial').close()"
+            class="text-gray-400 hover:text-text-main transition">
+            <ion-icon name="close-circle-outline" class="text-3xl"></ion-icon>
+        </button>
+    </div>
+
+    <div class="max-h-80 overflow-y-auto custom-scrollbar" id="contenedorHistorial">
+        <!-- Renderizado Vía JS -->
+    </div>
+</dialog>
+
+<div style="display:none;">{% csrf_token %}</div>
+<script>
+    // 1. Antigüedad en vivo
+    document.querySelectorAll('.calc-antiguedad').forEach(el => {
+        const d = new Date(el.dataset.fecha);
+        const hoy = new Date();
+        if (isNaN(d.getTime())) return;
+        let dif = new Date(hoy - d);
+        let a = dif.getUTCFullYear() - 1970;
+        let m = dif.getUTCMonth();
+        let d2 = dif.getUTCDate() - 1;
+        el.innerText = `${a} años, ${m} meses, ${d2} días`;
+    });
+
+    // Buscador en tiempo real
+    function buscarEnNomina() {
+        let input = document.getElementById('buscadorPersonal').value.toLowerCase();
+        let filas = document.querySelectorAll('#tabla-personal tr');
+        filas.forEach(fila => {
+            if (fila.children.length > 1) { // Evita ocultar mensajes de "no hay datos" si estuvieran mal estructurados
+                let texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(input) ? '' : 'none';
+            }
+        });
+    }
+
+    // 2. Control de selección (checkboxes)
+    function toggleAll(source) {
+        document.querySelectorAll('.chk-empleado').forEach(chk => chk.checked = source.checked);
+    }
+
+    // 3. Crear empleado en backend
+    async function guardarPersonal() {
+        const data = {
+            nombre_completo: document.getElementById('add_nombre').value,
+            cedula: document.getElementById('add_cedula').value,
+            cargo: document.getElementById('add_cargo').value,
+            fecha_ingreso: document.getElementById('add_fecha').value,
+            esta_en_gestion_docentes: document.getElementById('add_docente_gest').value === 'true'
+        };
+        try {
+            let payload = await fetch("{% url 'api_agregar_personal' %}", {
+                method: "POST", headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify(data)
+            });
+            if (payload.ok) {
+                location.reload();
+            } else {
+                let rs = await payload.text();
+                alert("Ocurrió un error: " + rs);
+            }
+        } catch (err) {
+            alert("Error de red: " + err);
+        }
+    }
+
+    // Variables Globales de Tasas
+    let tasasVigentes = { Dolar: null, Euro: null };
+
+    // 4. Armar Modal de Pagos Múltiples y llamar la API
+    async function abrirModalPagosMasivos() {
+        const seleccionados = Array.from(document.querySelectorAll('.chk-empleado:checked'));
+        if (seleccionados.length === 0) return alert("Selecciona al menos un empleado");
+
+        // Obtener tasas
+        const divTasas = document.getElementById('tasasDelDia');
+        divTasas.innerHTML = "Cargando tasas...";
+        try {
+            let rs = await fetch("https://ve.dolarapi.com/v1/cotizaciones");
+            let d = await rs.json();
+            // dolarapi general devuelve array o objeto
+            if (Array.isArray(d)) {
+                // Extraer promedios asumiento estructura array
+                d.forEach(i => {
+                    let n = (i.nombre || "").toLowerCase();
+                    let m = (i.moneda || "").toLowerCase();
+                    // Identificar Dólar
+                    if (m.includes('usd') || n.includes('dolar') || n.includes('dólar')) {
+                        if (!tasasVigentes.Dolar) tasasVigentes.Dolar = i.promedio || i.precio;
+                    }
+                    // Identificar Euro
+                    if (m.includes('eur') || n.includes('euro')) {
+                        if (!tasasVigentes.Euro) tasasVigentes.Euro = i.promedio || i.precio;
+                    }
+                });
+            } else {
+                // Estructura de diccionario (ej. usd, eur, dolar, euro)
+                tasasVigentes.Dolar = (d.usd || d.dolar)?.promedio || (d.usd || d.dolar)?.precio;
+                tasasVigentes.Euro = (d.eur || d.euro)?.promedio || (d.eur || d.euro)?.precio;
+            }
+
+            if (tasasVigentes.Dolar) {
+                divTasas.innerHTML = `Dólar: ${tasasVigentes.Dolar} Bs &nbsp;&nbsp;|&nbsp;&nbsp; Euro: ${tasasVigentes.Euro || 'N/A'} Bs`;
+            } else {
+                divTasas.innerHTML = `No se pudo obtener la tasa actual.`;
+            }
+
+        } catch (e) {
+            divTasas.innerHTML = `No se pudo obtener la tasa actual.`;
+        }
+
+        const cont = document.getElementById('contenedorPagos');
+        cont.innerHTML = ''; // Limpiar previo
+
+        seleccionados.forEach(c => {
+            const tr = c.closest('tr');
+            // HTML inyectado con los selectores de moneda a usar para calcular equivalente
+            const htm = `
+        <div class="grid grid-cols-5 gap-2 items-start mb-2 p-3 bg-surface-element rounded border border-border payload-empleado" data-id="${tr.dataset.id}">
+            <div class="col-span-2 text-sm font-bold truncate self-center">${tr.dataset.nombre}</div>
+            
+            <div class="col-span-1">
+                <input type="text" value="" class="w-full text-black p-1 rounded i-monto" placeholder="Monto (Bs)" oninput="window.maskCurrency(this); calcEquiv(this)">
+                <div class="mt-1 text-xs text-emerald-400 font-semibold cont-equivalente"></div>
+            </div>
+            
+            <div class="col-span-1">
+                <select class="w-full text-black p-1 rounded i-metodo" onchange="toggleTasaSelector(this)">
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="PAGO_MOVIL">Pago Móvil</option>
+                    <option value="ZELLE">Zelle</option>
+                    <option value="BINANCE">Binance</option>
+                    <option value="PAYPAL">PayPal</option>
+                </select>
+                <!-- Selector dinámico para la tasa -->
+                <select class="w-full text-black p-1 rounded mt-1 hidden i-tasa-ref" onchange="calcEquiv(this)">
+                    <option value="Dolar">Ref: USD</option>
+                    <option value="Euro">Ref: EUR</option>
+                </select>
+            </div>
+            
+            <div class="col-span-1">
+                <input type="text" placeholder="# Ref/Obs" class="w-full text-black p-1 rounded i-ref">
+            </div>
+        </div>`;
+            cont.innerHTML += htm;
+        });
+
+        document.getElementById('modalPagos').showModal();
+    }
+
+    function toggleTasaSelector(el) {
+        let div = el.closest('.payload-empleado');
+        let selMetodo = el.value;
+        let selTasa = div.querySelector('.i-tasa-ref');
+
+        // Mostramos el selector de moneda si es Transferencia o Pago Móvil
+        if (selMetodo === 'TRANSFERENCIA' || selMetodo === 'PAGO_MOVIL') {
+            selTasa.classList.remove('hidden');
+        } else {
+            selTasa.classList.add('hidden');
+        }
+        calcEquiv(el);
+    }
+
+    function calcEquiv(el) {
+        let div = el.closest('.payload-empleado');
+        let inputMonto = div.querySelector('.i-monto').value;
+        let montoNum = window.unmaskCurrency(inputMonto);
+        let selMetodo = div.querySelector('.i-metodo').value;
+        let selTasaStr = div.querySelector('.i-tasa-ref').value;
+        let contEq = div.querySelector('.cont-equivalente');
+
+        if (!montoNum || (selMetodo !== 'TRANSFERENCIA' && selMetodo !== 'PAGO_MOVIL')) {
+            contEq.innerHTML = '';
+            return;
+        }
+
+        let tasaAUsar = selTasaStr === 'Dolar' ? tasasVigentes.Dolar : tasasVigentes.Euro;
+
+        if (!tasaAUsar) {
+            contEq.innerHTML = 'Sin acceso a tasa';
+            return;
+        }
+
+        let equiv = (montoNum / tasaAUsar);
+        let icon = selTasaStr === 'Dolar' ? 'USD' : 'EUR';
+        contEq.innerHTML = `Equivalente: ${window.formatCurrency(equiv)} ${icon}`;
+    }
+
+    async function ejecutarPagos() {
+        let pagos = {};
+        document.querySelectorAll('.payload-empleado').forEach(el => {
+            pagos[el.dataset.id] = {
+                monto: window.unmaskCurrency(el.querySelector('.i-monto').value),
+                metodo: el.querySelector('.i-metodo').value,
+                comprobante: el.querySelector('.i-ref').value
+            }
+        });
+
+        try {
+            let res = await fetch("{% url 'api_pago_masivo' %}", {
+                method: "POST", headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ pagos: pagos })
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                let msg = await res.text();
+                alert("Error procesando pago masivo: " + msg);
+            }
+        } catch (err) {
+            alert("Error de red: " + err);
+        }
+    }
+
+    // 5. Historial de Pagos
+    async function verHistorial(idEmpleado, nombre) {
+        document.getElementById('historialNombre').innerText = `Historial: ${nombre}`;
+        const cont = document.getElementById('contenedorHistorial');
+        cont.innerHTML = '<div class="text-center p-4 text-emerald-400">Cargando...</div>';
+        document.getElementById('modalHistorial').showModal();
+
+        try {
+            let res = await fetch(`/pagos/api/personal/${idEmpleado}/historial/`);
+            if (!res.ok) {
+                cont.innerHTML = '<div class="text-center p-4 text-error">Error al cargar historial</div>';
+                return;
+            }
+            let data = await res.json();
+
+            if (data.historial.length === 0) {
+                cont.innerHTML = '<div class="text-center p-6 text-gray-500 italic">No hay pagos registrados recientes.</div>';
+                return;
+            }
+
+            cont.innerHTML = '';
+            data.historial.forEach(p => {
+                const esPagado = true; // Por defecto siempre será verde en esta previsualización a menos que modifiquemos
+                const colorMonto = 'text-emerald-400';
+                const colorIcono = 'bg-emerald-500/20 text-emerald-400';
+
+                let htm = `
+            <div class="flex justify-between items-center bg-surface-element border border-border p-3 mb-2 rounded-xl hover:bg-surface-element transition">
+                <div class="flex gap-4 items-center">
+                    <div class="w-10 h-10 ${colorIcono} rounded-full flex items-center justify-center font-bold text-sm">
+                        Bs
+                    </div>
+                    <div>
+                        <div class="font-bold text-sm tracking-wide text-text-main">${p.metodo}</div>
+                        <div class="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
+                            <ion-icon name="calendar-outline"></ion-icon> ${p.fecha} &bull; Ref: ${p.comprobante}
+                        </div>
+                        <div class="text-[10px] text-gray-500 uppercase mt-0.5">${p.observaciones}</div>
+                    </div>
+                </div>
+                <div class="${colorMonto} font-bold tracking-wider">
+                    +${window.formatCurrency(p.monto)}
+                </div>
+            </div>`;
+                cont.innerHTML += htm;
+            });
+
+        } catch (err) {
+            cont.innerHTML = '<div class="text-center p-4 text-error">Error de red al consultar</div>';
+        }
+    }
+
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Nómina del Personal</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">groups</span> 1. Registrar al personal
+                </h4>
+                <p class="text-xs">Pulsa <strong>Agregar Personal</strong> para incorporar un nuevo empleado a la nómina. Completa sus datos:
+                    <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                        <li><strong>Nombres y Apellidos</strong> y <strong>Cédula</strong> (el prefijo V- se agrega automáticamente).</li>
+                        <li><strong>Cargo</strong>: selecciona el rol (Director, Docente, Cocina, Mantenimiento, etc.).</li>
+                        <li><strong>Fecha de Ingreso</strong>: con ella el sistema calcula la antigüedad en años, meses y días de forma automática.</li>
+                        <li><strong>¿Está en la gestión de docentes?</strong>: indica si el empleado ya figura en el módulo docente.</li>
+                    </ul>
+                </p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">payments</span> 2. Pagar la nómina
+                </h4>
+                <p class="text-xs">Marca con la casilla a los empleados que deseas pagar (puedes usar la casilla del encabezado para <strong>seleccionar todos</strong>) y pulsa <strong>Pagar Seleccionados</strong>. En la ventana de pago:
+                    <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                        <li>Escribe el <strong>monto en bolívares (Bs)</strong> para cada persona.</li>
+                        <li>Elige el <strong>método de pago</strong>: Efectivo, Transferencia, Pago Móvil, Zelle, Binance o PayPal.</li>
+                        <li>En Transferencia o Pago Móvil se muestra la <strong>tasa de referencia (USD o EUR)</strong> y el sistema calcula el equivalente en divisas usando la tasa del día (BCV / DolarAPI).</li>
+                        <li>Agrega el <strong># de referencia u observación</strong> y pulsa <strong>Procesar Nómina</strong>.</li>
+                    </ul>
+                </p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">history</span> 3. Consultar el historial de pagos
+                </h4>
+                <p class="text-xs">En la columna <strong>Historial de pagos</strong> pulsa <strong>Ver</strong> para abrir el estado de cuenta del empleado. Allí se muestran los <strong>últimos 2 meses de nómina</strong> con el método, la fecha, la referencia y el monto de cada pago.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">search</span> 4. Buscar dentro de la nómina
+                </h4>
+                <p class="text-xs">Usa el campo <strong>Buscar nombre o cédula</strong> en la parte superior para filtrar la lista en tiempo real. La etiqueta <strong>¿En Gestión Docente?</strong> indica con <strong>SÍ</strong> o <strong>NO</strong> si la persona está vinculada al módulo de docentes.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1039 @@
+{% extends "base.html" %}
+{% block title %}Observabilidad | Dev Console{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<style>
+  /* ── Variables del tema de observabilidad ── */
+  :root {
+    --obs-cpu:    #6366f1;
+    --obs-ram:    #8b5cf6;
+    --obs-req:    #06b6d4;
+    --obs-err:    #ef4444;
+    --obs-lat:    #f59e0b;
+    --obs-ok:     #10b981;
+    --obs-warn:   #f59e0b;
+    --obs-crit:   #ef4444;
+    --term-bg:    #0b0e14;
+    --term-text:  #e2e8f0;
+  }
+  /* Scrollbar delgada */
+  .obs-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+  .obs-scroll::-webkit-scrollbar-track { background: transparent; }
+  .obs-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+  /* Tabs */
+  .obs-tab { transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .obs-tab:hover { background: rgba(255,255,255,0.03); }
+  .obs-tab.active { background: rgba(255,255,255,0.06); color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+  /* Gráficas */
+  .chart-wrap { position: relative; height: 160px; }
+  /* Terminal */
+  .term-line { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; line-height: 1.55; padding: 1px 0; }
+  .term-ERROR   { color: #f87171; }
+  .term-WARNING { color: #fbbf24; }
+  .term-INFO    { color: #60a5fa; }
+  .term-DEBUG   { color: #6b7280; }
+  .term-SQL     { color: #34d399; }
+  .term-AUTH    { color: #a78bfa; }
+  .term-API     { color: #38bdf8; }
+  /* Pulse dot */
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+  .pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+  /* Glow badge */
+  .badge-crit { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
+  .badge-warn { background:rgba(245,158,11,.15); color:#fbbf24; border:1px solid rgba(245,158,11,.3); }
+  .badge-ok   { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+  /* Tablas */
+  .audit-row:hover { background: rgba(255,255,255,.03); }
+</style>
+
+<div class="max-w-[1600px] mx-auto space-y-4">
+
+  <!-- ═══ HEADER ═════════════════════════════════════════════════════════════ -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <h2 class="font-headline font-extrabold text-2xl tracking-tight text-text-main flex items-center gap-3">
+        <span class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <ion-icon name="pulse-outline" class="text-xl"></ion-icon>
+        </span>
+        <span class="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">Observabilidad Profesional</span>
+      </h2>
+      <p class="text-xs text-text-muted mt-1 ml-12">DevOps Console — {{ system_info.os }} · Python {{ system_info.python_version }} · {{ system_info.db_engine }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <div id="pulse-indicator" class="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+        <span id="system-status-text">Online</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ KPI CARDS (siempre visibles) ══════════════════════════════════════ -->
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+    <!-- CPU -->
+    <div class="lg:col-span-2 bg-surface-element rounded-3xl p-5 flex items-center gap-4 shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+      <div class="absolute -inset-2 bg-indigo-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 flex-shrink-0 relative z-10 shadow-inner">
+        <ion-icon name="speedometer-outline" class="text-2xl"></ion-icon>
+      </div>
+      <div class="min-w-0 relative z-10">
+        <p class="text-[10px] text-text-muted uppercase tracking-widest font-bold">CPU</p>
+        <p class="text-3xl font-black text-text-main font-mono tracking-tight mt-0.5" id="kpi-cpu">{{ system_info.cpu_percent }}%</p>
+      </div>
+    </div>
+    <!-- RAM -->
+    <div class="lg:col-span-2 bg-surface-element rounded-3xl p-5 flex items-center gap-4 shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+      <div class="absolute -inset-2 bg-violet-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400 flex-shrink-0 relative z-10 shadow-inner">
+        <ion-icon name="hardware-chip-outline" class="text-2xl"></ion-icon>
+      </div>
+      <div class="min-w-0 relative z-10">
+        <p class="text-[10px] text-text-muted uppercase tracking-widest font-bold">RAM Proceso</p>
+        <p class="text-3xl font-black text-text-main font-mono tracking-tight mt-0.5" id="kpi-ram">{{ system_info.ram_proceso_mb }}MB</p>
+      </div>
+    </div>
+    <!-- Req/min -->
+    <div class="lg:col-span-2 bg-surface-element rounded-3xl p-5 flex items-center gap-4 shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+      <div class="absolute -inset-2 bg-cyan-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 flex-shrink-0 relative z-10 shadow-inner">
+        <ion-icon name="flash-outline" class="text-2xl"></ion-icon>
+      </div>
+      <div class="min-w-0 relative z-10">
+        <p class="text-[10px] text-text-muted uppercase tracking-widest font-bold">Req / min</p>
+        <p class="text-3xl font-black text-text-main font-mono tracking-tight mt-0.5" id="kpi-req">—</p>
+      </div>
+    </div>
+    <!-- Errores -->
+    <div class="lg:col-span-2 bg-surface-element rounded-3xl p-5 flex items-center gap-4 shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden">
+      <div class="absolute -inset-2 bg-red-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div class="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 flex-shrink-0 relative z-10 shadow-inner">
+        <ion-icon name="alert-circle-outline" class="text-2xl"></ion-icon>
+      </div>
+      <div class="min-w-0 relative z-10">
+        <p class="text-[10px] text-text-muted uppercase tracking-widest font-bold">Errores 500</p>
+        <p class="text-3xl font-black text-text-main font-mono tracking-tight mt-0.5" id="kpi-err">—</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NAVIGATION TABS ════════════════════════════════════════════════════ -->
+  <div class="flex gap-2 overflow-x-auto obs-scroll bg-surface-element p-1.5 rounded-2xl shadow-inner mb-6">
+    <button onclick="switchTab('metricas')" id="tab-metricas" class="obs-tab active px-5 py-2.5 text-sm font-semibold text-indigo-400 flex items-center gap-2 whitespace-nowrap rounded-xl">
+      <ion-icon name="stats-chart-outline"></ion-icon> Métricas
+    </button>
+    <button onclick="switchTab('logs')" id="tab-logs" class="obs-tab px-5 py-2.5 text-sm font-semibold text-text-muted hover:text-text-main flex items-center gap-2 whitespace-nowrap rounded-xl">
+      <ion-icon name="terminal-outline"></ion-icon> Logs en Vivo
+      <span id="logs-badge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 shadow-sm border-none">LIVE</span>
+    </button>
+    <button onclick="switchTab('anomalias')" id="tab-anomalias" class="obs-tab px-5 py-2.5 text-sm font-semibold text-text-muted hover:text-text-main flex items-center gap-2 whitespace-nowrap rounded-xl">
+      <ion-icon name="warning-outline"></ion-icon> Anomalías
+      <span id="anomalias-count" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 shadow-sm border-none">0</span>
+    </button>
+    <button onclick="switchTab('auditoria')" id="tab-auditoria" class="obs-tab px-5 py-2.5 text-sm font-semibold text-text-muted hover:text-text-main flex items-center gap-2 whitespace-nowrap rounded-xl">
+      <ion-icon name="shield-checkmark-outline"></ion-icon> Auditoría Técnica
+    </button>
+    <button onclick="switchTab('herramientas')" id="tab-herramientas" class="obs-tab px-5 py-2.5 text-sm font-semibold text-text-muted hover:text-text-main flex items-center gap-2 whitespace-nowrap rounded-xl">
+      <ion-icon name="construct-outline"></ion-icon> Herramientas
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB 1: MÉTRICAS
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-metricas" class="space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- CPU History -->
+      <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20 transition-all duration-300 hover:bg-surface-element">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-sm font-bold text-text-main flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span>CPU % — Últimos 60 puntos
+          </h3>
+          <span class="text-[10px] font-mono text-text-muted bg-surface-element px-3 py-1.5 rounded-full shadow-inner">↻ 5s</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-cpu"></canvas></div>
+      </div>
+      <!-- RAM History -->
+      <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20 transition-all duration-300 hover:bg-surface-element">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-sm font-bold text-text-main flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]"></span>RAM Proceso (MB) — Histórico
+          </h3>
+          <span id="kpi-ram-sys" class="text-[10px] font-mono text-text-muted bg-surface-element px-3 py-1.5 rounded-full shadow-inner">Sistema: —%</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-ram"></canvas></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Requests / min -->
+      <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20 transition-all duration-300 hover:bg-surface-element">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-sm font-bold text-text-main flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></span>Requests por Minuto (60 min)
+          </h3>
+          <span class="text-[10px] font-mono text-text-muted bg-surface-element px-3 py-1.5 rounded-full shadow-inner">HTTP</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-req"></canvas></div>
+      </div>
+      <!-- Latencia + Errores -->
+      <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20 transition-all duration-300 hover:bg-surface-element">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-sm font-bold text-text-main flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></span>Latencia Prom. (ms) · Errores 500
+          </h3>
+          <span id="kpi-lat" class="text-[10px] font-mono text-text-muted bg-surface-element px-3 py-1.5 rounded-full shadow-inner">—ms avg</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-lat"></canvas></div>
+      </div>
+    </div>
+    <!-- Barra de estado de servicios -->
+    <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20">
+      <h3 class="text-sm font-bold text-text-main mb-5 flex items-center gap-2">
+        <ion-icon name="server-outline" class="text-text-muted text-lg"></ion-icon> Estado de Servicios
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="flex items-center gap-4 bg-surface-element rounded-2xl p-4 shadow-inner">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+          <div><p class="text-[10px] text-text-muted uppercase tracking-wider">Django</p><p class="text-sm font-bold text-text-main">Online</p></div>
+        </div>
+        <div class="flex items-center gap-4 bg-surface-element rounded-2xl p-4 shadow-inner">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+          <div><p class="text-[10px] text-text-muted uppercase tracking-wider">Base de Datos</p><p class="text-sm font-bold text-text-main" id="svc-db">{{ system_info.db_engine }}</p></div>
+        </div>
+        <div class="flex items-center gap-4 bg-surface-element rounded-2xl p-4 shadow-inner">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" id="svc-cache-dot"></span>
+          <div><p class="text-[10px] text-text-muted uppercase tracking-wider">Caché</p><p class="text-sm font-bold text-text-main" id="svc-cache">—</p></div>
+        </div>
+        <div class="flex items-center gap-4 bg-surface-element rounded-2xl p-4 shadow-inner">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" id="svc-conn-dot"></span>
+          <div><p class="text-[10px] text-text-muted uppercase tracking-wider">DB Conexiones</p><p class="text-sm font-bold text-text-main" id="svc-conn">—</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB 2: LOGS EN VIVO
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-logs" class="hidden space-y-4">
+    <!-- Controls -->
+    <div class="flex flex-col sm:flex-row gap-4">
+      <!-- Filtros de nivel -->
+      <div class="flex flex-wrap gap-2">
+
+        <button onclick="toggleLevel('ALL')" id="lvl-ALL" class="log-lvl-btn active px-4 py-2 text-[10px] font-bold rounded-xl bg-surface-element text-text-main transition-all shadow-md">ALL</button>
+        <button onclick="toggleLevel('ERROR')" id="lvl-ERROR" class="log-lvl-btn px-4 py-2 text-[10px] font-bold rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all shadow-md">ERROR</button>
+        <button onclick="toggleLevel('WARNING')" id="lvl-WARNING" class="log-lvl-btn px-4 py-2 text-[10px] font-bold rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all shadow-md">WARNING</button>
+        <button onclick="toggleLevel('INFO')" id="lvl-INFO" class="log-lvl-btn px-4 py-2 text-[10px] font-bold rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all shadow-md">INFO</button>
+        <button onclick="toggleLevel('DEBUG')" id="lvl-DEBUG" class="log-lvl-btn px-4 py-2 text-[10px] font-bold rounded-xl bg-gray-500/10 text-gray-400 hover:bg-gray-500/20 transition-all shadow-md">DEBUG</button>
+        <button onclick="toggleLevel('SQL')" id="lvl-SQL" class="log-lvl-btn px-4 py-2 text-[10px] font-bold rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all shadow-md">SQL</button>
+      </div>
+      <!-- Búsqueda -->
+      <div class="flex-1 relative">
+        <ion-icon name="search-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-lg z-10"></ion-icon>
+        <input id="log-search" type="text" placeholder="Buscar en logs..." oninput="filterLogsLocal()"
+               class="w-full bg-surface-element rounded-xl py-2.5 pl-11 pr-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono shadow-inner border-none"/>
+      </div>
+      <!-- Acciones -->
+      <div class="flex gap-2 flex-shrink-0">
+        <button onclick="toggleLogPause()" id="btn-log-pause"
+                class="px-4 py-2.5 text-xs font-bold rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all shadow-md flex items-center gap-2">
+          <ion-icon name="pause-outline" id="pause-icon" class="text-base"></ion-icon><span id="pause-txt">Pausar</span>
+        </button>
+        <button onclick="clearLogConsole()"
+                class="px-4 py-2.5 text-xs font-bold rounded-xl bg-surface-element text-text-muted hover:bg-surface-element transition-all shadow-md flex items-center gap-2">
+          <ion-icon name="trash-outline" class="text-base"></ion-icon>Limpiar
+        </button>
+        <a href="{% url 'dev_logs_download' %}"
+           class="px-4 py-2.5 text-xs font-bold rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all shadow-md flex items-center gap-2">
+          <ion-icon name="download-outline" class="text-base"></ion-icon>Descargar
+        </a>
+      </div>
+    </div>
+    <!-- Terminal -->
+    <div class="bg-[#0b0e14] rounded-3xl overflow-hidden shadow-2xl relative ring-1 ring-border">
+      <!-- TitleBar -->
+      <div class="flex items-center gap-2 px-5 py-3 bg-surface-element">
+        <div class="w-3 h-3 rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+        <div class="w-3 h-3 rounded-full bg-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.5)]"></div>
+        <div class="w-3 h-3 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+        <span class="ml-3 text-[10px] font-mono text-text-muted tracking-widest uppercase">● app.log — live stream</span>
+        <span class="ml-auto text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md" id="log-count">0 líneas</span>
+      </div>
+      <div id="log-console" class="h-[480px] overflow-y-auto obs-scroll p-5 space-y-1 font-mono text-xs">
+        <div class="term-line term-INFO">Conectando al stream de logs del sistema...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB 3: ANOMALÍAS
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-anomalias" class="hidden space-y-6">
+    <!-- Summary KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-surface-element rounded-3xl p-6 text-center shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300">
+        <p class="text-5xl font-black font-mono text-text-main tracking-tight" id="ano-total">—</p>
+        <p class="text-xs text-text-muted mt-2 font-bold uppercase tracking-widest">Anomalías Activas</p>
+      </div>
+      <div class="bg-surface-element rounded-3xl p-6 text-center shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -inset-4 bg-red-500/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <p class="text-5xl font-black font-mono text-red-400 tracking-tight relative z-10" id="ano-criticos">—</p>
+        <p class="text-xs text-text-muted mt-2 font-bold uppercase tracking-widest relative z-10">🔴 Críticos</p>
+      </div>
+      <div class="bg-surface-element rounded-3xl p-6 text-center shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300 relative overflow-hidden group">
+        <div class="absolute -inset-4 bg-amber-500/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <p class="text-5xl font-black font-mono text-amber-400 tracking-tight relative z-10" id="ano-advertencias">—</p>
+        <p class="text-xs text-text-muted mt-2 font-bold uppercase tracking-widest relative z-10">🟠 Advertencias</p>
+      </div>
+    </div>
+    <!-- Panel de alertas -->
+    <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-sm font-bold text-text-main flex items-center gap-3">
+          <ion-icon name="warning-outline" class="text-amber-400 text-lg"></ion-icon> Alertas Activas
+        </h3>
+        <span class="text-[10px] text-text-muted font-mono bg-surface-element px-3 py-1.5 rounded-full shadow-inner">Actualiza cada 10s</span>
+      </div>
+      <div id="anomalias-list" class="space-y-4">
+        <div class="text-center text-text-muted py-10 text-sm">
+          <ion-icon name="shield-checkmark-outline" class="text-5xl text-emerald-500/30 mb-3 block mx-auto"></ion-icon>
+          Cargando diagnóstico...
+        </div>
+      </div>
+    </div>
+    <!-- Umbrales de detección -->
+    <div class="bg-surface-element rounded-3xl p-6 shadow-xl shadow-black/20">
+      <h3 class="text-sm font-bold text-text-main mb-6 flex items-center gap-3">
+        <ion-icon name="options-outline" class="text-text-muted text-lg"></ion-icon> Umbrales de Detección Configurados
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-surface-element rounded-2xl p-5 shadow-inner text-center sm:text-left">
+          <p class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">RAM Sistema</p>
+          <p class="text-2xl font-black text-amber-400 font-mono">≥ 85%</p>
+          <p class="text-[10px] text-text-muted mt-1">🔴 Crítico a ≥ 95%</p>
+        </div>
+        <div class="bg-surface-element rounded-2xl p-5 shadow-inner text-center sm:text-left">
+          <p class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">CPU</p>
+          <p class="text-2xl font-black text-amber-400 font-mono">≥ 85%</p>
+          <p class="text-[10px] text-text-muted mt-1">🔴 Crítico a ≥ 95%</p>
+        </div>
+        <div class="bg-surface-element rounded-2xl p-5 shadow-inner text-center sm:text-left">
+          <p class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">Errores 500</p>
+          <p class="text-2xl font-black text-red-400 font-mono">≥ 3/min</p>
+          <p class="text-[10px] text-text-muted mt-1">🔴 Crítico a ≥ 10/min</p>
+        </div>
+        <div class="bg-surface-element rounded-2xl p-5 shadow-inner text-center sm:text-left">
+          <p class="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">Latencia</p>
+          <p class="text-2xl font-black text-amber-400 font-mono">≥ 1500ms</p>
+          <p class="text-[10px] text-text-muted mt-1">🔴 Crítico a ≥ 5000ms</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB 4: AUDITORÍA TÉCNICA
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-auditoria" class="hidden space-y-6">
+    <!-- Filtros -->
+    <div class="bg-surface-element rounded-3xl p-5 shadow-xl shadow-black/20">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <input id="aud-q" type="text" placeholder="Buscar descripción / SQL..." oninput="debounceAudit()"
+               class="bg-surface-element rounded-xl py-2.5 px-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner border-none"/>
+        <input id="aud-usuario" type="text" placeholder="Usuario..." oninput="debounceAudit()"
+               class="bg-surface-element rounded-xl py-2.5 px-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner border-none"/>
+        <select id="aud-accion" onchange="loadAuditPage(1)"
+                class="bg-surface-element rounded-xl py-2.5 px-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-inner border-none appearance-none">
+          <option value="">Todas las acciones</option>
+          <option value="SQL_EXECUTE">SQL Select</option>
+          <option value="SQL_MODIFY">SQL Modificación</option>
+          <option value="EXPORT_DB">Exportar BD</option>
+          <option value="RESTORE_DB">Restaurar BD</option>
+          <option value="CLEAR_CACHE">Limpiar Caché</option>
+          <option value="PURGE_AUDIT">Purgar Auditoría</option>
+          <option value="EXPORT_AUDIT">Exportar Auditoría</option>
+          <option value="VIEW_PANEL">Ver Panel</option>
+        </select>
+        <select id="aud-riesgo" onchange="loadAuditPage(1)"
+                class="bg-surface-element rounded-xl py-2.5 px-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-inner border-none appearance-none">
+          <option value="">Todos los riesgos</option>
+          <option value="CRITICO">🔴 Crítico</option>
+          <option value="ADVERTENCIA">🟠 Advertencia</option>
+          <option value="INFORMATIVO">🔵 Informativo</option>
+        </select>
+        <div class="flex gap-2">
+          <button onclick="loadAuditPage(1)" class="flex-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-xl py-2.5 px-3 text-sm font-bold transition-all shadow-md">
+            Filtrar
+          </button>
+          <a href="{% url 'dev_auditoria_export' %}?format=csv" id="aud-export-csv"
+             class="flex items-center justify-center w-12 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl transition-all shadow-md" title="Descargar CSV">
+            <ion-icon name="download-outline" class="text-xl"></ion-icon>
+          </a>
+          <a href="{% url 'dev_auditoria_export' %}?format=json" id="aud-export-json"
+             class="flex items-center justify-center w-12 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl transition-all shadow-md" title="Descargar JSON">
+            <ion-icon name="code-slash-outline" class="text-xl"></ion-icon>
+          </a>
+        </div>
+      </div>
+    </div>
+    <!-- Tabla -->
+    <div class="bg-surface-element rounded-3xl overflow-hidden shadow-xl shadow-black/20">
+      <div class="px-6 py-5 bg-surface-element flex items-center justify-between">
+        <h3 class="text-sm font-bold text-text-main">Registro Técnico del Desarrollador</h3>
+        <span class="text-[10px] text-text-muted font-mono bg-surface-element px-3 py-1 rounded-md shadow-inner" id="aud-total-label">Cargando...</span>
+      </div>
+      <div class="overflow-x-auto obs-scroll">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-surface-element text-[10px] text-text-muted uppercase tracking-wider">
+            <tr>
+              <th class="px-6 py-4 font-bold">Timestamp</th>
+              <th class="px-6 py-4 font-bold">Acción</th>
+              <th class="px-6 py-4 font-bold">Usuario</th>
+              <th class="px-6 py-4 font-bold">IP</th>
+              <th class="px-6 py-4 font-bold">Riesgo</th>
+              <th class="px-6 py-4 font-bold">Descripción / SQL</th>
+              <th class="px-6 py-4 font-bold text-right">ms</th>
+              <th class="px-6 py-4 font-bold text-center">OK</th>
+            </tr>
+          </thead>
+          <tbody id="aud-tbody" class="text-sm divide-y divide-border">
+            <tr><td colspan="8" class="px-6 py-10 text-center text-text-muted">Cargando registros...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Paginación -->
+      <div class="px-6 py-4 bg-surface-element flex items-center justify-between">
+        <button onclick="loadAuditPage(auditState.page - 1)" id="aud-prev" class="px-4 py-2 text-xs font-bold text-text-muted hover:text-text-main bg-surface-element hover:bg-surface-element rounded-xl transition-all shadow-sm disabled:opacity-30" disabled>← Anterior</button>
+        <span class="text-[11px] font-mono text-text-muted" id="aud-page-label">Pág. 1</span>
+        <button onclick="loadAuditPage(auditState.page + 1)" id="aud-next" class="px-4 py-2 text-xs font-bold text-text-muted hover:text-text-main bg-surface-element hover:bg-surface-element rounded-xl transition-all shadow-sm disabled:opacity-30" disabled>Siguiente →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       TAB 5: HERRAMIENTAS
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-herramientas" class="hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- Izquierdo: Backup + Utilidades -->
+      <div class="space-y-5">
+        <!-- DB Avanzada -->
+        <div class="bg-surface-element rounded-3xl p-6 space-y-5 shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300">
+          <h3 class="font-bold text-text-main flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <ion-icon name="server-outline" class="text-indigo-400 text-xl"></ion-icon> Base de Datos
+            </div>
+            <div id="db-status-badge" class="px-2 py-1 bg-surface-element border border-border rounded font-mono text-[9px] text-text-muted">Cargando...</div>
+          </h3>
+          
+
+
+          <button onclick="postAction('{% url 'dev_db_optimize' %}', '¿Optimizar la base de datos limpiando sesiones y caché?')" class="w-full flex items-center gap-4 bg-surface-element hover:bg-surface-element shadow-inner rounded-2xl p-4 transition-all group">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-md group-hover:rotate-180 transition-transform duration-500"><ion-icon name="flash-outline" class="text-lg"></ion-icon></div>
+            <div class="text-left"><p class="text-sm font-semibold text-text-main">Optimizar Sistema</p><p class="text-[10px] text-text-muted">Limpiar sesiones y memoria</p></div>
+          </button>
+
+          <button onclick="postAction('{% url 'dev_db_close_connections' %}', '¿Terminar todas las conexiones inactivas en PostgreSQL?')" class="w-full flex items-center gap-4 bg-surface-element hover:bg-surface-element shadow-inner rounded-2xl p-4 transition-all group">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shadow-md group-hover:scale-110 transition-transform"><ion-icon name="cut-outline" class="text-lg"></ion-icon></div>
+            <div class="text-left"><p class="text-sm font-semibold text-text-main">Purgar Conexiones</p><p class="text-[10px] text-text-muted">Terminar procesos inactivos (Idle)</p></div>
+          </button>
+
+          <!-- Restaurar Backup (Oculto en Postgres local/produccion, util para sqlite) -->
+          <details class="bg-surface-element shadow-inner rounded-2xl group border border-border">
+            <summary class="p-4 cursor-pointer text-sm font-bold text-text-main flex items-center justify-between opacity-70 hover:opacity-100 transition-opacity">
+              <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 shadow-md"><ion-icon name="cloud-upload-outline" class="text-lg"></ion-icon></div> Restaurar SQLite</div>
+              <ion-icon name="chevron-down-outline" class="text-text-muted group-open:rotate-180 transition-transform"></ion-icon>
+            </summary>
+            <div class="p-4 pt-0">
+              <input type="file" id="db-file" accept=".sqlite3" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0]?.name || 'Ningún archivo'">
+              <div class="flex gap-2">
+                <button onclick="document.getElementById('db-file').click()" class="flex-1 bg-surface-element hover:bg-surface-element text-[10px] font-semibold py-2.5 rounded-xl transition-colors text-text-main shadow-md">
+                  <span id="file-name" class="truncate block px-2">Seleccionar archivo...</span>
+                </button>
+                <button onclick="restaurarDB()" class="bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md">SUBIR</button>
+              </div>
+            </div>
+          </details>
+        </div>
+        <!-- Utilidades -->
+        <div class="bg-surface-element rounded-3xl p-6 space-y-4 shadow-xl shadow-black/20 hover:bg-surface-element transition-all duration-300">
+          <h3 class="font-bold text-text-main flex items-center gap-3">
+            <ion-icon name="construct-outline" class="text-red-400 text-xl"></ion-icon> Utilidades del Sistema
+          </h3>
+          <button onclick="document.getElementById('modal-notificacion').classList.remove('hidden')" class="w-full flex items-center gap-4 bg-surface-element hover:bg-surface-element shadow-inner rounded-2xl p-4 transition-all group border border-border text-left">
+            <div class="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400 shadow-md group-hover:scale-110 transition-transform"><ion-icon name="megaphone-outline" class="text-lg"></ion-icon></div>
+            <div><p class="text-sm font-semibold text-text-main">Enviar Notificación</p><p class="text-[10px] text-text-muted">Aviso Global al Sistema</p></div>
+          </button>
+          <button onclick="postAction('{% url "dev_clear_cache" %}')" class="w-full flex items-center gap-4 bg-surface-element hover:bg-surface-element shadow-inner rounded-2xl p-4 transition-all group">
+            <div class="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-400 shadow-md group-hover:rotate-180 transition-transform duration-500"><ion-icon name="sync-outline" class="text-lg"></ion-icon></div>
+            <p class="text-sm font-semibold text-text-main">Limpiar Caché Global</p>
+          </button>
+          <button onclick="postAction('{% url "dev_purge_audit" %}','¿Purgar todos los logs no críticos? Esta acción es irreversible.')" class="w-full flex items-center gap-4 bg-surface-element hover:bg-surface-element shadow-inner rounded-2xl p-4 transition-all group">
+            <div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400 shadow-md group-hover:scale-110 transition-transform"><ion-icon name="trash-bin-outline" class="text-lg"></ion-icon></div>
+            <p class="text-sm font-semibold text-text-main">Purgar Logs de Auditoría</p>
+          </button>
+          <button onclick="postAction('{% url "dev_test_error" %}','Esto provocará un error 500 de prueba. ¿Continuar?')" class="w-full flex items-center gap-4 bg-red-500/10 hover:bg-red-500/20 shadow-inner rounded-2xl p-4 transition-all group">
+            <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400 shadow-md group-hover:scale-110 transition-transform"><ion-icon name="bug-outline" class="text-lg"></ion-icon></div>
+            <p class="text-sm font-semibold text-red-400">Levantar Excepción (Test 500)</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Derecho: Consola SQL -->
+      <div class="lg:col-span-2">
+        <div class="bg-[#0b0e14] rounded-3xl shadow-2xl flex flex-col h-[660px] overflow-hidden ring-1 ring-border">
+          <div class="bg-surface-element px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]"></div>
+              <div class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+              <span class="ml-4 font-mono text-xs text-text-muted tracking-widest uppercase font-bold">SQL Terminal Interactive</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span id="sql-exec-time" class="text-[10px] font-mono text-text-muted hidden bg-surface-element px-3 py-1.5 rounded-full shadow-inner"></span>
+              <button onclick="ejecutarSQL()" id="btn-run-sql" class="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2">
+                <ion-icon name="play-outline" class="text-sm"></ion-icon> RUN
+              </button>
+            </div>
+          </div>
+          <div class="h-1/3 bg-surface-element relative shadow-inner">
+            <textarea id="sql-input" class="w-full h-full bg-transparent text-emerald-400/90 font-mono text-sm p-6 focus:outline-none resize-none placeholder:text-emerald-400/30"
+                      placeholder="SELECT * FROM usuarios_usuario LIMIT 10;" spellcheck="false"></textarea>
+          </div>
+          <div class="flex-1 bg-[#0b0e14] relative overflow-hidden flex flex-col border-t border-white/[0.05]">
+            <div class="px-6 py-3 bg-surface-element text-[10px] font-mono text-text-muted flex justify-between items-center">
+              <span>Resultados de la Ejecución</span>
+              <span id="sql-status" class="text-indigo-400 hidden animate-pulse">Ejecutando...</span>
+            </div>
+            <div class="flex-1 overflow-auto obs-scroll p-0 bg-black/10" id="sql-results">
+              <div class="w-full h-full flex items-center justify-center text-text-muted/40 font-mono text-sm">Esperando consulta...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /max-w -->
+
+<!-- Toast container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[99999] flex flex-col gap-2 pointer-events-none"></div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, tipo='info') {
+  const colors = {
+    success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    error:   'border-red-500/30 bg-red-500/10 text-red-400',
+    warn:    'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    info:    'border-indigo-500/30 bg-indigo-500/10 text-indigo-400',
+  };
+  const icons = { success:'checkmark-circle-outline', error:'alert-circle-outline', warn:'warning-outline', info:'information-circle-outline' };
+  const el = document.createElement('div');
+  el.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold shadow-xl ${colors[tipo]||colors.info} transform translate-y-4 opacity-0 transition-all duration-300`;
+  el.innerHTML = `<ion-icon name="${icons[tipo]||icons.info}" class="text-lg flex-shrink-0"></ion-icon><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  requestAnimationFrame(() => { el.classList.remove('translate-y-4','opacity-0'); });
+  setTimeout(() => { el.classList.add('translate-y-4','opacity-0'); setTimeout(()=>el.remove(),300); }, 4000);
+}
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+const TABS = ['metricas','logs','anomalias','auditoria','herramientas'];
+function switchTab(tab) {
+  TABS.forEach(t => {
+    document.getElementById('panel-'+t).classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById('tab-'+t);
+    btn.classList.toggle('active', t === tab);
+    btn.classList.toggle('text-indigo-400', t === tab);
+    btn.classList.toggle('text-text-muted', t !== tab);
+  });
+  if (tab === 'auditoria' && !auditState.loaded) loadAuditPage(1);
+  if (tab === 'logs') {
+    document.getElementById('logs-badge').classList.remove('hidden');
+    startLogPolling();
+  } else {
+    stopLogPolling();
+  }
+  if (tab === 'anomalias') loadAnomalias();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB MÉTRICAS — Chart.js
+// ═══════════════════════════════════════════════════════════════════════════
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false,
+    backgroundColor: 'rgba(15,17,26,0.95)', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+    titleColor: '#e2e8f0', bodyColor: '#94a3b8', padding: 10,
+  }},
+  scales: {
+    x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 9, family: 'monospace' }, maxRotation: 0, maxTicksLimit: 12 }},
+    y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 9, family: 'monospace' }}, beginAtZero: true },
+  },
+  animation: { duration: 300 },
+  elements: { point: { radius: 2, hoverRadius: 5 }, line: { tension: 0.4 } },
+};
+
+function makeGradient(ctx, color) {
+  const g = ctx.createLinearGradient(0, 0, 0, 160);
+  g.addColorStop(0, color.replace(')',',0.25)').replace('rgb','rgba'));
+  g.addColorStop(1, color.replace(')',',0)').replace('rgb','rgba'));
+  return g;
+}
+function rgbFromHex(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgb(${r},${g},${b})`;
+}
+
+let charts = {};
+function initChart(id, color, labelY='', fill=true) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const cfg  = JSON.parse(JSON.stringify(chartDefaults));
+  cfg.scales.y.title = { display: !!labelY, text: labelY, color: '#6b7280', font: { size: 9 } };
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ data: [], borderColor: color, borderWidth: 2, fill, backgroundColor: 'transparent', pointBackgroundColor: color }] },
+    options: cfg,
+  });
+}
+function initBarChart(id, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const cfg  = JSON.parse(JSON.stringify(chartDefaults));
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { data: [], backgroundColor: `${color}33`, borderColor: color, borderWidth: 1.5, borderRadius: 4, label: 'Req' },
+      { data: [], backgroundColor: 'rgba(239,68,68,0.2)', borderColor: '#ef4444', borderWidth: 1.5, borderRadius: 4, label: 'Err500' },
+    ]},
+    options: { ...cfg, plugins: { ...cfg.plugins, legend: { display: true, labels: { color:'#6b7280', font:{size:9} } } } },
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  charts.cpu = initChart('chart-cpu', '#6366f1', '%');
+  charts.ram = initChart('chart-ram', '#8b5cf6', 'MB');
+  charts.req = initBarChart('chart-req', '#06b6d4');
+  charts.lat = initChart('chart-lat', '#f59e0b', 'ms');
+  fetchMetrics();
+  metricsInterval = setInterval(fetchMetrics, 5000);
+  anomaliasInterval = setInterval(fetchKpiAnomalias, 10000);
+});
+
+let metricsInterval, anomaliasInterval;
+
+async function fetchMetrics() {
+  try {
+    const r = await fetch('{% url "dev_metricas" %}');
+    const d = await r.json();
+    if (!d.ok) return;
+    const s = d.snapshot, sr = d.series;
+
+    // KPI cards
+    document.getElementById('kpi-cpu').textContent = s.cpu_pct.toFixed(1) + '%';
+    document.getElementById('kpi-cpu').style.color  = s.cpu_pct > 85 ? '#f87171' : s.cpu_pct > 60 ? '#fbbf24' : 'var(--color-text-primary)';
+    document.getElementById('kpi-ram').textContent = s.ram_proceso_mb + ' MB';
+    document.getElementById('kpi-req').textContent = s.req_ultimo_min;
+    document.getElementById('kpi-err').textContent = s.err_ultimo_min;
+    document.getElementById('kpi-err').style.color = s.err_ultimo_min > 0 ? '#f87171' : 'var(--color-text-primary)';
+    document.getElementById('kpi-ram-sys').textContent = `Sistema: ${s.ram_sistema_pct}%`;
+    document.getElementById('kpi-lat').textContent = `${s.latencia_avg_ms}ms avg`;
+    // Servicios
+    document.getElementById('svc-conn').textContent = s.db_connections;
+    const connDot = document.getElementById('svc-conn-dot');
+    connDot.style.background = typeof s.db_connections === 'number' ? '#10b981' : '#f59e0b';
+    // Cache
+    document.getElementById('svc-cache').textContent = 'Django Cache';
+    document.getElementById('svc-cache-dot').style.background = '#10b981';
+    document.getElementById('svc-cache-dot').className = 'w-2 h-2 rounded-full pulse-dot';
+
+    // Actualizar gráficas con series
+    if (sr.labels && sr.labels.length) {
+      charts.cpu.data.labels  = sr.labels;
+      charts.cpu.data.datasets[0].data = sr.cpu;
+      charts.cpu.update('none');
+
+      charts.ram.data.labels  = sr.labels;
+      charts.ram.data.datasets[0].data = sr.ram;
+      charts.ram.update('none');
+
+      charts.req.data.labels  = sr.labels;
+      charts.req.data.datasets[0].data = sr.requests;
+      charts.req.data.datasets[1].data = sr.errores;
+      charts.req.update('none');
+
+      charts.lat.data.labels  = sr.labels;
+      charts.lat.data.datasets[0].data = sr.latencia;
+      charts.lat.update('none');
+    }
+  } catch (e) { /* silencioso */ }
+}
+
+// ── Anomalías rápidas para KPI ────────────────────────────────────────────────
+async function fetchKpiAnomalias() {
+  try {
+    const r = await fetch('{% url "dev_anomalias" %}');
+    const d = await r.json();
+    if (!d.ok) return;
+    const badge = document.getElementById('anomalias-count');
+    if (d.total > 0) {
+      badge.textContent = d.total;
+      badge.classList.remove('hidden');
+      badge.className = d.anomalias.some(a=>a.severidad==='CRITICO')
+        ? 'text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30'
+        : 'text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30';
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch(e) {}
+}
+fetchKpiAnomalias();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB LOGS
+// ═══════════════════════════════════════════════════════════════════════════
+let logState = { paused: false, cursor: 0, level: '', timer: null };
+let localLogCache = [];
+
+function startLogPolling() {
+  if (logState.timer) return;
+  logState.timer = setInterval(pollLogs, 2000);
+  pollLogs();
+}
+function stopLogPolling() {
+  clearInterval(logState.timer);
+  logState.timer = null;
+}
+
+async function pollLogs() {
+  if (logState.paused) return;
+  try {
+    const params = new URLSearchParams({ since: logState.cursor, limit: 80 });
+    if (logState.level && logState.level !== 'ALL') params.set('level', logState.level);
+    const r = await fetch(`{% url "dev_logs" %}?${params}`);
+    const d = await r.json();
+    if (!d.ok || d.logs.length === 0) return;
+
+    logState.cursor = d.cursor;
+    localLogCache.unshift(...d.logs); // recientes primero
+    if (localLogCache.length > 500) localLogCache = localLogCache.slice(0, 500);
+
+    renderLogs();
+  } catch(e) {}
+}
+
+function renderLogs() {
+  const q = document.getElementById('log-search').value.toLowerCase();
+  const container = document.getElementById('log-console');
+  const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 20;
+
+  let filtered = localLogCache;
+  if (q) filtered = filtered.filter(l => l.msg.toLowerCase().includes(q));
+
+  const html = filtered.slice(0, 300).map(l => {
+    const ts = new Date(l.ts * 1000).toLocaleTimeString('es-VE', {hour12: false});
+    const lvl = l.level;
+    const cls = ['ERROR','WARNING','INFO','DEBUG','SQL','AUTH','API'].includes(lvl) ? `term-${lvl}` : 'term-INFO';
+    const badge = `<span style="opacity:.6;margin-right:8px">[${ts}]</span><span style="margin-right:8px;opacity:.8">[${l.name.slice(-20)}]</span>`;
+    const msgEsc = l.msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="term-line ${cls}"><span class="text-gray-600 select-none">${badge}</span>${msgEsc}</div>`;
+  }).join('');
+
+  container.innerHTML = html || '<div class="term-line term-DEBUG">Sin entradas para los filtros actuales.</div>';
+  document.getElementById('log-count').textContent = `${filtered.length} líneas`;
+
+  if (wasAtBottom) container.scrollTop = container.scrollHeight;
+}
+
+function filterLogsLocal() { renderLogs(); }
+
+function toggleLevel(lvl) {
+  logState.level = (logState.level === lvl) ? '' : lvl;
+  document.querySelectorAll('.log-lvl-btn').forEach(b => {
+    b.classList.toggle('ring-2', b.id === `lvl-${logState.level}` || (logState.level === '' && b.id === 'lvl-ALL'));
+    b.classList.toggle('ring-white/30', b.id === `lvl-${logState.level}` || (logState.level === '' && b.id === 'lvl-ALL'));
+  });
+  renderLogs();
+}
+
+function toggleLogPause() {
+  logState.paused = !logState.paused;
+  document.getElementById('pause-icon').setAttribute('name', logState.paused ? 'play-outline' : 'pause-outline');
+  document.getElementById('pause-txt').textContent = logState.paused ? 'Reanudar' : 'Pausar';
+}
+
+function clearLogConsole() {
+  localLogCache = [];
+  document.getElementById('log-console').innerHTML = '<div class="term-line term-DEBUG">Consola limpiada.</div>';
+  document.getElementById('log-count').textContent = '0 líneas';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB ANOMALÍAS
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadAnomalias() {
+  try {
+    const r = await fetch('{% url "dev_anomalias" %}');
+    const d = await r.json();
+    if (!d.ok) return;
+
+    document.getElementById('ano-total').textContent = d.total;
+    document.getElementById('ano-criticos').textContent   = d.anomalias.filter(a=>a.severidad==='CRITICO').length;
+    document.getElementById('ano-advertencias').textContent = d.anomalias.filter(a=>a.severidad==='ADVERTENCIA').length;
+
+    const list = document.getElementById('anomalias-list');
+    if (d.total === 0) {
+      list.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-10 text-center">
+          <ion-icon name="shield-checkmark-outline" class="text-5xl text-emerald-500/40 mb-3"></ion-icon>
+          <p class="text-sm font-bold text-emerald-400">Sistema Estable</p>
+          <p class="text-xs text-text-muted mt-1">No se detectaron anomalías en los umbrales configurados.</p>
+        </div>`;
+      return;
+    }
+    list.innerHTML = d.anomalias.map(a => {
+      const isCrit = a.severidad === 'CRITICO';
+      const color  = isCrit ? 'red' : 'amber';
+      const icon   = isCrit ? 'alert-circle' : 'warning';
+      const pct    = Math.min(100, Math.round((a.valor / (a.umbral * 1.5)) * 100));
+      return `
+        <div class="flex items-start gap-4 bg-${color}-500/[0.03] rounded-2xl p-5 shadow-lg shadow-black/10 hover:bg-${color}-500/[0.05] transition-all duration-300">
+          <div class="w-12 h-12 rounded-xl bg-${color}-500/10 flex items-center justify-center text-${color}-400 flex-shrink-0 shadow-inner">
+            <ion-icon name="${icon}-outline" class="text-2xl"></ion-icon>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-base font-bold text-text-main">${a.titulo}</p>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full badge-${isCrit?'crit':'warn'} shadow-sm">${a.severidad}</span>
+            </div>
+            <p class="text-sm text-text-muted mt-1">${a.descripcion}</p>
+            <div class="mt-3 bg-surface-element rounded-full h-1.5 overflow-hidden shadow-inner">
+              <div class="h-full bg-${color}-500/70 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(${isCrit?'239,68,68':'245,158,11'},0.8)]" style="width:${pct}%"></div>
+            </div>
+            <p class="text-[10px] text-text-muted mt-1.5 font-mono">Valor: ${a.valor} — Umbral: ${a.umbral}</p>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB AUDITORÍA TÉCNICA
+// ═══════════════════════════════════════════════════════════════════════════
+let auditState = { page: 1, pages: 1, total: 0, loaded: false, debounceTimer: null };
+
+function debounceAudit() {
+  clearTimeout(auditState.debounceTimer);
+  auditState.debounceTimer = setTimeout(() => loadAuditPage(1), 400);
+}
+
+async function loadAuditPage(page) {
+  if (page < 1 || page > auditState.pages) return;
+  auditState.page = page;
+
+  const params = new URLSearchParams({
+    page,
+    per_page: 25,
+    q:       document.getElementById('aud-q').value,
+    usuario: document.getElementById('aud-usuario').value,
+    accion:  document.getElementById('aud-accion').value,
+    riesgo:  document.getElementById('aud-riesgo').value,
+  });
+
+  const tbody = document.getElementById('aud-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-text-muted text-xs">Cargando...</td></tr>';
+
+  try {
+    const r = await fetch(`{% url "dev_auditoria_api" %}?${params}`);
+    const d = await r.json();
+    if (!d.ok) return;
+
+    auditState.pages  = d.pages;
+    auditState.total  = d.total;
+    auditState.loaded = true;
+
+    document.getElementById('aud-total-label').textContent = `${d.total} registros — Pág. ${d.page}/${d.pages}`;
+    document.getElementById('aud-page-label').textContent  = `Pág. ${d.page} / ${d.pages}`;
+    document.getElementById('aud-prev').disabled = d.page <= 1;
+    document.getElementById('aud-next').disabled = d.page >= d.pages;
+
+    const riesgoClasses = {
+      CRITICO:     'badge-crit',
+      ADVERTENCIA: 'badge-warn',
+      INFORMATIVO: 'badge-ok',
+    };
+    const riesgoEmoji = { CRITICO:'🔴', ADVERTENCIA:'🟠', INFORMATIVO:'🔵' };
+
+    if (d.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-text-muted text-xs">Sin registros para este filtro.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = d.data.map(log => `
+      <tr class="audit-row hover:bg-surface-element transition-colors">
+        <td class="px-6 py-3.5 text-[10px] font-mono text-text-muted whitespace-nowrap">${log.timestamp}</td>
+        <td class="px-6 py-3.5">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-element text-text-muted shadow-inner">${log.accion_label}</span>
+        </td>
+        <td class="px-6 py-3.5 text-sm font-semibold text-text-main">${log.usuario}</td>
+        <td class="px-6 py-3.5 text-[10px] font-mono text-text-muted">${log.ip}</td>
+        <td class="px-6 py-3.5">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${riesgoClasses[log.nivel_riesgo]||'badge-ok'} shadow-sm border-none">
+            ${riesgoEmoji[log.nivel_riesgo]||'🔵'} ${log.nivel_riesgo}
+          </span>
+        </td>
+        <td class="px-6 py-3.5 max-w-xs">
+          <p class="text-sm text-text-muted truncate">${log.descripcion || '—'}</p>
+          ${log.query_sql ? `<p class="text-[10px] font-mono text-emerald-400/70 truncate mt-0.5">${log.query_sql}</p>` : ''}
+        </td>
+        <td class="px-6 py-3.5 text-right text-[10px] font-mono text-text-muted">${log.execution_ms != null ? log.execution_ms+'ms' : '—'}</td>
+        <td class="px-6 py-3.5 text-center text-sm">${log.exitoso ? '✅' : '❌'}</td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-6 text-center text-red-400 text-xs">Error al cargar registros.</td></tr>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB HERRAMIENTAS — SQL + Backup
+// ═══════════════════════════════════════════════════════════════════════════
+async function ejecutarSQL() {
+  const input = document.getElementById('sql-input').value.trim();
+  if (!input) return;
+  const resDiv    = document.getElementById('sql-results');
+  const statusDiv = document.getElementById('sql-status');
+  const btn       = document.getElementById('btn-run-sql');
+  const timeEl    = document.getElementById('sql-exec-time');
+
+  resDiv.innerHTML = '';
+  statusDiv.classList.remove('hidden');
+  btn.disabled = true; btn.classList.add('opacity-50');
+  const t0 = performance.now();
+
+  try {
+    const res = await fetch('{% url "dev_run_sql" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ query: input })
+    });
+    const data = await res.json();
+    const ms   = (performance.now() - t0).toFixed(1);
+    timeEl.textContent = `${data.execution_ms || ms}ms · ${data.rows_count || data.rows_affected || 0} filas`;
+    timeEl.classList.remove('hidden');
+
+    if (data.ok) {
+      if (data.columns && data.rows) {
+        let html = `<table class="w-full text-left border-collapse font-mono text-xs whitespace-nowrap">
+          <thead><tr class="bg-surface-element border-b border-border">`;
+        data.columns.forEach(c => html += `<th class="px-4 py-2 font-bold text-indigo-400">${c}</th>`);
+        html += `</tr></thead><tbody class="divide-y divide-white/5">`;
+        data.rows.forEach(r => {
+          html += `<tr class="hover:bg-white/3">`;
+          r.forEach(v => html += `<td class="px-4 py-2 text-text-main">${v===null ? '<i class="text-text-muted">null</i>' : v}</td>`);
+          html += `</tr>`;
+        });
+        html += `</tbody></table>`;
+        resDiv.innerHTML = html;
+        toast(`${data.rows.length} filas en ${data.execution_ms}ms`, 'success');
+      } else {
+        resDiv.innerHTML = `<div class="p-4 text-emerald-400 font-mono text-sm">${data.mensaje}</div>`;
+        toast(data.mensaje, 'success');
+      }
+    } else {
+      resDiv.innerHTML = `<div class="p-4 text-red-400 font-mono text-sm whitespace-pre-wrap">${data.error}</div>`;
+      toast('Error SQL', 'error');
+    }
+  } catch(e) {
+    resDiv.innerHTML = `<div class="p-4 text-red-400 font-mono text-sm">Error de conexión</div>`;
+    toast('Error de conexión', 'error');
+  } finally {
+    statusDiv.classList.add('hidden');
+    btn.disabled = false; btn.classList.remove('opacity-50');
+  }
+}
+
+async function restaurarDB() {
+  const input = document.getElementById('db-file');
+  if (!input.files?.length) return toast('Selecciona un archivo .sqlite3', 'warn');
+  if (!confirm('⚠️ PELIGRO: Esto sobrescribirá toda la base de datos actual. ¿Estás absolutamente seguro?')) return;
+  const fd = new FormData();
+  fd.append('db_file', input.files[0]);
+  try {
+    toast('Subiendo y restaurando...', 'info');
+    const res = await fetch('{% url "dev_restore_db" %}', { method:'POST', body:fd, headers:{'X-CSRFToken':CSRF} });
+    const data = await res.json();
+    if (data.ok) { toast(data.mensaje, 'success'); setTimeout(()=>location.reload(), 2000); }
+    else toast(data.error || 'Error', 'error');
+  } catch(e) { toast('Error de conexión', 'error'); }
+}
+
+async function postAction(url, confirmMsg) {
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  try {
+    const res = await fetch(url, { method:'POST', headers:{'X-CSRFToken':CSRF} });
+    const data = await res.json();
+    if (data.ok) {
+        toast(data.mensaje, 'success');
+        if(url.includes('optimize') || url.includes('close')) setTimeout(loadDbStatus, 1000);
+    }
+    else toast(data.error || 'Error', 'error');
+  } catch(e) { toast('Error de conexión', 'error'); }
+}
+
+async function loadDbStatus() {
+  try {
+    const res = await fetch('{% url "dev_db_status" %}');
+    const data = await res.json();
+    if (data.ok) {
+        const bd = data.status;
+        const badge = document.getElementById('db-status-badge');
+        
+        badge.innerHTML = `<span class="text-text-main font-bold">${bd.connections}</span> Conexiones • <span class="text-text-main">${bd.size}</span>`;
+    }
+  } catch(e) {}
+}
+
+// Cargar status al iniciar
+setTimeout(loadDbStatus, 500);
+</script>
+
+<!-- Modal Enviar Notificación -->
+<div id="modal-notificacion" class="fixed inset-0 z-[999] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-surface border border-border rounded-3xl p-6 shadow-2xl w-full max-w-lg relative overflow-hidden">
+        <h3 class="text-xl font-black text-text-main font-headline mb-4 flex items-center gap-2">
+            <ion-icon name="megaphone-outline" class="text-primary text-2xl"></ion-icon>
+            Emitir Notificación Global
+        </h3>
+        <form action="{% url 'enviar_notificacion_dev' %}" method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-bold text-text-muted mb-1">Tipo de Alerta</label>
+                <select name="tipo" class="w-full p-3 bg-surface-container border border-border rounded-xl text-text-main focus:outline-none focus:border-primary transition-colors">
+                    <option value="ACTUALIZACION">Nota de Actualización</option>
+                    <option value="SISTEMA">Aviso del Sistema</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-text-muted mb-1">Título</label>
+                <input type="text" name="titulo" required class="w-full p-3 bg-surface-container border border-border rounded-xl text-text-main focus:outline-none focus:border-primary transition-colors" placeholder="Ej: Versión 5.0 Lanzada">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-text-muted mb-1">Mensaje / Cambios</label>
+                <textarea name="mensaje" rows="4" required class="w-full p-3 bg-surface-container border border-border rounded-xl text-text-main focus:outline-none focus:border-primary transition-colors" placeholder="Escribe los detalles aquí..."></textarea>
+            </div>
+            <button type="submit" class="w-full py-3 bg-primary hover:bg-primary/80 text-white font-bold rounded-xl transition-colors shadow-neon-primary">
+                Distribuir Notificación
+            </button>
+            <div class="mt-4 text-center">
+                <button type="button" onclick="document.getElementById('modal-notificacion').classList.add('hidden')" class="text-sm text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
+                    ← Volver al Panel Dev
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

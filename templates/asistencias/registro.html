@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Registro de Asistencias | Intranet{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Encabezado -->
+  <div class="bg-surface-container rounded-3xl p-6 md:p-8 border border-border shadow-md">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-text-main font-headline">Registro de Asistencias</h1>
+        <p class="text-text-muted text-sm mt-1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Historial de asistencias por fecha. Haz clic en un día para ver el detalle completo. <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+            <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+        </button></p>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'asistencias_personal' %}" class="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 rounded-xl text-primary text-sm font-bold transition-all flex items-center gap-2">
+          <ion-icon name="people-outline"></ion-icon> Personal
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de fechas registradas -->
+  {% if registros %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for r in registros %}
+    <a href="{% url 'detalle_registro' r.fecha|date:'Y-m-d' %}"
+       class="bg-surface-container border border-border rounded-2xl p-5 hover:border-primary/30 hover:bg-surface-element transition-all group shadow-md block">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-all">
+          <ion-icon name="calendar-outline" class="text-primary text-2xl"></ion-icon>
+        </div>
+        <div>
+          <p class="text-text-main font-bold">{{ r.fecha|date:"d/m/Y" }}</p>
+          <p class="text-text-muted text-xs mt-0.5">{{ r.fecha|date:"l" }}</p>
+        </div>
+        <ion-icon name="chevron-forward-outline" class="text-text-muted text-lg ml-auto group-hover:text-primary transition-colors"></ion-icon>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-surface-container border border-border rounded-2xl p-16 text-center shadow-md">
+    <ion-icon name="time-outline" class="text-5xl text-text-muted mb-4 block"></ion-icon>
+    <h3 class="text-lg font-bold text-text-main mb-2">Sin registros aún</h3>
+    <p class="text-text-muted text-sm">Comienza a marcar asistencias desde el módulo de Personal.</p>
+    <div class="flex justify-center gap-4 mt-6">
+      <a href="{% url 'asistencias_personal' %}" class="px-5 py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary text-sm font-bold hover:bg-primary/20 transition-all">Personal</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Registro de Asistencias</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">event_available</span> 1. ¿Qué es esta sección?
+                </h4>
+                <p class="text-xs">Aquí se muestra el <strong>historial de asistencias</strong> agrupado por fecha. Cada tarjeta representa un día en el que se registró asistencia, indicando la <strong>fecha</strong> y el <strong>día de la semana</strong> correspondiente.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">touch_app</span> 2. Ver el detalle de un día
+                </h4>
+                <p class="text-xs">Haz clic sobre cualquier <strong>tarjeta de fecha</strong> para abrir el detalle completo de ese día y consultar quiénes asistieron, faltaron o llegaron tarde.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">how_to_reg</span> 3. Registrar nuevas asistencias
+                </h4>
+                <p class="text-xs">Para <strong>marcar la asistencia del personal</strong>, utiliza el botón <strong>Personal</strong> ubicado en la parte superior derecha. Desde allí podrás generar nuevos registros que aparecerán luego en este historial.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">info</span> 4. Cuando no hay registros
+                </h4>
+                <p class="text-xs">Si aún no se ha tomado ninguna asistencia, verás el mensaje <strong>"Sin registros aún"</strong>. En ese caso, comienza desde el módulo de <strong>Personal</strong> para crear el primer registro.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+{% endblock %}

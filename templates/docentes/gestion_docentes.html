@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Docentes | Intranet{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div>
+      <h2 class="font-headline font-extrabold text-2xl text-text-main flex items-center gap-3">
+        <ion-icon name="people-circle-outline" class="text-primary"></ion-icon> Gestión de Docentes
+      </h2>
+      <p class="text-sm text-text-muted mt-1" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Administra el equipo docente, sus perfiles y asignaciones académicas.
+        <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+            <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+        </button>
+      </p>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-text-muted bg-surface-container/60 border border-border rounded-xl px-4 py-2">
+      <ion-icon name="people-outline" class="text-primary"></ion-icon>
+      <span>{{ total }} docente{{ total|pluralize:"s" }} registrado{{ total|pluralize:"s" }}</span>
+    </div>
+  </div>
+
+  <!-- Búsqueda y Filtros -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl p-5 shadow-md">
+    <form method="GET" class="flex gap-3 flex-wrap">
+      <div class="relative flex-1 min-w-[260px]">
+        <ion-icon name="search-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-lg z-10"></ion-icon>
+        <input type="text" name="q" value="{{ query }}" placeholder="Buscar por usuario o nombre completo..."
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 pl-11 pr-4 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-text-muted"/>
+      </div>
+      <button type="submit" class="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all">
+        Buscar
+      </button>
+      {% if query %}
+      <a href="{% url 'gestion_docentes' %}" class="bg-surface-element hover:bg-surface-element text-text-muted border border-border px-4 py-2.5 rounded-xl text-sm transition-all">
+        Limpiar
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Lista de Docentes -->
+  {% if datos %}
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md overflow-hidden">
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-element/50 border-b border-border text-[10px] uppercase tracking-wider text-text-muted">
+            <th class="px-6 py-4">Docente</th>
+            <th class="px-6 py-4">Clases Asignadas</th>
+            <th class="px-6 py-4 text-center">Notas</th>
+            <th class="px-6 py-4 text-center">Estado</th>
+            <th class="px-6 py-4 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-sm">
+          {% for item in datos %}
+          <tr class="hover:bg-white/3 transition-colors group">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                {% if item.perfil and item.perfil.foto_perfil %}
+                <img src="{{ item.perfil.foto_perfil.url }}" class="w-10 h-10 rounded-full border border-primary/30 object-cover flex-shrink-0 shadow-[0_0_10px_rgba(99,102,241,0.2)]" alt="Foto">
+                {% else %}
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                  {{ item.usuario.username|first|upper }}
+                </div>
+                {% endif %}
+                <div>
+                  <p class="font-semibold text-text-main group-hover:text-primary transition-colors">
+                    {{ item.perfil.nombre_completo|default:item.usuario.nombre_completo|default:item.usuario.username }}
+                  </p>
+                  <p class="text-xs text-text-muted">@{{ item.usuario.username }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              {% if item.asignaciones_preview %}
+              <div class="flex flex-wrap gap-1.5">
+                {% for a in item.asignaciones_preview %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/5 border border-primary/10 rounded text-[10px] text-primary/80">
+                  {{ a.ano_grado }}{{ a.seccion }}
+                  <span class="text-text-muted">· {{ a.asignatura__nombre|truncatechars:10 }}</span>
+                </span>
+                {% endfor %}
+                {% if item.asignaciones_count > 3 %}
+                <span class="text-[10px] text-text-muted">+{{ item.asignaciones_count|add:"-3" }} más</span>
+                {% endif %}
+              </div>
+              {% else %}
+              <span class="text-xs text-text-muted italic">Sin asignaciones</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-center">
+              <span class="font-bold text-sm {% if item.notas_count > 0 %}text-secondary{% else %}text-text-muted{% endif %}">
+                {{ item.notas_count }}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              {% if item.usuario.is_active %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase">
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Activo
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-error/10 text-error border border-error/20 uppercase">
+                <span class="w-1.5 h-1.5 rounded-full bg-error"></span> Bloqueado
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-right">
+              <a href="{% url 'perfil_docente_admin' item.usuario.id %}"
+                 class="inline-flex items-center gap-2 text-text-main bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
+                <ion-icon name="person-outline" class="text-primary text-base"></ion-icon> Ver Perfil
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="bg-surface-container/60 border border-border rounded-2xl py-20 text-center">
+    <ion-icon name="people-outline" class="text-6xl text-text-muted/20 block mx-auto mb-4"></ion-icon>
+    <h3 class="font-bold text-text-main mb-2">
+      {% if query %}No se encontró "{{ query }}"{% else %}No hay docentes registrados{% endif %}
+    </h3>
+    <p class="text-sm text-text-muted max-w-sm mx-auto">
+      {% if query %}
+        Prueba con otro término de búsqueda.
+        <a href="{% url 'gestion_docentes' %}" class="text-primary hover:underline ml-1">Ver todos</a>
+      {% else %}
+        Crea usuarios con cargo "Docente" desde el módulo de Usuarios.
+        <a href="{% url 'usuarios' %}" class="text-primary hover:underline block mt-2">Ir a Usuarios →</a>
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Gestión de Docentes</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">groups</span> 1. ¿Qué es esta sección?
+                </h4>
+                <p class="text-xs">Aquí administra al <strong>equipo docente</strong> de la institución. Verá un listado con todo el personal que tiene el cargo <strong>"Docente"</strong>, incluyendo su foto, nombre completo, las clases que tiene asignadas y la cantidad de notas que ha cargado. El contador superior le indica el <strong>total de docentes registrados</strong>.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">search</span> 2. Buscar un docente
+                </h4>
+                <p class="text-xs">Use el campo de búsqueda para encontrar rápidamente a un docente por su <strong>nombre completo</strong> o su <strong>nombre de usuario</strong>. Presione <strong>Buscar</strong> para filtrar el listado y <strong>Limpiar</strong> para volver a ver a todos los docentes.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">table_rows</span> 3. Entender el listado
+                </h4>
+                <p class="text-xs">Cada fila muestra información clave de un docente:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Clases Asignadas:</strong> las materias y secciones que dicta (año, sección y asignatura).</li>
+                    <li><strong>Notas:</strong> cantidad de calificaciones que el docente ha cargado en el sistema.</li>
+                    <li><strong>Estado:</strong> indica si el usuario está <strong>Activo</strong> (puede ingresar) o <strong>Bloqueado</strong> (acceso restringido).</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">person</span> 4. Ver el perfil de un docente
+                </h4>
+                <p class="text-xs">Pulse el botón <strong>Ver Perfil</strong> en la fila del docente para acceder a su ficha completa, donde podrá revisar y gestionar sus <strong>datos personales y asignaciones académicas</strong>. Si aún no aparece ningún docente, créelo desde el módulo de <strong>Usuarios</strong> asignándole el cargo "Docente".</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+                Entendido
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+</script>
+{% endblock %}

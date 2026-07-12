@@ -1,0 +1,1024 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% block title %}Calificaciones · Carga de Notas | Intranet{% endblock %}
+
+{% block content %}
+<style>
+  /* ══ CALIFICACIONES — DISEÑO LIMPIO ══ */
+  .calif-wrapper {
+    max-width: 720px;
+    margin: 0 auto;
+    font-family: var(--font-body);
+  }
+
+  .calif-page-title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .calif-page-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+  }
+
+  .calif-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .calif-dropzone {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    margin-top: 1rem;
+  }
+
+  .calif-dropzone:hover {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+  }
+
+  .calif-dropzone ion-icon {
+    font-size: 2.2rem;
+    color: var(--color-accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .calif-dropzone h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .calif-select {
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    outline: none;
+  }
+  .calif-select:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-ring);
+  }
+
+  .calif-btn {
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border: none;
+    padding: 0.7rem 2rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .calif-btn:hover {
+    background: var(--color-accent-hover);
+  }
+
+  .nc-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem; margin-top:1rem; }
+  .nc-card { border-radius:10px; padding:1rem; text-align:center; background:var(--color-surface); border:1px solid var(--color-border); }
+  .nc-card .num { font-size:1.75rem; font-weight:800; color:var(--color-accent); }
+  .nc-card .lbl { font-size:0.75rem; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.25rem; }
+
+  .nc-panel { margin-top:1rem; background:var(--color-surface); border:1px solid var(--color-border); border-radius:10px; padding:1rem; }
+  .nc-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .nc-table th { background:var(--color-bg-secondary); color:var(--color-text-primary); padding:0.5rem; text-align:left; font-weight:600; font-size:0.75rem; }
+  .nc-table td { padding:0.5rem; border-bottom:1px solid var(--color-border-subtle); color:var(--color-text-secondary); }
+
+  .nota-badge { background:var(--color-accent-subtle); color:var(--color-accent-text); font-weight:700; padding:0.15rem 0.4rem; border-radius:4px; font-family:monospace; font-size:0.75rem; }
+
+  /* Fix steps list */
+  .nc-steps { list-style:none; padding:0; display:flex; flex-direction:column; gap:0.3rem; margin-top:0.5rem; }
+  .nc-steps li { display:flex; align-items:center; gap:0.4rem; font-size:0.75rem; color:var(--color-text-secondary); }
+  .nc-steps ion-icon { color:var(--color-success); flex-shrink:0; font-size:0.9rem; }
+
+  /* Toast */
+  .nc-toast { position:fixed; bottom:1.5rem; right:1.5rem; z-index:10000; background:var(--color-surface);
+    border:1px solid var(--color-border); border-radius:10px; padding:0.75rem 1rem; max-width:320px;
+    box-shadow:var(--shadow-lg); display:flex; align-items:flex-start; gap:0.5rem; transition:opacity 0.3s; }
+  .nc-toast.ok   { border-left:3px solid var(--color-success); }
+  .nc-toast.warn { border-left:3px solid var(--color-warning); }
+  .nc-toast .ti { font-size:1.1rem; flex-shrink:0; }
+  .nc-toast .tt  { font-weight:700; font-size:0.8rem; color:var(--color-text-primary); }
+  .nc-toast .tm  { font-size:0.72rem; color:var(--color-text-secondary); margin-top:0.1rem; }
+
+  /* Spinner overlay */
+  #nc-spinner { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999;
+    align-items:center; justify-content:center; flex-direction:column; gap:0.75rem; }
+  .nc-spin { width:40px; height:40px; border:4px solid var(--color-border);
+    border-top-color:var(--color-accent); border-radius:50%; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  details summary { cursor:pointer; font-weight:700; font-size:0.8rem; color:var(--color-text-primary);
+    padding:0.5rem 0; list-style:none; display:flex; align-items:center; gap:0.35rem; }
+  details summary::-webkit-details-marker { display:none; }
+</style>
+
+<div class="block md:hidden text-center py-20 px-6 bg-white rounded-2xl shadow-sm border border-gray-100 my-8">
+  <div class="w-16 h-16 mx-auto bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 mb-4">
+    <ion-icon name="desktop-outline" class="text-3xl"></ion-icon>
+  </div>
+  <h3 class="text-lg font-bold text-gray-800 mb-2">Modo Escritorio Requerido</h3>
+  <p class="text-sm text-gray-500">Para ir a la carga masiva te recomendamos ir a una Computadora de Escritorio (PC)</p>
+</div>
+
+<div class="calif-wrapper hidden md:block">
+  <h1 class="calif-page-title">Calificaciones</h1>
+  <p class="calif-page-desc" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    Gestión de notas académicas y procesamiento de sábanas Excel
+    <button type="button" onclick="toggleCalifHelp()" style="display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;cursor:pointer;color:var(--color-accent);font-size:.8rem;font-weight:700;padding:0;">
+      <span class="material-symbols-outlined" style="font-size:15px;">help</span> ¿Cómo usar esta sección?
+    </button>
+  </p>
+
+  {% if not procesado %}
+  <!-- ═══ FORMULARIO ══════════════════════════════════════════════ -->
+  <div style="padding:0;">
+
+    {% if error %}
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1rem;border-radius:10px;margin-bottom:1.5rem;">
+      <ion-icon name="alert-circle-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon>
+      <strong>Error:</strong> {{ error }}
+      {% if col_map_detectado %}
+      <div style="margin-top:.5rem;font-size:.8rem;color:rgba(248,113,113,.7);">
+        Columnas detectadas: {{ col_map_detectado|join:", " }}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" id="nc-form" data-turbo="false">
+      {% csrf_token %}
+
+      <!-- Selectores de Período y Año Académico -->
+      <div class="calif-card">
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div>
+            <label style="display:block;font-size:.75rem;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">
+              <ion-icon name="calendar-outline" style="vertical-align:middle;margin-right:.3rem;color:var(--color-accent);"></ion-icon>
+              Período Académico *
+            </label>
+            <select name="periodo_id" id="nc-periodo" class="calif-select" required>
+              <option value="" disabled selected>— Selecciona el período —</option>
+              {% for p in periodos %}
+              <option value="{{ p.id }}" {% if p.activo %}style="color:var(--color-accent);font-weight:700;"{% endif %}>
+                {{ p.nombre }}{% if p.activo %} (Activo){% endif %}
+              </option>
+              {% empty %}
+              <option value="" disabled>No hay períodos registrados. Administra en el panel.</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:.75rem;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">
+              <ion-icon name="school-outline" style="vertical-align:middle;margin-right:.3rem;color:var(--color-accent);"></ion-icon>
+              Año Cursante (Grado) *
+            </label>
+            <select name="ano_grado" id="nc-ano" class="calif-select" required>
+              <option value="" disabled selected>— Selecciona el año —</option>
+              <option value="1">1er Año</option>
+              <option value="2">2do Año</option>
+              <option value="3">3er Año</option>
+              <option value="4">4to Año</option>
+              <option value="5">5to Año</option>
+            </select>
+          </div>
+        </div>
+
+
+        <p style="font-size:.72rem;color:var(--color-text-secondary);margin-top:0.75rem;">
+          <ion-icon name="information-circle-outline" style="vertical-align:middle;"></ion-icon>
+          Las notas se asociarán al período y año seleccionados. <a href="#" id="btn-gestionar-periodos" style="color:var(--color-accent);font-weight:700;text-decoration:underline;">Gestionar Períodos Académicos</a>.
+        </p>
+      </div>
+
+      <div class="calif-dropzone" id="nc-drop" onclick="document.getElementById('nc-input').click()">
+        <input type="file" id="nc-input" name="archivo_excel" accept=".xlsx,.xls" required style="display:none;">
+        <ion-icon name="cloud-upload-outline"></ion-icon>
+        <h3>Arrastra el archivo de notas aquí</h3>
+        <p style="color:var(--color-text-secondary);font-size:.78rem;">Formato: <code>CÉDULA | MATERIA | LAPSO I | LAPSO II | LAPSO III | DEFINITIVA</code></p>
+        <div id="nc-file-name" style="margin-top: 0.5rem; color: var(--color-accent); font-weight: 700; font-size:0.85rem;"></div>
+      </div>
+      
+      <div style="text-align:center; margin-top: 1.5rem;">
+        <a href="/static/formatos/formato_calificaciones.xlsx" download
+           style="display:inline-flex; align-items:center; gap:.5rem; background:var(--color-bg-secondary); color:var(--color-text-primary); border:1px solid var(--color-border); padding:.6rem 1.5rem; border-radius:8px; font-size:.85rem; font-weight:700; text-decoration:none; transition:all .2s;">
+          <ion-icon name="download-outline" style="font-size:1.2rem; color:var(--color-accent);"></ion-icon>
+          Aquí tienes un formato para subir tus archivos
+        </a>
+      </div>
+      <div style="text-align:center; margin-top: 1rem;">
+        <button type="submit" id="nc-btn-proc" class="calif-btn" style="display:none;">
+          <ion-icon name="flash-outline" style="vertical-align:middle;margin-right:.3rem;"></ion-icon>
+          Procesar Notas
+        </button>
+      </div>
+    </form>
+
+    <!-- Guía de formato -->
+    <div class="calif-card" style="margin-top:0.75rem;">
+      <h4 style="font-size:.82rem;font-weight:700;color:var(--color-text-primary);margin-bottom:.5rem;">
+        <ion-icon name="information-circle-outline" style="vertical-align:middle;color:var(--color-accent);"></ion-icon>
+        Estructura esperada del archivo Excel
+      </h4>
+      <div style="overflow-x: auto;">
+        <table class="nc-table">
+          <thead>
+            <tr>
+              <th>CEDULA</th><th>MATERIA</th><th>LAPSO I</th><th>LAPSO II</th><th>LAPSO III</th><th>DEFINITIVA</th><th>REPARACION</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>12345678</td><td>MATEMÁTICAS</td>
+              <td><span class="nota-badge">15.50</span></td>
+              <td><span class="nota-badge">16.00</span></td>
+              <td><span class="nota-badge">14.75</span></td>
+              <td><span class="nota-badge">15.42</span></td>
+              <td style="color:var(--color-text-secondary);">—</td>
+            </tr>
+            <tr>
+              <td>87654321</td><td>LENGUA Y LITERATURA</td>
+              <td><span class="nota-badge">12.00</span></td>
+              <td><span class="nota-badge">11.50</span></td>
+              <td><span class="nota-badge">10.00</span></td>
+              <td style="color:var(--color-text-secondary);">auto</td>
+              <td style="color:var(--color-text-secondary);">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="nc-steps" style="margin-top:1rem;">
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Si la columna DEFINITIVA está vacía, se calcula automáticamente como promedio de los lapsos</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Notas fuera del rango 0–20 son rechazadas con advertencia</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Si el alumno ya tiene nota en ese lapso, se actualiza con el nuevo valor</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Alumnos no encontrados por cédula se reportan como "No encontrado"</li>
+        <li><ion-icon name="checkmark-circle-outline"></ion-icon> Encabezados detectados automáticamente (hasta fila 15)</li>
+      </ul>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ═══ RESULTADOS ════════════════════════════════════════════ -->
+
+  <div class="calif-card">
+    {% if periodo_usado %}
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:.65rem 1rem;">
+      <ion-icon name="calendar-outline" style="color:#10b981;font-size:1.1rem;"></ion-icon>
+      <span style="font-size:.85rem;font-weight:700;color:#10b981;">Período procesado: {{ periodo_usado.nombre }}</span>
+      {% if periodo_usado.activo %}<span style="font-size:.72rem;background:rgba(16,185,129,.2);color:#10b981;border-radius:6px;padding:.1rem .45rem;margin-left:.4rem;">ACTIVO</span>{% endif %}
+    </div>
+    {% endif %}
+    <div style="font-size:.8rem;color:var(--color-text-secondary);">Columnas detectadas en el archivo</div>
+    <div style="margin-top:.35rem;">
+      {% for c in col_map_detectado %}
+      <span style="display:inline-block;background:rgba(99,102,241,.15);color:#818cf8;font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;margin:.15rem;">{{ c }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Tarjetas resumen -->
+  <div class="nc-cards">
+    <div class="nc-card ok">
+      <div class="num">{{ total_notas }}</div>
+      <div class="lbl">Notas cargadas</div>
+    </div>
+    <div class="nc-card info">
+      <div class="num">{{ total_duplicados }}</div>
+      <div class="lbl">Notas actualizadas</div>
+    </div>
+    <div class="nc-card warn">
+      <div class="num">{{ total_no_enc }}</div>
+      <div class="lbl">Alumnos no encontrados</div>
+    </div>
+    <div class="nc-card err">
+      <div class="num">{{ total_errores }}</div>
+      <div class="lbl">Errores de dato</div>
+    </div>
+  </div>
+
+  <!-- Tabla: notas cargadas -->
+  {% if cargadas %}
+  <div class="nc-panel">
+    <details open>
+      <summary>
+        <ion-icon name="checkmark-circle-outline" style="color:#10b981;"></ion-icon>
+        Notas Cargadas Exitosamente ({{ cargadas|length }})
+        <ion-icon name="chevron-forward-outline" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="nc-table" style="margin-top:.75rem;">
+        <thead><tr><th>Cédula</th><th>Alumno</th><th>Materia</th><th>Notas</th></tr></thead>
+        <tbody>
+          {% for r in cargadas %}
+          <tr>
+            <td>{{r.cedula|formato_cedula}}</td>
+            <td>{{ r.alumno }}</td>
+            <td>{{ r.materia }}</td>
+            <td>{% for n in r.notas_list %}<span class="nota-badge">{{ n }}</span>{% endfor %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Tabla: notas actualizadas (duplicados) -->
+  {% if duplicados %}
+  <div class="nc-panel">
+    <details>
+      <summary>
+        <ion-icon name="refresh-circle-outline" style="color:var(--color-accent);"></ion-icon>
+        Notas Actualizadas (ya existían y fueron sobreescritas) ({{ duplicados|length }})
+        <ion-icon name="chevron-forward-outline" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="nc-table" style="margin-top:.75rem;">
+        <thead><tr><th>Cédula</th><th>Materia</th><th>Lapso</th><th>Nota anterior</th><th>Nota nueva</th></tr></thead>
+        <tbody>
+          {% for d in duplicados %}
+          <tr>
+            <td>{{d.cedula|formato_cedula}}</td><td>{{ d.materia }}</td><td>{{ d.lapso }}</td>
+            <td style="color:#f59e0b;font-weight:700;font-family:monospace;">{{ d.nota_anterior }}</td>
+            <td style="color:#10b981;font-weight:700;font-family:monospace;">{{ d.nota_nueva }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- No encontrados -->
+  {% if no_encontrados %}
+  <div class="nc-panel">
+    <details>
+      <summary>
+        <ion-icon name="person-remove-outline" style="color:#f59e0b;"></ion-icon>
+        Alumnos No Encontrados en el Sistema ({{ no_encontrados|length }})
+        <ion-icon name="chevron-forward-outline" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="nc-table" style="margin-top:.75rem;">
+        <thead><tr><th>Cédula</th><th>Fila Excel</th><th>Acción sugerida</th></tr></thead>
+        <tbody>
+          {% for r in no_encontrados %}
+          <tr>
+            <td>V-{{r.cedula|formato_cedula}}</td>
+            <td>{{ r.fila }}</td>
+            <td>
+              <a href="/expedientes/nuevo/" style="color:var(--color-accent);font-size:.75rem;text-decoration:none;font-weight:700;">
+                <ion-icon name="add-circle-outline" style="vertical-align:middle;"></ion-icon> Crear expediente
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Errores -->
+  {% if errores %}
+  <div class="nc-panel">
+    <details>
+      <summary>
+        <ion-icon name="close-circle-outline" style="color:#ef4444;"></ion-icon>
+        Errores de Dato ({{ errores|length }})
+        <ion-icon name="chevron-forward-outline" style="margin-left:auto;"></ion-icon>
+      </summary>
+      <table class="nc-table" style="margin-top:.75rem;">
+        <thead><tr><th>Fila</th><th>Motivo</th></tr></thead>
+        <tbody>
+          {% for e in errores %}
+          <tr><td>{{ e.fila }}</td><td>{{ e.motivo }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Botones -->
+  <div style="text-align:center;margin-top:2rem;display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
+    <a href="{% url 'notas_calificaciones' %}" class="calif-btn" style="text-decoration:none;">
+      <ion-icon name="refresh-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon> Cargar otro archivo
+    </a>
+    <a href="{% url 'expedientes' %}"
+       style="border:1px solid var(--brand-main);color:var(--brand-main);padding:.75rem 2rem;border-radius:10px;font-weight:700;text-decoration:none;">
+      <ion-icon name="folder-open-outline" style="vertical-align:middle;margin-right:.4rem;"></ion-icon> Ver Expedientes
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Spinner -->
+<div id="nc-spinner">
+  <div class="nc-spin"></div>
+  <p style="color:#fff;font-weight:600;font-size:.92rem;">Procesando notas con motor IA…</p>
+</div>
+
+<!-- Toast resultado -->
+{% if procesado %}
+<div class="nc-toast {% if total_errores == 0 and total_no_enc == 0 %}ok{% else %}warn{% endif %}" id="nc-toast">
+  <ion-icon name="{% if total_errores == 0 and total_no_enc == 0 %}checkmark-circle{% else %}warning{% endif %}-outline"
+            class="ti" style="color:{% if total_errores == 0 and total_no_enc == 0 %}#10b981{% else %}#f59e0b{% endif %};"></ion-icon>
+  <div>
+    <div class="tt">Carga de notas completada</div>
+    <div class="tm">{{ total_notas }} notas · {{ total_no_enc }} no encontrados · {{ total_errores }} errores</div>
+  </div>
+</div>
+<script>setTimeout(() => { const t = document.getElementById('nc-toast'); if(t) t.style.opacity='0'; }, 6000);</script>
+{% endif %}
+
+<!-- Modal de Gestión de Períodos Académicos -->
+<div id="modal-periodos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); z-index:99999; align-items:center; justify-content:center; padding:1.5rem; transition:opacity 0.3s ease;">
+  <div class="glass-panel" style="width:100%; max-width:650px; background:var(--color-surface); border:1px solid rgba(99,102,241,0.25); border-radius:18px; padding:2rem; box-shadow:0 20px 50px rgba(0,0,0,0.5); display:flex; flex-direction:column; max-height:85vh; overflow-y:auto; position:relative; gap:1.25rem;">
+    <!-- Botón Cerrar -->
+    <button type="button" id="btn-close-modal" style="position:absolute; top:1.25rem; right:1.25rem; background:none; border:none; color:var(--color-text-secondary); cursor:pointer; font-size:1.6rem; transition:color 0.2s;" onmouseover="this.style.color='var(--color-accent)'" onmouseout="this.style.color='var(--color-text-secondary)'">
+      <ion-icon name="close-circle-outline"></ion-icon>
+    </button>
+    
+    <div style="display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid var(--color-border); padding-bottom:0.75rem;">
+      <ion-icon name="calendar-outline" style="font-size:1.8rem; color:var(--color-accent);"></ion-icon>
+      <h2 style="font-size:1.4rem; font-weight:800; margin:0;" class="text-text-main">Gestión de Períodos Académicos</h2>
+    </div>
+
+    <!-- Mensajes de Notificación local inside Modal -->
+    <div id="modal-alert" style="display:none; border-radius:10px; padding:0.75rem 1rem; font-size:0.85rem; font-weight:600; margin-bottom:0.5rem;"></div>
+
+    <!-- Formulario para agregar / editar -->
+    <form id="form-periodo" style="background:rgba(99,102,241,0.04); border:1px solid rgba(99,102,241,0.15); border-radius:12px; padding:1.25rem; display:flex; flex-direction:column; gap:0.85rem;">
+      <input type="hidden" id="periodo-id" value="">
+      
+      <div style="font-weight:700; font-size:0.9rem; color:var(--color-text-primary); display:flex; align-items:center; gap:0.3rem;">
+        <span id="form-action-title">Agregar Nuevo Período</span>
+        <button type="button" id="btn-cancel-edit" style="display:none; margin-left:auto; background:none; border:none; color:#ef4444; font-size:0.75rem; font-weight:700; cursor:pointer;">Cancelar Edición</button>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:0.75rem; align-items:end;">
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.25rem;">Nombre Período *</label>
+          <input type="text" id="p-nombre" placeholder="Ej: 2025-2026" required style="width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:8px; padding:0.5rem 0.75rem; font-size:0.85rem; font-weight:600; outline:none; transition:border-color 0.2s;">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.25rem;">F. Inicio *</label>
+          <input type="date" id="p-fecha-inicio" required style="width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:8px; padding:0.45rem 0.5rem; font-size:0.85rem; font-weight:600; outline:none; transition:border-color 0.2s;">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.25rem;">F. Fin *</label>
+          <input type="date" id="p-fecha-fin" required style="width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:8px; padding:0.45rem 0.5rem; font-size:0.85rem; font-weight:600; outline:none; transition:border-color 0.2s;">
+        </div>
+      </div>
+      
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:0.25rem;">
+        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:600; color:var(--color-text-secondary); cursor:pointer;">
+          <input type="checkbox" id="p-activo" style="width:16px; height:16px; accent-color:#10b981; cursor:pointer;">
+          Establecer como Período Activo
+        </label>
+        <button type="submit" id="btn-save-periodo" class="btn-primary" style="padding:0.5rem 1.5rem; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; display:flex; align-items:center; gap:0.35rem; transition:transform 0.2s, box-shadow 0.2s;">
+          <ion-icon name="checkmark-outline"></ion-icon> Guardar
+        </button>
+      </div>
+    </form>
+
+    <!-- Lista de Períodos -->
+    <div>
+      <div style="font-weight:700; font-size:0.9rem; color:var(--color-text-primary); margin-bottom:0.5rem; display:flex; align-items:center; gap:0.35rem;">
+        <ion-icon name="list-outline" style="color:var(--color-accent);"></ion-icon>
+        <span>Períodos Registrados</span>
+      </div>
+      
+      <div style="max-height:220px; overflow-y:auto; border:1px solid var(--color-border); border-radius:12px; background:rgba(255,255,255,0.01);">
+        <table class="nc-table" style="width:100%; border-collapse:collapse; margin:0;">
+          <thead>
+            <tr>
+              <th style="padding:0.6rem;">Nombre</th>
+              <th style="padding:0.6rem;">Inicio</th>
+              <th style="padding:0.6rem;">Fin</th>
+              <th style="padding:0.6rem; text-align:center;">Estado</th>
+              <th style="padding:0.6rem; text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="lista-periodos-tbody">
+            <tr>
+              <td colspan="5" style="text-align:center; padding:1.5rem; color:var(--color-text-secondary);">Cargando períodos…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+{
+const drop = document.getElementById('nc-drop');
+const inp  = document.getElementById('nc-input');
+const fn   = document.getElementById('nc-file-name');
+const btn  = document.getElementById('nc-btn-proc');
+const form = document.getElementById('nc-form');
+const spin = document.getElementById('nc-spinner');
+
+function setFile(file) {
+  if (!file) return;
+  fn.textContent = file.name;
+  if (btn) btn.style.display = 'inline-block';
+}
+if (inp) inp.addEventListener('change', e => setFile(e.target.files[0]));
+if (drop) {
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('active'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('active'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('active');
+    const f = e.dataTransfer.files[0];
+    if (f) { inp.files = e.dataTransfer.files; setFile(f); }
+  });
+}
+if (form) form.addEventListener('submit', () => { if(spin) spin.style.display = 'flex'; });
+
+// ═══ GESTIÓN DE PERÍODOS ACADÉMICOS EN MODAL ═══
+const btnGestionar = document.getElementById('btn-gestionar-periodos');
+const modalPeriodos = document.getElementById('modal-periodos');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const formPeriodo = document.getElementById('form-periodo');
+const btnCancelEdit = document.getElementById('btn-cancel-edit');
+const formActionTitle = document.getElementById('form-action-title');
+const listaTbody = document.getElementById('lista-periodos-tbody');
+const modalAlert = document.getElementById('modal-alert');
+const selectMain = document.getElementById('nc-periodo');
+
+// Inputs de Periodo
+const inputId = document.getElementById('periodo-id');
+const inputNombre = document.getElementById('p-nombre');
+const inputInicio = document.getElementById('p-fecha-inicio');
+const inputFin = document.getElementById('p-fecha-fin');
+const inputActivo = document.getElementById('p-activo');
+
+function getCsrfToken() {
+  const input = document.querySelector('[name=csrfmiddlewaretoken]');
+  return input ? input.value : '';
+}
+
+function showAlert(msg, isError = false) {
+  modalAlert.textContent = msg;
+  modalAlert.style.display = 'block';
+  if (isError) {
+    modalAlert.style.background = 'rgba(239,68,68,0.15)';
+    modalAlert.style.color = '#f87171';
+    modalAlert.style.border = '1px solid rgba(239,68,68,0.3)';
+  } else {
+    modalAlert.style.background = 'rgba(16,185,129,0.15)';
+    modalAlert.style.color = '#34d399';
+    modalAlert.style.border = '1px solid rgba(16,185,129,0.3)';
+  }
+  setTimeout(() => {
+    modalAlert.style.display = 'none';
+  }, 5000);
+}
+
+function resetForm() {
+  inputId.value = '';
+  inputNombre.value = '';
+  inputInicio.value = '';
+  inputFin.value = '';
+  inputActivo.checked = false;
+  formActionTitle.textContent = 'Agregar Nuevo Período';
+  btnCancelEdit.style.display = 'none';
+}
+
+btnCancelEdit.addEventListener('click', resetForm);
+
+// Abrir modal
+if (btnGestionar) {
+  btnGestionar.addEventListener('click', (e) => {
+    e.preventDefault();
+    modalPeriodos.style.display = 'flex';
+    cargarPeriodos();
+  });
+}
+
+// Cerrar modal
+if (btnCloseModal) {
+  btnCloseModal.addEventListener('click', () => {
+    modalPeriodos.style.display = 'none';
+    resetForm();
+  });
+}
+
+// Cerrar click fuera
+modalPeriodos.addEventListener('click', (e) => {
+  if (e.target === modalPeriodos) {
+    modalPeriodos.style.display = 'none';
+    resetForm();
+  }
+});
+
+// Cargar periodos desde backend
+async function cargarPeriodos() {
+  listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--color-text-secondary);">Cargando períodos…</td></tr>`;
+  try {
+    const res = await fetch('/notas/periodos/');
+    const data = await res.json();
+    if (data.success) {
+      actualizarVistas(data.periodos);
+    } else {
+      listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#ef4444;">Error al recuperar períodos del servidor.</td></tr>`;
+    }
+  } catch (err) {
+    listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#ef4444;">Fallo de conexión.</td></tr>`;
+  }
+}
+
+// Actualizar tabla modal y select principal sincronizadamente
+function actualizarVistas(periodos) {
+  // 1. Renderizar tabla en el modal
+  if (periodos.length === 0) {
+    listaTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--color-text-secondary);">No hay períodos registrados.</td></tr>`;
+  } else {
+    listaTbody.innerHTML = periodos.map(p => `
+      <tr style="border-bottom: 1px solid var(--color-border);">
+        <td style="padding:0.6rem; font-weight:700; color:var(--color-text-primary);">${p.nombre}</td>
+        <td style="padding:0.6rem; font-family:monospace; font-size:0.78rem;">${p.fecha_inicio}</td>
+        <td style="padding:0.6rem; font-family:monospace; font-size:0.78rem;">${p.fecha_fin}</td>
+        <td style="padding:0.6rem; text-align:center;">
+          ${p.activo 
+            ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.7rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:6px; border:1px solid rgba(16,185,129,0.3);">ACTIVO</span>` 
+            : `<span style="background:rgba(255,255,255,0.06); color:var(--color-text-secondary); font-size:0.7rem; padding:0.15rem 0.45rem; border-radius:6px;">Cerrado</span>`
+          }
+        </td>
+        <td style="padding:0.6rem; text-align:center;">
+          <div style="display:flex; justify-content:center; gap:0.4rem;">
+            <button type="button" class="btn-edit-p" data-id="${p.id}" data-nombre="${p.nombre}" data-inicio="${p.fecha_inicio}" data-fin="${p.fecha_fin}" data-activo="${p.activo}" style="background:rgba(99,102,241,0.1); color:var(--color-accent); border:none; padding:0.35rem; border-radius:6px; cursor:pointer; font-size:1.1rem; display:inline-flex; align-items:center; justify-content:center; transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Editar">
+              <ion-icon name="create-outline"></ion-icon>
+            </button>
+            <button type="button" class="btn-delete-p" data-id="${p.id}" data-nombre="${p.nombre}" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; padding:0.35rem; border-radius:6px; cursor:pointer; font-size:1.1rem; display:inline-flex; align-items:center; justify-content:center; transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Eliminar">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    
+    // Registrar controladores para botones cargados
+    document.querySelectorAll('.btn-edit-p').forEach(b => {
+      b.addEventListener('click', (e) => {
+        const trg = e.currentTarget;
+        inputId.value = trg.getAttribute('data-id');
+        inputNombre.value = trg.getAttribute('data-nombre');
+        inputInicio.value = trg.getAttribute('data-inicio');
+        inputFin.value = trg.getAttribute('data-fin');
+        inputActivo.checked = trg.getAttribute('data-activo') === 'true';
+        formActionTitle.textContent = 'Editar Período: ' + trg.getAttribute('data-nombre');
+        btnCancelEdit.style.display = 'inline-block';
+        
+        // Scroll suave al formulario
+        formPeriodo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+    
+    const IS_DEV = {% if request.user.rol == 'DESARROLLADOR' %}true{% else %}false{% endif %};
+
+    document.querySelectorAll('.btn-delete-p').forEach(b => {
+      b.addEventListener('click', async (e) => {
+        const id = e.currentTarget.getAttribute('data-id');
+        const nombre = e.currentTarget.getAttribute('data-nombre');
+        if (IS_DEV) {
+          abrirModalEliminarPeriodo(id, nombre);
+        } else {
+          if (confirm(`¿Estás 100% seguro de eliminar el período "${nombre}"? Esta acción no se puede deshacer.`)) {
+            ejecutarEliminacionPeriodo(id);
+          }
+        }
+      });
+    });
+  }
+
+  // 2. Sincronizar el select dropdown principal de la interfaz original
+  const prevValue = selectMain.value;
+  selectMain.innerHTML = '<option value="" disabled>— Selecciona el período académico —</option>';
+  
+  if (periodos.length === 0) {
+    selectMain.innerHTML += '<option value="" disabled>No hay períodos registrados. Administra en el panel.</option>';
+  } else {
+    periodos.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.nombre + (p.activo ? ' (Activo)' : '');
+      if (p.activo) {
+        opt.style.color = '#10b981';
+        opt.style.fontWeight = '700';
+      }
+      selectMain.appendChild(opt);
+    });
+  }
+  
+  // Reestablecer selección previa o seleccionar el activo por defecto
+  if (prevValue && Array.from(selectMain.options).some(o => o.value === prevValue)) {
+    selectMain.value = prevValue;
+  } else {
+    const act = periodos.find(p => p.activo);
+    if (act && !prevValue) {
+      selectMain.value = act.id;
+    }
+  }
+}
+
+// Envío del Formulario (Agregar / Editar)
+formPeriodo.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const id = inputId.value;
+  const nombre = inputNombre.value.trim();
+  const fecha_inicio = inputInicio.value;
+  const fecha_fin = inputFin.value;
+  const activo = inputActivo.checked;
+  
+  const url = id ? `/notas/periodos/${id}/` : '/notas/periodos/';
+  const payload = { nombre, fecha_inicio, fecha_fin, activo };
+  
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken()
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const rData = await res.json();
+    if (rData.success) {
+      showAlert(id ? 'Período académico actualizado exitosamente.' : 'Período académico creado exitosamente.');
+      setTimeout(() => {
+        modalPeriodos.style.display = 'none';
+        resetForm();
+        window.location.reload();
+      }, 1500);
+    } else {
+      showAlert(rData.error || 'Ocurrió un error inesperado al procesar.', true);
+    }
+  } catch (err) {
+    showAlert('Error de comunicación con el servidor al guardar el período.', true);
+  }
+});
+
+// ═══ SISTEMA DE BORRADO SEGURO PARA DESARROLLADOR ═══
+let targetPeriodoId = null;
+let targetPeriodoName = '';
+
+function abrirModalEliminarPeriodo(id, nombre) {
+  targetPeriodoId = id;
+  targetPeriodoName = nombre;
+  document.getElementById('msg-eliminar-p-1').innerHTML = `Estás a punto de eliminar el período <strong class="text-white">"${nombre}"</strong>.`;
+  document.getElementById('modal-eliminar-p-1').classList.remove('hidden');
+}
+
+function cerrarModalEliminarPeriodo() {
+  document.getElementById('modal-eliminar-p-1').classList.add('hidden');
+  document.getElementById('modal-eliminar-p-2').classList.add('hidden');
+  targetPeriodoId = null;
+  targetPeriodoName = '';
+}
+
+function siguientePasoEliminarPeriodo() {
+  document.getElementById('modal-eliminar-p-1').classList.add('hidden');
+  document.getElementById('msg-eliminar-p-2').innerText = `¿Eliminar el período "${targetPeriodoName}" para siempre?`;
+  document.getElementById('modal-eliminar-p-2').classList.remove('hidden');
+}
+
+async function confirmarEliminacionPeriodo() {
+  if (!targetPeriodoId) return;
+  const btn = document.getElementById('btn-ejecutar-eliminar-p');
+  const oldText = btn.textContent;
+  btn.textContent = 'Eliminando...';
+  btn.disabled = true;
+  
+  try {
+    const res = await fetch(`/notas/periodos/${targetPeriodoId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCsrfToken(),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: '_method=DELETE'
+    });
+    const rData = await res.json();
+    btn.textContent = oldText;
+    btn.disabled = false;
+    
+    if (rData.success) {
+      cerrarModalEliminarPeriodo();
+      showAlert('Período eliminado correctamente.');
+      cargarPeriodos();
+      if (selectMain && selectMain.value == targetPeriodoId) {
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    } else {
+      showAlert(rData.error || 'Error al intentar eliminar el período.', true);
+      cerrarModalEliminarPeriodo();
+    }
+  } catch (err) {
+    showAlert('Error de conexión al eliminar.', true);
+    btn.textContent = oldText;
+    btn.disabled = false;
+    cerrarModalEliminarPeriodo();
+  }
+}
+
+async function ejecutarEliminacionPeriodo(id) {
+  try {
+    const res = await fetch(`/notas/periodos/${id}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCsrfToken(),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: '_method=DELETE'
+    });
+    const rData = await res.json();
+    if (rData.success) {
+      showAlert('Período eliminado correctamente.');
+      cargarPeriodos();
+      if (selectMain && selectMain.value == id) {
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    } else {
+      showAlert(rData.error || 'Error al intentar eliminar el período.', true);
+    }
+  } catch (err) {
+    showAlert('Error de conexión al eliminar.', true);
+  }
+}
+
+// Exportar funciones globales necesarias para onclick inline attributes
+window.cerrarModalEliminarPeriodo = cerrarModalEliminarPeriodo;
+window.siguientePasoEliminarPeriodo = siguientePasoEliminarPeriodo;
+window.confirmarEliminacionPeriodo = confirmarEliminacionPeriodo;
+}
+</script>
+
+<!-- Modales de Eliminación de Período Académico (Doble Confirmación para Desarrollador) -->
+<!-- Modal 1: Pregunta Inicial -->
+<div id="modal-eliminar-p-1" class="hidden fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-white/10 rounded-2xl shadow-glass w-full max-w-md mx-4 p-6 space-y-5 text-center">
+    <div class="w-16 h-16 rounded-full bg-error/20 flex items-center justify-center mx-auto mb-4 border border-error/30 shadow-neon-error">
+      <ion-icon name="warning-outline" class="text-4xl text-error"></ion-icon>
+    </div>
+    <h4 class="font-headline font-bold text-xl text-white">¿Estás seguro?</h4>
+    <p class="text-text-muted text-sm" id="msg-eliminar-p-1">Estás a punto de eliminar este período académico.</p>
+    <div class="flex items-center gap-3 pt-4">
+      <button onclick="cerrarModalEliminarPeriodo()" class="flex-1 bg-surface-element hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl text-sm transition-all border border-white/10">Cancelar</button>
+      <button onclick="siguientePasoEliminarPeriodo()" class="flex-1 bg-primary hover:bg-primary/80 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-neon-primary">Sí, Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Confirmación de Seguridad -->
+<div id="modal-eliminar-p-2" class="hidden fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-error/30 rounded-2xl shadow-glass w-full max-w-md mx-4 p-6 space-y-5 text-center relative overflow-hidden">
+    <div class="absolute inset-0 bg-error/5 z-0 pointer-events-none"></div>
+    <div class="relative z-10">
+      <div class="w-16 h-16 rounded-full bg-error flex items-center justify-center mx-auto mb-4 shadow-neon-error">
+        <ion-icon name="skull-outline" class="text-4xl text-white"></ion-icon>
+      </div>
+      <h4 class="font-headline font-extrabold text-xl text-error uppercase tracking-wider">Confirmación de Seguridad</h4>
+      <p class="text-text-muted text-sm mt-3">
+        Esta acción es <strong>IRREVERSIBLE</strong> y usará tu <strong>Super Poder de Desarrollador</strong> para saltar restricciones de integridad. Se eliminarán permanentemente el período académico y <strong>TODAS sus inscripciones, calificaciones asociadas, horarios y asignaciones de docentes</strong>.
+      </p>
+      <p class="text-white text-sm font-bold mt-2" id="msg-eliminar-p-2"></p>
+      <div class="flex items-center gap-3 pt-6">
+        <button onclick="cerrarModalEliminarPeriodo()" class="flex-1 bg-surface-element hover:bg-white/10 text-white font-semibold py-2.5 rounded-xl text-sm transition-all border border-white/10">Cancelar</button>
+        <button onclick="confirmarEliminacionPeriodo()" id="btn-ejecutar-eliminar-p" class="flex-1 bg-error hover:bg-error/80 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-error">Eliminar Definitivamente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Ayuda (Guía de Calificaciones) -->
+<div id="califHelpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+      <div class="flex items-center gap-2 text-primary">
+        <span class="material-symbols-outlined">grading</span>
+        <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Carga de Calificaciones</h3>
+      </div>
+      <button type="button" onclick="toggleCalifHelp()" class="text-text-muted hover:text-text-main cursor-pointer bg-transparent border-none">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+
+      <!-- Sección 1: Pasos previos -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">checklist</span>
+          1. Pasos Previos Obligatorios
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>Selecciona el <strong>Período Académico</strong> al que pertenecen las notas (ej: 2024-2025).</li>
+          <li>Selecciona el <strong>Año Cursante</strong> (1er año, 2do año, etc.) del grupo de alumnos.</li>
+          <li>Prepara tu archivo Excel: puedes subir un libro con 3 pestañas o pestañas específicas nombradas <strong>M1</strong>, <strong>M2</strong> y <strong>M3</strong> para cargar de forma masiva los lapsos 1, 2 y 3 respectivamente. Si subes una sola hoja que no coincida con estos nombres, el sistema la interpretará como <strong>Definitiva Directa</strong>.</li>
+        </ul>
+        <p class="text-xs mt-2">
+          Si aún no tienes períodos creados, haz clic en el enlace <em>"Gestionar Períodos Académicos"</em> para crear uno antes de subir el archivo.
+        </p>
+      </div>
+
+      <!-- Sección 2: Formato del Excel -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">table_chart</span>
+          2. Formato del Archivo Excel
+        </h4>
+        <p class="text-xs mb-2">Cada pestaña activa debe seguir la estructura administrativa. Las columnas requeridas son:</p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">CEDULA (Columna B)</span>
+            <span>Cédula de identidad del alumno (se limpia a solo dígitos)</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">COLUMNAS D a M</span>
+            <span>Notas de las 10 materias consecutivas correspondientes a la pestaña</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">M1 / M2 / M3</span>
+            <span>Hojas correspondientes a los Lapsos 1, 2 y 3 del periodo académico</span>
+          </div>
+          <div class="bg-surface-element p-2.5 rounded border border-border">
+            <span class="font-bold text-text-main block">DEFINITIVA DIRECTA</span>
+            <span>Subida de una sola hoja que asocia las notas directamente a la nota final</span>
+          </div>
+        </div>
+        <p class="text-xs mt-2 flex items-center gap-1">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--color-accent);">download</span>
+          Puedes descargar el formato oficial multi-hoja usando el botón <em>"Aquí tienes un formato para subir tus archivos"</em>.
+        </p>
+      </div>
+
+      <!-- Sección 3: Lapsos y Definitiva -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">event_repeat</span>
+          3. Carga y Cálculo de Notas
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li>El sistema mapea las notas de las hojas <strong>M1</strong>, <strong>M2</strong> y <strong>M3</strong> a los lapsos <strong>L1</strong>, <strong>L2</strong> y <strong>L3</strong> respectivamente.</li>
+          <li>La <strong>Definitiva</strong> se calcula de forma automatizada como el promedio de los tres lapsos cuando los tres están cargados completos.</li>
+          <li>El archivo de una sola hoja carga las notas directo como <strong>Definitivas Directas</strong>.</li>
+          <li>Si el alumno ya poseía notas registradas en dicho lapso/materia, estas <strong>se sobrescribirán</strong> automáticamente con los nuevos valores del Excel.</li>
+        </ul>
+      </div>
+
+      <!-- Sección 4: Interpretación de resultados -->
+      <div>
+        <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary" style="font-size:16px;">bar_chart</span>
+          4. Interpretación del Reporte Final
+        </h4>
+        <ul class="list-disc list-inside text-xs pl-2 space-y-1">
+          <li><strong class="text-emerald-400">Notas Cargadas:</strong> Registradas exitosamente por primera vez.</li>
+          <li><strong class="text-sky-400">Notas Actualizadas:</strong> Ya existían y fueron sobreescritas con el nuevo valor.</li>
+          <li><strong class="text-amber-400">Alumnos No Encontrados:</strong> La cédula en el Excel no corresponde a ningún estudiante en el sistema. Se recomienda crear el expediente primero.</li>
+          <li><strong class="text-red-400">Errores de Dato:</strong> Notas fuera del rango 0–20 o datos mal formateados. Se indica el número de fila del Excel.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+      <button type="button" onclick="toggleCalifHelp()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleCalifHelp() {
+  const modal = document.getElementById('califHelpModal');
+  if (modal) modal.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

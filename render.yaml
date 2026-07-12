@@ -1,0 +1,70 @@
+services:
+  # ── Servicio Web Principal (Django) ──────────────────────────────────────────
+  - type: web
+    name: gestor-expedientes-apacuana
+    runtime: python
+    region: oregon        # Cambia si prefieres: frankfurt, singapore, ohio
+    plan: free            # starter para produccion real
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python run_db_fix.py &&
+      python manage.py migrate &&
+      python manage.py setup_users &&
+      python manage.py sync_materias
+    startCommand: >-
+      gunicorn config.wsgi:application
+      --workers 2
+      --timeout 120
+      --bind 0.0.0.0:$PORT
+      --log-level info
+      --access-logfile -
+      --error-logfile -
+    healthCheckPath: /admin/login/
+    autoDeploy: true
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true     # Render genera un valor seguro automaticamente
+      - key: DATABASE_URL
+        fromDatabase:           # Si usas Render Postgres; borrar si usas Supabase
+          name: gestor-db
+          property: connectionString
+      # Las siguientes las debes definir manualmente en el dashboard de Render:
+      # ALLOWED_HOSTS, SUPABASE_URL, SUPABASE_ANON_KEY,
+      # SUPABASE_SERVICE_ROLE_KEY, REDIS_URL, GOOGLE_API_KEY
+
+  # ── Worker Celery (Django) ───────────────────────────────────────────────────
+  - type: worker
+    name: gestor-celery-worker
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: >-
+      celery -A config worker
+      --loglevel=info
+      --concurrency=2
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: DEBUG
+        value: "False"
+      # Mismas variables de entorno que el servicio web
+
+  # ── Portal Docente (Flask) ───────────────────────────────────────────────────
+  - type: web
+    name: docente-apacuana
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # El portal docente también usa la base de datos de Supabase y variables compartidas.

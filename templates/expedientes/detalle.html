@@ -1,0 +1,1107 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Perfil del Estudiante | {{ estudiante.nombres }} {% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-end">
+    <div>
+        <h1 class="text-3xl font-bold text-text-main mb-2 tracking-tight">Perfil del Estudiante</h1>
+        <p class="text-text-muted text-sm">Inspección de modo seguro (Solo Lectura) del estudiante de la matriz.</p>
+    </div>
+    <div class="flex gap-3">
+        <a href="{% url 'digitalizacion' %}" class="btn btn-secondary font-bold">
+            <ion-icon name="images-outline" class="text-lg"></ion-icon> Agregar Imágenes
+        </a>
+        <button onclick="document.getElementById('modalEmitirDocumentos').classList.remove('hidden')"
+            class="btn btn-primary font-bold">
+            <ion-icon name="document-text-outline" class="text-lg"></ion-icon> Emitir Documentos
+        </button>
+        <a href="{% url 'editar_expediente' estudiante.cedula_identidad %}"
+            class="btn btn-secondary font-bold">
+            <ion-icon name="create-outline" class="text-lg"></ion-icon> Editar
+        </a>
+        <a href="{% url 'expedientes' %}"
+            class="btn btn-secondary">
+            <ion-icon name="arrow-back-outline"></ion-icon> Volver al Listado
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-12 gap-8">
+
+    <!-- Left Column: Identity Card -->
+    <div class="col-span-12 md:col-span-4 flex flex-col gap-6">
+        <div
+            class="card flex flex-col items-center relative overflow-hidden p-8">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+
+            <div class="relative group cursor-pointer w-36 h-36 rounded-full border-2 border-primary/30 overflow-hidden mb-4 shadow-[0_0_20px_rgba(99,102,241,0.2)]" id="avatarContainer">
+                <input type="file" id="fotoInput" accept="image/*" class="hidden">
+                {% if expediente and expediente.archivo_fotos %}
+                <img id="avatarImage" src="{{ expediente.archivo_fotos.url }}" 
+                     alt="Foto de {{ estudiante.nombres }}" 
+                     class="w-full h-full object-cover transition-all duration-300">
+                {% else %}
+                <div id="avatarFallback"
+                    class="w-full h-full bg-surface-element flex items-center justify-center text-primary/80 text-5xl">
+                    <ion-icon name="person"></ion-icon>
+                </div>
+                {% endif %}
+                <!-- Hover Overlay with Camera Icon & +Imagen -->
+                <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 gap-1 backdrop-blur-[2px]">
+                    <ion-icon name="camera-outline" class="text-2xl animate-bounce"></ion-icon>
+                    <span class="text-[9px] font-black tracking-widest uppercase">+ Imagen</span>
+                </div>
+                <!-- Spinner Overlay for Uploading -->
+                <div id="avatarSpinner" class="hidden absolute inset-0 bg-black/75 flex items-center justify-center text-primary">
+                    <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                </div>
+            </div>
+
+            <h2 class="text-xl font-bold text-text-main text-center">{{ estudiante.nombres|title }} <br> {{ estudiante.apellidos|title }}</h2>
+            <p class="text-text-muted tracking-widest uppercase text-xs mt-2 relative z-10">C.I. {{estudiante.cedula_identidad|formato_cedula}}</p>
+
+            <div class="mt-4 relative z-10 flex flex-col items-center">
+                <span class="text-[9px] font-bold text-text-muted/80 tracking-widest uppercase mb-1">AÑO CURSANDO</span>
+                {% if estudiante.ano_cursando == 1 %}
+                <span
+                    class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER
+                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 2 %}
+                <span
+                    class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">2DO
+                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 3 %}
+                <span
+                    class="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">3ER
+                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 4 %}
+                <span
+                    class="bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">4TO
+                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% elif estudiante.ano_cursando == 5 %}
+                <span
+                    class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">5TO
+                    AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
+                {% else %}
+                <span
+                    class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">EGRESADO</span>
+                {% endif %}
+            </div>
+
+            <div class="w-full h-px bg-border my-6"></div>
+
+            <div class="w-full flex flex-col gap-4 text-sm relative z-10">
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted/80">F. Nacimiento</span>
+                    <span class="text-text-main font-medium">{{ estudiante.fecha_nacimiento|date:"d/m/Y" }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted/80">País Nac.</span>
+                    <span class="text-text-main font-medium">{{ estudiante.pais_nacimiento|default:"Venezuela" }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted/80">Estado Nac.</span>
+                    <span class="text-text-main font-medium">{{ estudiante.estado_nacimiento|default:"-" }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted/80">Municipio Nac.</span>
+                    <span class="text-text-main font-medium">{{ estudiante.municipio_nacimiento|default:"-" }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-text-muted/80">Género Oficial</span>
+                    <span class="text-text-main font-medium">{% if estudiante.sexo == 'F' %}Femenino{% elif estudiante.sexo == 'M' %}Masculino{% else %}No Especificado{% endif %}</span>
+                </div>
+
+                <div class="w-full h-px bg-border my-2"></div>
+
+                <div class="flex flex-col gap-3">
+                    <p class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Información del
+                        Representante</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-text-muted/80">Representante</span>
+                        <span class="text-text-main font-medium">{{ estudiante.nombre_representante|default:"No asignado" }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-text-muted/80">C.I. Representante</span>
+                        <span class="text-text-main font-medium">{% if estudiante.cedula_representante %}{{ estudiante.cedula_representante|formato_cedula }}{% else %}-{% endif %}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-text-muted/80">Teléfono</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-text-main font-medium">{% if estudiante.telefono_representante %}{{ estudiante.telefono_representante|formato_telefono }}{% else %}-{% endif %}</span>
+                            {% if estudiante.telefono_representante %}
+                            <a href="https://wa.me/58{{ estudiante.telefono_representante|whatsapp_phone }}?text=¡Hola! Te contactamos desde la UEN Apacuana en relación al expediente de {{ estudiante.nombres }} {{ estudiante.apellidos }}. *Recuerde que el perfil de estudiante no es el expediente completo. En caso de requerir el expediente físico dirigirse a la institución.*" target="_blank" class="text-success hover:text-success/80 transition-colors bg-success/10 p-1.5 rounded-full flex items-center justify-center" title="Contactar por WhatsApp">
+                                <ion-icon name="logo-whatsapp" class="text-base"></ion-icon>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-text-muted/80">Correo</span>
+                        <span class="text-text-main font-medium truncate max-w-[150px] text-right">{{ estudiante.email_representante|default:"-" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="card p-6">
+            <h3
+                class="text-sm font-bold text-text-main mb-4 uppercase tracking-widest opacity-80 border-b border-border pb-2">
+                Información Institucional</h3>
+
+            <div class="flex flex-col gap-3">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-text-muted/80 uppercase tracking-widest">Ingreso del Sist.</span>
+                    <span class="text-text-main font-bold">{{ estudiante.fecha_ingreso|date:'d/m/Y'|default:"-" }}</span>
+                </div>
+                <div class="flex justify-between text-xs border-t border-border pt-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">Zona Educativa</span>
+                    <span class="text-text-main font-medium text-right max-w-[150px] leading-tight">{{ estudiante.zona_educativa|default:"-" }}</span>
+                </div>
+                <div class="flex justify-between items-center text-xs border-t border-border pt-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">Cód. Plantel</span>
+                    <span class="text-text-main font-mono">{{ estudiante.codigo_plantel|default:"-" }}</span>
+                </div>
+                <div
+                    class="flex justify-between items-center text-xs border-t border-border pt-2 bg-primary/5 p-2 rounded-lg mt-1">
+                    <span class="text-primary font-bold uppercase tracking-widest">Plan Estudio</span>
+                    <span class="text-primary font-mono font-bold">{{ estudiante.codigo_plan_estudio|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="card p-6">
+            <h3
+                class="text-sm font-bold text-text-main mb-4 uppercase tracking-widest opacity-80 border-b border-border pb-2">
+                Culminación Académica</h3>
+            <div class="flex flex-col gap-3">
+                {% if estudiante.mes_culminacion_1er_ano and estudiante.ano_culminacion_1er_ano %}
+                <div class="flex justify-between text-xs border-b border-border pb-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">1er Año</span>
+                    <span class="text-text-main font-bold">{{ estudiante.mes_culminacion_1er_ano }} / {{ estudiante.ano_culminacion_1er_ano }}</span>
+                </div>
+                {% endif %}
+                {% if estudiante.mes_culminacion_2do_ano and estudiante.ano_culminacion_2do_ano %}
+                <div class="flex justify-between text-xs border-b border-border pb-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">2do Año</span>
+                    <span class="text-text-main font-bold">{{ estudiante.mes_culminacion_2do_ano }} / {{ estudiante.ano_culminacion_2do_ano }}</span>
+                </div>
+                {% endif %}
+                {% if estudiante.mes_culminacion_3er_ano and estudiante.ano_culminacion_3er_ano %}
+                <div class="flex justify-between text-xs border-b border-border pb-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">3er Año</span>
+                    <span class="text-text-main font-bold">{{ estudiante.mes_culminacion_3er_ano }} / {{ estudiante.ano_culminacion_3er_ano }}</span>
+                </div>
+                {% endif %}
+                {% if estudiante.mes_culminacion_4to_ano and estudiante.ano_culminacion_4to_ano %}
+                <div class="flex justify-between text-xs border-b border-border pb-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">4to Año</span>
+                    <span class="text-text-main font-bold">{{ estudiante.mes_culminacion_4to_ano }} / {{ estudiante.ano_culminacion_4to_ano }}</span>
+                </div>
+                {% endif %}
+                {% if estudiante.mes_culminacion_5to_ano and estudiante.ano_culminacion_5to_ano %}
+                <div class="flex justify-between text-xs border-b border-border pb-2">
+                    <span class="text-text-muted/80 uppercase tracking-widest">5to Año</span>
+                    <span class="text-text-main font-bold">{{ estudiante.mes_culminacion_5to_ano }} / {{ estudiante.ano_culminacion_5to_ano }}</span>
+                </div>
+                {% endif %}
+                {% if not estudiante.mes_culminacion_1er_ano %}
+                <p class="text-xs text-text-muted italic">Sin fechas registradas.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if expediente %}
+        <div
+            class="card p-6">
+            <h3 class="text-sm font-bold text-text-main mb-4 uppercase tracking-widest opacity-80">Estatus del Operativo
+            </h3>
+            {% if expediente.estatus == 'SOLVENTE' %}
+            <div class="flex items-center gap-3 p-4 bg-success-subtle border border-success/20 rounded-xl">
+                <ion-icon name="shield-checkmark" class="text-2xl text-success"></ion-icon>
+                <div>
+                    <p class="text-text-main font-semibold flex items-center gap-2">SOLVENTE <span
+                            class="bg-success text-text-on-accent text-[9px] px-2 rounded-full uppercase tracking-widest">Activo</span>
+                    </p>
+                    <p class="text-xs text-text-muted">Totalmente expedito para grado.</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="flex items-center gap-3 p-4 bg-warning-subtle border border-warning/20 rounded-xl">
+                <ion-icon name="alert-circle" class="text-2xl text-warning"></ion-icon>
+                <div>
+                    <p class="text-text-main font-semibold flex items-center gap-2">INCOMPLETO <span
+                            class="bg-warning text-text-on-accent text-[9px] px-2 rounded-full font-bold uppercase tracking-widest">Alerta</span>
+                    </p>
+                    <p class="text-xs text-text-muted">Revisión física requerida.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Documents and Academics -->
+    <div class="col-span-12 md:col-span-8 flex flex-col gap-6">
+
+        <!-- Document Matrix -->
+        <div
+            class="card p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-text-main">Matriz Documental</h3>
+                <span
+                    class="text-[10px] bg-surface-element text-text-muted px-2.5 py-1 rounded border border-border uppercase tracking-widest font-bold opacity-60">Depósito
+                    Físico</span>
+            </div>
+
+            {% if expediente %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-solid border-primary bg-surface-element/30 hover:bg-surface-element/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <ion-icon name="card-outline"
+                            class="text-xl {% if expediente.copia_cedula %}text-success{% else %}text-error{% endif %}"></ion-icon>
+                        <span class="text-sm font-medium text-text-main">Copia de Cédula</span>
+                    </div>
+                    {% if expediente.archivo_cedula %}
+                    <a href="{{ expediente.archivo_cedula.url }}" target="_blank"
+                        class="btn btn-sm btn-secondary text-success font-bold uppercase transition-colors">
+                        <ion-icon name="eye"></ion-icon> Ver Digital
+                    </a>
+                    {% elif expediente.copia_cedula %}
+                    <ion-icon name="checkmark-circle" class="text-success"></ion-icon>
+                    {% else %}
+                    <ion-icon name="close-circle" class="text-error"></ion-icon>
+                    {% endif %}
+                </div>
+
+                <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-solid border-primary bg-surface-element/30 hover:bg-surface-element/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <ion-icon name="document-text-outline"
+                            class="text-xl {% if expediente.partida_nacimiento %}text-success{% else %}text-error{% endif %}"></ion-icon>
+                        <span class="text-sm font-medium text-text-main">Partida Nacimiento</span>
+                    </div>
+                    {% if expediente.archivo_partida %}
+                    <a href="{{ expediente.archivo_partida.url }}" target="_blank"
+                        class="btn btn-sm btn-secondary text-success font-bold uppercase transition-colors">
+                        <ion-icon name="eye"></ion-icon> Ver Digital
+                    </a>
+                    {% elif expediente.partida_nacimiento %}
+                    <ion-icon name="checkmark-circle" class="text-success"></ion-icon>
+                    {% else %}
+                    <ion-icon name="close-circle" class="text-error"></ion-icon>
+                    {% endif %}
+                </div>
+
+                <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-solid border-primary bg-surface-element/30 hover:bg-surface-element/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <ion-icon name="school-outline"
+                            class="text-xl {% if expediente.notas_certificadas_previas %}text-success{% else %}text-error{% endif %}"></ion-icon>
+                        <span class="text-sm font-medium text-text-main">Notas Certificadas</span>
+                    </div>
+                    {% if expediente.archivo_notas %}
+                    <a href="{{ expediente.archivo_notas.url }}" target="_blank"
+                        class="btn btn-sm btn-secondary text-success font-bold uppercase transition-colors">
+                        <ion-icon name="eye"></ion-icon> Ver Digital
+                    </a>
+                    {% elif expediente.notas_certificadas_previas %}
+                    <ion-icon name="checkmark-circle" class="text-success"></ion-icon>
+                    {% else %}
+                    <ion-icon name="close-circle" class="text-error"></ion-icon>
+                    {% endif %}
+                </div>
+
+                <div
+                    class="flex items-center justify-between p-4 rounded-xl border border-solid border-primary bg-surface-element/30 hover:bg-surface-element/50 transition-all">
+                    <div class="flex items-center gap-3">
+                        <ion-icon name="camera-outline"
+                            class="text-xl {% if expediente.fotografias %}text-success{% else %}text-error{% endif %}"></ion-icon>
+                        <span class="text-sm font-medium text-text-main">Fotografías Carnet</span>
+                    </div>
+                    {% if expediente.archivo_fotos %}
+                    <a href="{{ expediente.archivo_fotos.url }}" target="_blank"
+                        class="btn btn-sm btn-secondary text-success font-bold uppercase transition-colors">
+                        <ion-icon name="eye"></ion-icon> Ver Digital
+                    </a>
+                    {% elif expediente.fotografias %}
+                    <ion-icon name="checkmark-circle" class="text-success"></ion-icon>
+                    {% else %}
+                    <ion-icon name="close-circle" class="text-error"></ion-icon>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p class="text-center text-text-muted/80 text-sm">Este estudiante fue registrado sin apertura de carpeta
+                física.</p>
+            {% endif %}
+        </div>
+
+        <!-- Academic History -->
+        <div
+            class="card flex-1 p-8">
+            <h3 class="text-lg font-bold text-text-main mb-6 flex items-center gap-2">Módulo Académico (Calificaciones)</h3>
+
+            <div class="flex flex-col">
+                {% for ano_num, ano_data in boleta.items %}
+                <details class="group overflow-hidden">
+                    <summary
+                        class="flex justify-between items-center py-4 px-1 cursor-pointer hover:bg-surface-hover transition-colors select-none">
+                        <div class="flex items-center">
+                            <h4 class="font-bold text-text-main text-sm tracking-widest">{{ ano_data.titulo }}</h4>
+                        </div>
+                        <ion-icon name="chevron-down-outline"
+                            class="text-text-main transform group-open:rotate-180 transition-transform duration-300"></ion-icon>
+                    </summary>
+                    <div class="pb-6 pt-2 px-1 bg-transparent">
+                        {% if ano_data.materias %}
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr>
+                                        <th
+                                            class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal">
+                                            Materias</th>
+                                        <th
+                                            class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal text-center">
+                                            Primer Lapso</th>
+                                        <th
+                                            class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal text-center">
+                                            Segundo Lapso</th>
+                                        <th
+                                            class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal text-center">
+                                            Tercer Lapso</th>
+                                        <th
+                                            class="py-2 border-b border-border text-[10px] text-primary uppercase tracking-widest font-bold text-center">
+                                            Notas (Final)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mat_id, mat in ano_data.materias.items %}
+                                    <tr class="hover:bg-surface-hover transition-colors">
+                                        <td class="py-3 border-b border-border text-xs text-text-main font-medium">{{ mat.nombre }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
+                                            {{ mat.l1 }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
+                                            {{ mat.l2 }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
+                                            {{ mat.l3 }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-center font-mono font-bold {% if mat.final != '-' and mat.final >= 10 %}text-primary{% elif mat.final != '-' %}text-error{% else %}text-text-muted/80{% endif %}">
+                                            {{ mat.final }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="bg-primary/5 border-t-2 border-primary/30">
+                                    <tr>
+                                        <td
+                                            class="py-3 px-2 border-b border-border text-xs text-primary font-bold uppercase tracking-widest text-right">
+                                            Promedios Oficiales:</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-primary text-center font-black">
+                                            {{ ano_data.promedios.l1 }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-primary text-center font-black">
+                                            {{ ano_data.promedios.l2 }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-primary text-center font-black">
+                                            {{ ano_data.promedios.l3 }}</td>
+                                        <td
+                                            class="py-3 border-b border-border text-xs text-primary text-center font-black">
+                                            {{ ano_data.promedios.final }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div
+                            class="flex flex-col items-center justify-center p-6 border border-dashed border-border rounded-xl bg-surface-element">
+                            <ion-icon name="document-text-outline" class="text-3xl text-text-muted/80 mb-2"></ion-icon>
+                            <p class="text-center text-text-muted text-sm">Este año académico no posee notas cargadas
+                                aún mediante archivos xlsx.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </details>
+                {% if not forloop.last %}
+                <div class="w-[60%] mx-auto h-px bg-border opacity-80 my-1"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <!-- Análisis Conductual -->
+        <div
+            class="card p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2">Análisis Conductual</h3>
+                <button onclick="document.getElementById('modalConductual').classList.remove('hidden')"
+                    class="btn btn-primary fab-mobile">
+                    <span class="material-symbols-outlined fab-icon" style="display:none; font-size:20px;">add</span>
+                    <span class="fab-text">Nuevo Registro</span>
+                </button>
+            </div>
+
+            <div id="listaObservaciones" class="flex flex-col gap-3">
+                <div
+                    class="flex flex-col items-center justify-center p-6 border border-dashed border-border rounded-xl bg-surface-element">
+                    <ion-icon name="hourglass-outline"
+                        class="text-3xl text-text-muted/80 mb-2 animate-pulse"></ion-icon>
+                    <p class="text-center text-text-muted text-sm">Cargando registros conductuales...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL: Nuevo Registro Conductual -->
+<div id="modalConductual" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+    style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
+    <div class="bg-surface rounded-2xl border border-border w-full max-w-xl mx-4 shadow-2xl overflow-hidden"
+        style="animation: slideUp 0.3s ease;">
+        <div class="bg-gradient-to-r from-indigo-600/10 to-purple-600/10 p-6 border-b border-border">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2"><ion-icon
+                        name="create-outline"></ion-icon> Registrar Observación Conductual</h3>
+                <button onclick="document.getElementById('modalConductual').classList.add('hidden')"
+                    class="text-text-main/50 hover:text-text-main text-2xl transition-colors">&times;</button>
+            </div>
+            <p class="text-text-muted text-xs mt-1">Estudiante: <strong class="text-text-main">{{ estudiante.nombres }}
+                    {{ estudiante.apellidos }}</strong> — {{estudiante.cedula_identidad|formato_cedula}}</p>
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">Asunto</label>
+                <input type="text" id="obsAsunto" placeholder="Ej: Conducta en clase, Inasistencias repetidas..."
+                    class="form-input w-full">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">Descripción del
+                    Comportamiento</label>
+                <textarea id="obsDescripcion" rows="6"
+                    placeholder="Escriba aquí la observación completa del estudiante sin límite de caracteres..."
+                    class="form-input w-full resize-y"></textarea>
+            </div>
+            <div id="obsError"
+                class="hidden text-error-text text-xs bg-error-subtle border border-error/20 p-3 rounded-lg"></div>
+            <button onclick="guardarObservacion()"
+                class="btn btn-primary w-full py-3 font-bold flex items-center justify-center gap-2">
+                <ion-icon name="save-outline"></ion-icon> Guardar Registro
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Ver Observación Completa -->
+<div id="modalVerObs" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+    style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
+    <div class="bg-surface rounded-2xl border border-border w-full max-w-2xl mx-4 shadow-2xl overflow-hidden"
+        style="animation: slideUp 0.3s ease;">
+        <div class="bg-gradient-to-r from-emerald-600/10 to-teal-600/10 p-6 border-b border-border">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2"><ion-icon
+                        name="eye-outline"></ion-icon> Detalle de Observación</h3>
+                <button onclick="document.getElementById('modalVerObs').classList.add('hidden')"
+                    class="text-text-main/50 hover:text-text-main text-2xl transition-colors">&times;</button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                    <span class="text-xs text-text-muted/80 uppercase tracking-widest block">Nombre Completo</span>
+                    <p class="text-text-main font-semibold">{{ estudiante.nombres }} {{ estudiante.apellidos }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-text-muted/80 uppercase tracking-widest block">Cédula</span>
+                    <p class="text-text-main font-semibold">{{estudiante.cedula_identidad|formato_cedula}}</p>
+                </div>
+            </div>
+            <div class="mb-4">
+                <span class="text-xs text-text-muted/80 uppercase tracking-widest block">Asunto</span>
+                <p id="verAsunto" class="text-primary font-bold text-lg mt-1"></p>
+            </div>
+            <div class="mb-6">
+                <span class="text-xs text-text-muted/80 uppercase tracking-widest block mb-1">Descripción</span>
+                <div id="verDescripcion"
+                    class="bg-surface-element border border-border rounded-xl p-4 text-text-secondary text-sm leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
+                </div>
+            </div>
+            <a id="verPdfLink" href="#" 
+                class="btn btn-secondary text-success font-bold py-2 px-5 text-sm">
+                <ion-icon name="download-outline"></ion-icon> Descargar PDF
+            </a>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- MODAL: Emitir Documentos -->
+<div id="modalEmitirDocumentos" class="hidden fixed inset-0 z-50 flex items-center justify-center"
+    style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
+    <div class="bg-surface rounded-2xl border border-border w-full max-w-3xl mx-4 shadow-2xl overflow-hidden"
+        style="animation: slideUp 0.3s ease;">
+        <div class="bg-gradient-to-r from-indigo-600/10 to-purple-600/10 p-6 border-b border-border">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2"><ion-icon
+                        name="documents-outline"></ion-icon> Emitir Documentos</h3>
+                <button onclick="document.getElementById('modalEmitirDocumentos').classList.add('hidden')"
+                    class="text-text-main/50 hover:text-text-main text-2xl transition-colors">&times;</button>
+            </div>
+            <p class="text-text-muted text-xs mt-1">Seleccione el documento a emitir para: <strong class="text-text-main">{{ estudiante.nombres }} {{ estudiante.apellidos }}</strong></p>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <a href="{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Aceptacion de cupo' %}" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Aceptación de Cupo</span>
+                </a>
+                <a href="{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Autorizacion' %}" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Autorización</span>
+                </a>
+                <a href="#" onclick="abrirModalCitacion(event)" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Citación</span>
+                </a>
+                <a href="{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Constancia de asistencia' %}" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Const. Asistencia</span>
+                </a>
+                <a href="{% url 'constancia_estudio' estudiante.cedula_identidad %}" target="_blank" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Const. Estudio</span>
+                </a>
+                <a href="#" onclick="abrirModalBoleta(event)" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Boleta Trimestral</span>
+                </a>
+                <a href="{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Constancia de inscripcion' %}" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Const. Inscripción</span>
+                </a>
+                <a href="{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Constancia de retiro' %}" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Const. Retiro</span>
+                </a>
+                <a href="{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Constancia de tramite' %}" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Const. Trámite</span>
+                </a>
+                <a href="#" onclick="abrirModalConvocatoria(event)" 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="document-text-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Convocatoria</span>
+                </a>
+                <a href="{% url 'emitir_notas_certificadas_auto' estudiante.cedula_identidad %}"
+                    class="flex items-center gap-3 p-4 bg-success-subtle hover:bg-success/20 border border-success/30 hover:border-success/50 rounded-xl transition-all group col-span-1 md:col-span-2 lg:col-span-3">
+                    <ion-icon name="school-outline" class="text-2xl text-success group-hover:text-success/80 transition-colors"></ion-icon>
+                    <div>
+                        <span class="text-sm font-bold text-success block">Notas Certificadas (PDF)</span>
+                        <span class="text-xs text-text-muted mt-1 block">Ver/imprimir usando calificaciones y fechas del perfil</span>
+                    </div>
+                </a>
+                <a href="{% url 'emitir_notas_certificadas_xlsx' estudiante.cedula_identidad %}"
+                    class="flex items-center gap-3 p-4 bg-success-subtle hover:bg-success/20 border border-success/30 hover:border-success/50 rounded-xl transition-all group col-span-1 md:col-span-2 lg:col-span-3">
+                    <ion-icon name="grid-outline" class="text-2xl text-success group-hover:text-success/80 transition-colors"></ion-icon>
+                    <div>
+                        <span class="text-sm font-bold text-success block">Notas Certificadas (Excel)</span>
+                        <span class="text-xs text-text-muted mt-1 block">Descargar el formato oficial .xlsx relleno con las calificaciones del perfil</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Emitir Boleta (Preguntas) -->
+<div id="modalBoleta" class="hidden fixed inset-0 z-[60] flex items-center justify-center"
+    style="background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+    <div class="bg-surface rounded-2xl border border-border w-full max-w-md mx-4 shadow-2xl overflow-hidden"
+        style="animation: slideUp 0.3s ease;">
+        <div class="bg-gradient-to-r from-primary/10 to-blue-600/10 p-6 border-b border-border">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2"><ion-icon name="help-circle-outline"></ion-icon> Promedio Condecorado</h3>
+                <button onclick="document.getElementById('modalBoleta').classList.add('hidden')"
+                    class="text-text-main/50 hover:text-text-main text-2xl transition-colors">&times;</button>
+            </div>
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Hay Promedio Condecorado?</label>
+                <select id="boletaHayPremio" class="form-input w-full" onchange="toggleAsuntoPremio()">
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                </select>
+            </div>
+            <div id="divAsuntoPremio" class="hidden">
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">Asunto del Promedio Condecorado</label>
+                <input type="text" id="boletaAsuntoPremio" placeholder="Ej: Excelencia Académica" class="form-input w-full">
+            </div>
+            <button onclick="generarBoleta()" class="btn btn-primary w-full py-3 font-bold mt-2">
+                Generar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Emitir Citación (Preguntas) -->
+<div id="modalCitacion" class="hidden fixed inset-0 z-[60] flex items-center justify-center"
+    style="background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+    <div class="bg-surface rounded-2xl border border-border w-full max-w-md mx-4 shadow-2xl overflow-hidden"
+        style="animation: slideUp 0.3s ease;">
+        <div class="bg-gradient-to-r from-primary/10 to-blue-600/10 p-6 border-b border-border">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2"><ion-icon name="help-circle-outline"></ion-icon> Datos para Citación</h3>
+                <button onclick="document.getElementById('modalCitacion').classList.add('hidden')"
+                    class="text-text-main/50 hover:text-text-main text-2xl transition-colors">&times;</button>
+            </div>
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Motivo de la citación?</label>
+                <input type="text" id="citacionMotivo" placeholder="Ej: Rendimiento académico" class="form-input w-full">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Qué día fue la reunión?</label>
+                <input type="text" id="citacionDia" placeholder="Ej: Lunes 15 de Mayo" class="form-input w-full">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Qué hora?</label>
+                <input type="time" id="citacionHora" class="form-input w-full" style="color-scheme: light dark;">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Nombre del docente y directivo?</label>
+                <input type="text" id="citacionDocenteDirectivo" placeholder="Ej: Prof. María y Dir. Juan" class="form-input w-full">
+            </div>
+            <button onclick="generarCitacion()" class="btn btn-primary w-full py-3 font-bold mt-2">
+                Generar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Emitir Convocatoria (Preguntas) -->
+<div id="modalConvocatoria" class="hidden fixed inset-0 z-[60] flex items-center justify-center"
+    style="background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+    <div class="bg-surface rounded-2xl border border-border w-full max-w-md mx-4 shadow-2xl overflow-hidden"
+        style="animation: slideUp 0.3s ease;">
+        <div class="bg-gradient-to-r from-emerald-600/10 to-teal-600/10 p-6 border-b border-border">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-text-main flex items-center gap-2"><ion-icon name="help-circle-outline"></ion-icon> Datos para Convocatoria</h3>
+                <button onclick="document.getElementById('modalConvocatoria').classList.add('hidden')"
+                    class="text-text-main/50 hover:text-text-main text-2xl transition-colors">&times;</button>
+            </div>
+        </div>
+        <div class="p-6 flex flex-col gap-4">
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">Número de Convocatoria</label>
+                <input type="text" id="convocatoriaNumeral" placeholder="Ej: 001" class="form-input w-full">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Asunto a tratar?</label>
+                <input type="text" id="convocatoriaAsunto" placeholder="Ej: Faltas recurrentes" class="form-input w-full">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Qué día debe asistir a la institución?</label>
+                <input type="date" id="convocatoriaFecha" class="form-input w-full" style="color-scheme: light dark;">
+            </div>
+            <div>
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿A qué hora?</label>
+                <input type="time" id="convocatoriaHora" class="form-input w-full" style="color-scheme: light dark;">
+            </div>
+            <button onclick="generarConvocatoria()" class="btn btn-primary w-full py-3 font-bold mt-2">
+                Generar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes slideUp {
+        from {
+            transform: translateY(30px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
+
+<script>
+    const CEDULA = '{{estudiante.cedula_identidad}}';
+    const IS_PERSONAL = {% if request.user.rol == 'PERSONAL' %}true{% else %}false{% endif %};
+
+    function cargarObservaciones() {
+        fetch(`/api/observaciones/${CEDULA}/listar/`)
+            .then(r => {
+                if (!r.ok) throw new Error('Error de red');
+                return r.json();
+            })
+            .then(data => {
+                const container = document.getElementById('listaObservaciones');
+                if (data.observaciones.length === 0) {
+                    container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-6 border border-dashed border-border rounded-xl bg-surface-element">
+                        <ion-icon name="chatbubbles-outline" class="text-3xl text-text-muted/80 mb-2"></ion-icon>
+                        <p class="text-center text-text-muted text-sm">No se han registrado observaciones conductuales aún.</p>
+                    </div>`;
+                    return;
+                }
+                container.innerHTML = data.observaciones.map(obs => `
+                <div class="flex items-center justify-between p-4 bg-surface-element border border-border rounded-xl hover:bg-surface-element/50 transition-colors">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <span class="w-9 h-9 rounded-lg bg-primary/10 text-primary/80 flex items-center justify-center flex-shrink-0"><ion-icon name="document-text"></ion-icon></span>
+                        <div class="min-w-0">
+                            <h4 class="text-text-main font-semibold text-sm truncate">${obs.asunto}</h4>
+                            <p class="text-text-muted/80 text-xs">${obs.fecha}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+                        <button onclick="verObservacion('${obs.asunto}', \`${obs.descripcion.replace(/`/g, "'")}\`, ${obs.id})" class="obs-btn obs-ver flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase transition-colors">
+                            <ion-icon name="eye-outline"></ion-icon> <span class="obs-text">Ver</span>
+                        </button>
+                        <button onclick="notificarRepresentante(${obs.id})" class="obs-btn obs-notificar flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase transition-colors">
+                            <ion-icon name="notifications-outline"></ion-icon> <span class="obs-text">Notificar</span>
+                        </button>
+                        <button onclick="${IS_PERSONAL ? `solicitarAccion({accion:'eliminar_observacion',modulo:'Conductual',descripcion:'Solicito eliminar la observación conductual: ${obs.asunto} de ${CEDULA}',payload:{observacion_id: ${obs.id}, cedula: CEDULA}})` : `eliminarObservacion(${obs.id})`}" 
+                                class="obs-btn obs-eliminar flex items-center justify-center bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase transition-colors" title="Eliminar Observación">
+                            <ion-icon name="trash-outline"></ion-icon> <span class="obs-text">Eliminar</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            })
+            .catch(err => {
+                const container = document.getElementById('listaObservaciones');
+                container.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-6 border border-dashed border-error/50 rounded-xl bg-error/10">
+                    <ion-icon name="alert-circle-outline" class="text-3xl text-error mb-2"></ion-icon>
+                    <p class="text-center text-error text-sm">Error cargando registros.</p>
+                </div>`;
+            });
+    }
+
+    function guardarObservacion() {
+        const btn = document.querySelector('button[onclick="guardarObservacion()"]');
+        if (btn.disabled) return;
+        
+        const asunto = document.getElementById('obsAsunto').value.trim();
+        const descripcion = document.getElementById('obsDescripcion').value.trim();
+        const errDiv = document.getElementById('obsError');
+
+        if (!asunto || !descripcion) {
+            errDiv.textContent = 'Debe completar el asunto y la descripción.';
+            errDiv.classList.remove('hidden');
+            return;
+        }
+        errDiv.classList.add('hidden');
+        
+        const oldText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<ion-icon name="hourglass-outline" class="animate-spin"></ion-icon> Guardando...';
+
+        fetch(`/api/observaciones/${CEDULA}/guardar/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ asunto, descripcion })
+        })
+            .then(r => {
+                if (!r.ok) throw new Error('Error inesperado en el servidor.');
+                return r.json();
+            })
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = oldText;
+                
+                if (data.ok) {
+                    document.getElementById('modalConductual').classList.add('hidden');
+                    document.getElementById('obsAsunto').value = '';
+                    document.getElementById('obsDescripcion').value = '';
+                    cargarObservaciones();
+                } else {
+                    errDiv.textContent = data.error;
+                    errDiv.classList.remove('hidden');
+                }
+            })
+            .catch((e) => {
+                btn.disabled = false;
+                btn.innerHTML = oldText;
+                errDiv.textContent = e.message || 'Error de conexión con el servidor.';
+                errDiv.classList.remove('hidden');
+            });
+    }
+
+    function verObservacion(asunto, descripcion, obsId) {
+        document.getElementById('verAsunto').textContent = asunto;
+        document.getElementById('verDescripcion').textContent = descripcion;
+        document.getElementById('verPdfLink').href = `/api/observaciones/${CEDULA}/pdf/${obsId}/`;
+        document.getElementById('modalVerObs').classList.remove('hidden');
+    }
+
+    function eliminarObservacion(obsId) {
+        if (!confirm('¿Está seguro de eliminar este registro conductual? Esta acción no se puede deshacer.')) return;
+
+        fetch(`/api/observaciones/${CEDULA}/eliminar/${obsId}/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) cargarObservaciones();
+            });
+    }
+
+    function notificarRepresentante(obsId) {
+        if (!confirm('Esto enviará una citación formal por correo y abrirá WhatsApp. ¿Continuar?')) return;
+
+        fetch(`/api/observaciones/${CEDULA}/notificar/${obsId}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    let msg = '✅ Correo enviado';
+                    if (!data.email_enviado) msg = '⚠️ El correo no se pudo enviar (Verifique configuración SMTP o email del representante)';
+
+                    if (data.wa_link) {
+                        alert(msg + '. Se procederá a abrir WhatsApp.');
+                        window.open(data.wa_link, '_blank');
+                    } else {
+                        alert(msg + '. No se encontró número telefónico para WhatsApp.');
+                    }
+                }
+            });
+    }
+
+    function abrirModalBoleta(e) {
+        e.preventDefault();
+        document.getElementById('modalBoleta').classList.remove('hidden');
+        document.getElementById('boletaHayPremio').value = 'No';
+        document.getElementById('divAsuntoPremio').classList.add('hidden');
+        document.getElementById('boletaAsuntoPremio').value = '';
+    }
+    
+    function toggleAsuntoPremio() {
+        const val = document.getElementById('boletaHayPremio').value;
+        const div = document.getElementById('divAsuntoPremio');
+        if (val === 'Sí') {
+            div.classList.remove('hidden');
+        } else {
+            div.classList.add('hidden');
+        }
+    }
+
+    function generarBoleta() {
+        const hayPremio = document.getElementById('boletaHayPremio').value;
+        const asunto = document.getElementById('boletaAsuntoPremio').value;
+        let url = "{% url 'boleta_calificaciones' estudiante.cedula_identidad %}";
+        if (hayPremio === 'Sí' && asunto.trim() !== '') {
+            url += `?premio=${encodeURIComponent(asunto)}`;
+        }
+        window.open(url, '_blank');
+        document.getElementById('modalBoleta').classList.add('hidden');
+    }
+
+    function abrirModalCitacion(e) {
+        e.preventDefault();
+        document.getElementById('modalCitacion').classList.remove('hidden');
+    }
+    
+    function abrirModalConvocatoria(e) {
+        e.preventDefault();
+        document.getElementById('modalConvocatoria').classList.remove('hidden');
+    }
+    
+    function generarCitacion() {
+        const dia = document.getElementById('citacionDia').value || '_______________________';
+        const horaVal = document.getElementById('citacionHora').value;
+        const motivo = document.getElementById('citacionMotivo').value || 'asuntos de interés';
+        let hora = '_______';
+        let amPm = '';
+        if (horaVal) {
+            const [h, m] = horaVal.split(':');
+            const hour24 = parseInt(h);
+            amPm = hour24 >= 12 ? 'PM' : 'AM';
+            let hour12 = hour24 % 12;
+            if (hour12 === 0) hour12 = 12;
+            const hour12Str = hour12.toString().padStart(2, '0');
+            hora = `${hour12Str}:${m}`;
+        }
+        const docenteDirectivo = document.getElementById('citacionDocenteDirectivo').value || '_______________________________';
+        
+        let docente = '_______________________';
+        let directivo = '_______________________________';
+        if(docenteDirectivo && docenteDirectivo !== '_______________________________') {
+            directivo = docenteDirectivo;
+        }
+
+        let url = `{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Citacion' %}?dia_reunion=${encodeURIComponent(dia)}&hora_reunion=${encodeURIComponent(hora)}&am_pm=${encodeURIComponent(amPm)}&docente_directivo=${encodeURIComponent(directivo)}&motivo=${encodeURIComponent(motivo)}`;
+        window.location.href = url;
+    }
+    
+    function generarConvocatoria() {
+        const numeral = document.getElementById('convocatoriaNumeral').value || '_____';
+        const asunto = document.getElementById('convocatoriaAsunto').value || 'el rendimiento académico';
+        const fecha = document.getElementById('convocatoriaFecha').value;
+        let diaStr = '__________________';
+        if(fecha) {
+            const parts = fecha.split('-');
+            diaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        const horaVal = document.getElementById('convocatoriaHora').value;
+        let hora = '_______';
+        let amPm = '';
+        if (horaVal) {
+            const [h, m] = horaVal.split(':');
+            const hour24 = parseInt(h);
+            amPm = hour24 >= 12 ? 'PM' : 'AM';
+            let hour12 = hour24 % 12;
+            if (hour12 === 0) hour12 = 12;
+            const hour12Str = hour12.toString().padStart(2, '0');
+            hora = `${hour12Str}:${m}`;
+        }
+        
+        let url = `{% url 'emitir_documento_formato' estudiante.cedula_identidad 'Convocatoria' %}?fecha_asistencia=${encodeURIComponent(diaStr)}&hora_reunion=${encodeURIComponent(hora)}&am_pm=${encodeURIComponent(amPm)}&numeral=${encodeURIComponent(numeral)}&asunto=${encodeURIComponent(asunto)}`;
+        window.location.href = url;
+    }
+
+    function initAvatarUpload() {
+        const avatarContainer = document.getElementById('avatarContainer');
+        const fotoInput = document.getElementById('fotoInput');
+        const avatarSpinner = document.getElementById('avatarSpinner');
+        
+        if (!avatarContainer || !fotoInput) return;
+        
+        avatarContainer.addEventListener('click', (e) => {
+            if (e.target === fotoInput) return;
+            fotoInput.click();
+        });
+        
+        fotoInput.addEventListener('change', () => {
+            if (fotoInput.files.length === 0) return;
+            
+            const file = fotoInput.files[0];
+            const formData = new FormData();
+            formData.append('foto', file);
+            
+            avatarSpinner.classList.remove('hidden');
+            
+            fetch(`/api/estudiantes/${CEDULA}/subir-foto/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Error al subir la imagen.');
+                return res.json();
+            })
+            .then(data => {
+                avatarSpinner.classList.add('hidden');
+                if (data.ok) {
+                    let img = document.getElementById('avatarImage');
+                    if (!img) {
+                        const fallback = document.getElementById('avatarFallback');
+                        if (fallback) fallback.remove();
+                        img = document.createElement('img');
+                        img.id = 'avatarImage';
+                        img.className = 'w-full h-full object-cover transition-all duration-300';
+                        avatarContainer.insertBefore(img, avatarContainer.firstChild);
+                    }
+                    img.src = data.url;
+                    
+                    const fotosMatrixItem = document.querySelector('ion-icon[name="camera-outline"]');
+                    if (fotosMatrixItem) {
+                        fotosMatrixItem.className = 'text-xl text-success';
+                        const parentRow = fotosMatrixItem.closest('.flex');
+                        if (parentRow) {
+                            let link = parentRow.querySelector('a');
+                            if (!link) {
+                                const iconCheck = parentRow.querySelector('ion-icon[name="checkmark-circle"]') || parentRow.querySelector('ion-icon[name="close-circle"]');
+                                if (iconCheck) {
+                                    link = document.createElement('a');
+                                    link.target = '_blank';
+                                    link.className = 'btn btn-sm btn-secondary text-success font-bold uppercase transition-colors';
+                                    link.innerHTML = '<ion-icon name="eye"></ion-icon> Ver Físico';
+                                    iconCheck.replaceWith(link);
+                                }
+                            }
+                            if (link) {
+                                link.href = data.url;
+                            }
+                        }
+                    }
+                    
+                    const estatusHeader = Array.from(document.querySelectorAll('h3')).find(el => el.textContent.includes('Estatus del Operativo'));
+                    if (estatusHeader) {
+                        const container = estatusHeader.nextElementSibling || estatusHeader.parentElement.querySelector('div');
+                        if (container) {
+                            if (data.estatus === 'SOLVENTE') {
+                                container.outerHTML = `
+                                <div class="flex items-center gap-3 p-4 bg-success-subtle border border-success/20 rounded-xl">
+                                    <ion-icon name="shield-checkmark" class="text-2xl text-success"></ion-icon>
+                                    <div>
+                                        <p class="text-text-main font-semibold flex items-center gap-2">SOLVENTE <span
+                                                class="bg-success text-text-on-accent text-[9px] px-2 rounded-full uppercase tracking-widest">Activo</span>
+                                        </p>
+                                        <p class="text-xs text-text-muted">Totalmente expedito para grado.</p>
+                                    </div>
+                                </div>
+                                `;
+                            } else {
+                                container.outerHTML = `
+                                <div class="flex items-center gap-3 p-4 bg-warning-subtle border border-warning/20 rounded-xl">
+                                    <ion-icon name="alert-circle" class="text-2xl text-warning"></ion-icon>
+                                    <div>
+                                        <p class="text-text-main font-semibold flex items-center gap-2">INCOMPLETO <span
+                                                class="bg-warning text-text-on-accent text-[9px] px-2 rounded-full font-bold uppercase tracking-widest">Alerta</span>
+                                        </p>
+                                        <p class="text-xs text-text-muted">Revisión física requerida.</p>
+                                    </div>
+                                </div>
+                                `;
+                            }
+                        }
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(err => {
+                avatarSpinner.classList.add('hidden');
+                alert(err.message || 'Error al conectar con el servidor.');
+            });
+        });
+    }
+
+    document.addEventListener("turbo:load", () => {
+        cargarObservaciones();
+        initAvatarUpload();
+    });
+    
+    document.addEventListener("DOMContentLoaded", () => {
+        initAvatarUpload();
+    });
+</script>
+{% endblock %}

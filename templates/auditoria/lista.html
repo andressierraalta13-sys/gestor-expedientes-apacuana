@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Centro de Auditoría Histórica | Intranet{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl p-6 md:p-8 shadow-md">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h2 class="font-headline font-extrabold text-2xl text-text-main flex items-center gap-3">
+          <ion-icon name="shield-checkmark-outline" class="text-primary"></ion-icon> Auditoría de Movimientos
+        </h2>
+        <p class="text-sm text-text-muted mt-1">Registro inalterable de cada evento ocurrido en la base de datos (Calificaciones y Expedientes).</p>
+        <button type="button" onclick="toggleHelpModal()" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline bg-transparent border-none cursor-pointer p-0">
+          <ion-icon name="help-circle-outline"></ion-icon> ¿Cómo usar esta sección?
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl text-primary text-sm font-bold flex items-center gap-2">
+          <ion-icon name="documents-outline"></ion-icon>
+          <span id="cnt-total">{{ full_logs|length }}</span> registro{{ full_logs|length|pluralize:"s" }}
+        </div>
+        {% if request.user.rol == 'DESARROLLADOR' %}
+        <button onclick="limpiarAuditoria()"
+          class="px-4 py-2 bg-error/10 hover:bg-error/20 text-error border border-error/20 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+          <ion-icon name="trash-outline"></ion-icon> Limpiar
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl p-5 shadow-md">
+    <div class="flex flex-col sm:flex-row gap-3">
+      <div class="relative flex-1 min-w-[200px]">
+        <ion-icon name="person-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-lg z-10"></ion-icon>
+        <input type="text" id="filtro-usuario" placeholder="Filtrar por usuario..."
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 pl-11 pr-4 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-text-muted"
+          oninput="filtrarAuditoria()" />
+      </div>
+      <div class="relative flex-1 min-w-[200px]">
+        <ion-icon name="calendar-outline" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted text-lg z-10"></ion-icon>
+        <input type="text" id="filtro-fecha" placeholder="Filtrar por fecha (ej: 20 Jun 2026)..."
+          class="w-full bg-surface-element border border-border rounded-xl py-2.5 pl-11 pr-4 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-text-muted"
+          oninput="filtrarAuditoria()" />
+      </div>
+      <button onclick="document.getElementById('filtro-usuario').value=''; document.getElementById('filtro-fecha').value=''; filtrarAuditoria();"
+        class="bg-surface-element hover:bg-surface-active text-text-muted border border-border px-4 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2 whitespace-nowrap">
+        <ion-icon name="close-circle-outline"></ion-icon> Limpiar Filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla de Auditoría -->
+  {% if full_logs %}
+  <div class="bg-surface-container/60 backdrop-blur-md border border-border rounded-2xl shadow-md overflow-hidden">
+    <div class="overflow-x-auto custom-scrollbar">
+      <table class="w-full text-left border-collapse" id="tabla-auditoria">
+        <thead>
+          <tr class="bg-surface-element/50 border-b border-border text-[10px] uppercase tracking-wider text-text-muted">
+            <th class="px-6 py-4 whitespace-nowrap">Fecha y Hora</th>
+            <th class="px-6 py-4 whitespace-nowrap">Usuario</th>
+            <th class="px-6 py-4 whitespace-nowrap text-center">Acción</th>
+            <th class="px-6 py-4 whitespace-nowrap">Módulo</th>
+            <th class="px-6 py-4">Detalle del Registro</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 text-sm">
+          {% for log in full_logs %}
+          <tr class="auditoria-row hover:bg-white/3 transition-colors">
+            <td class="col-fecha px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center gap-2 text-text-muted text-xs">
+                <ion-icon name="time-outline" class="text-sm text-primary/60"></ion-icon>
+                {{ log.fecha|date:"d M Y - h:i:s A" }}
+              </div>
+            </td>
+            <td class="col-usuario px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-[10px] font-bold flex-shrink-0">
+                  {{ log.usuario|first|upper }}
+                </div>
+                <span class="font-semibold text-text-main text-xs">{{ log.usuario }}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-center">
+              {% if log.accion_db == 'INSERT' %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-secondary/10 text-secondary border border-secondary/20">
+                <ion-icon name="add-circle-outline" class="text-xs"></ion-icon> INSERT
+              </span>
+              {% elif log.accion_db == 'UPDATE' %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-warning/10 text-warning border border-warning/20">
+                <ion-icon name="create-outline" class="text-xs"></ion-icon> UPDATE
+              </span>
+              {% elif log.accion_db == 'DELETE' %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-error/10 text-error border border-error/20">
+                <ion-icon name="remove-circle-outline" class="text-xs"></ion-icon> DELETE
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-primary/10 text-primary border border-primary/20">
+                <ion-icon name="information-circle-outline" class="text-xs"></ion-icon> INFO
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex items-center gap-2 text-xs text-text-main">
+                <ion-icon name="{{ log.icono }}" class="text-base text-primary"></ion-icon>
+                <span class="font-medium">{{ log.modulo }}</span>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <p class="text-xs text-text-muted leading-relaxed max-w-md">{{ log.detalle }}</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Estado Vacío -->
+  <div class="bg-surface-container/60 border border-border rounded-2xl py-20 text-center">
+    <ion-icon name="shield-outline" class="text-6xl text-text-muted/20 block mx-auto mb-4"></ion-icon>
+    <h3 class="font-bold text-text-main mb-2">Sin registros de auditoría</h3>
+    <p class="text-sm text-text-muted max-w-sm mx-auto">
+      El log está intacto. No hay actividades registradas en los módulos auditables.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- Indicador de filas visibles -->
+  <div class="text-center py-2">
+    <p id="indicador-filtro" class="text-xs text-text-muted hidden">
+      <ion-icon name="funnel-outline" class="text-primary align-middle"></ion-icon>
+      Mostrando <span id="cnt-visibles" class="font-bold text-text-main">0</span> de <span class="font-bold text-text-main">{{ full_logs|length }}</span> registros
+    </p>
+  </div>
+
+</div>
+
+{% if request.user.rol == 'DESARROLLADOR' %}
+<script>
+    async function limpiarAuditoria() {
+        if (!confirm("⚠️ ¿Estás completamente seguro de que deseas vaciar todo el log e historial de auditoría? Esta acción no se puede deshacer.")) {
+            return;
+        }
+
+        try {
+            const response = await fetch('{% url "auditoria_limpiar" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.ok) {
+                // Toast de éxito
+                const t = document.createElement('div');
+                t.className = 'fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold bg-secondary/10 border border-secondary/20 text-secondary';
+                t.innerHTML = '<ion-icon name="checkmark-circle-outline" class="text-base"></ion-icon>' + data.mensaje;
+                document.body.appendChild(t);
+                setTimeout(() => { t.remove(); window.location.reload(); }, 1500);
+            } else {
+                alert("⚠️ Error: " + (data.error || "No se pudo limpiar la bitácora."));
+            }
+        } catch (e) {
+            alert("⚠️ Error de conexión: " + e.message);
+        }
+    }
+</script>
+{% endif %}
+
+<!-- Modal de Ayuda -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Auditoría de Movimientos</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">history</span> 1. ¿Qué es esta sección?
+                </h4>
+                <p class="text-xs">Es la <strong>bitácora histórica</strong> del sistema. Aquí queda registrado, de forma permanente e inalterable, cada evento ocurrido en la base de datos sobre los módulos de <strong>Calificaciones</strong> y <strong>Expedientes</strong>. Sirve para garantizar la <strong>trazabilidad</strong> y saber en todo momento quién hizo qué y cuándo.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">table_rows</span> 2. Cómo leer la tabla
+                </h4>
+                <p class="text-xs">Cada fila representa un evento registrado. Las columnas muestran:</p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong>Fecha y Hora:</strong> momento exacto en que ocurrió la acción.</li>
+                    <li><strong>Usuario / IP:</strong> persona responsable del movimiento.</li>
+                    <li><strong>Acción Detectada:</strong> <strong>INSERT</strong> (se creó un registro), <strong>UPDATE</strong> (se modificó) o <strong>DELETE</strong> (se eliminó).</li>
+                    <li><strong>Módulo Alterado:</strong> sección del sistema afectada.</li>
+                    <li><strong>Detalle del Registro:</strong> descripción específica del cambio realizado.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">filter_alt</span> 3. Filtrar y buscar
+                </h4>
+                <p class="text-xs">Utilice el campo <strong>"Filtrar por usuario..."</strong> para localizar las acciones de una persona en particular, o el botón <strong>"Filtrar Fechas"</strong> para acotar el historial a un período de tiempo específico.</p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">delete_forever</span> 4. Limpiar la bitácora
+                </h4>
+                <p class="text-xs">El botón rojo <strong>"Limpiar"</strong> solo está disponible para el rol <strong>Desarrollador</strong> y vacía por completo el historial de auditoría. Esta acción es <strong>irreversible</strong>: una vez confirmada, los registros no se pueden recuperar. Úsela con extrema precaución.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) { modal.classList.toggle('hidden'); }
+    }
+
+    function filtrarAuditoria() {
+        const filtroUsuario = document.getElementById('filtro-usuario').value.toLowerCase().trim();
+        const filtroFecha = document.getElementById('filtro-fecha').value.toLowerCase().trim();
+        const filas = document.querySelectorAll('.auditoria-row');
+        const indicador = document.getElementById('indicador-filtro');
+        const cntVisibles = document.getElementById('cnt-visibles');
+        let visibles = 0;
+
+        filas.forEach(fila => {
+            const spanUsuario = fila.querySelector('.col-usuario span');
+            const usuario = spanUsuario ? spanUsuario.textContent.toLowerCase() : '';
+            const fecha = fila.querySelector('.col-fecha').textContent.toLowerCase();
+
+            const cumpleUsuario = !filtroUsuario || usuario.includes(filtroUsuario);
+            const cumpleFecha = !filtroFecha || fecha.includes(filtroFecha);
+
+            if (cumpleUsuario && cumpleFecha) {
+                fila.style.display = '';
+                visibles++;
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+
+        // Mostrar/ocultar indicador de filtro
+        if (filtroUsuario || filtroFecha) {
+            indicador.classList.remove('hidden');
+            cntVisibles.textContent = visibles;
+        } else {
+            indicador.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

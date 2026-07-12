@@ -1,0 +1,618 @@
+{% extends 'docentes/base_docente.html' %}
+{% block title %}Planificación de Clases{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-5">
+
+  <!-- Título -->
+  <div>
+    <h2 class="font-headline font-extrabold text-xl text-text-main flex items-center gap-2">
+      <ion-icon name="calendar-outline" class="text-secondary"></ion-icon>
+      Planificación de Clases y Tareas
+    </h2>
+    <p class="text-sm text-text-muted mt-1">Organiza el cronograma, sube material de apoyo y asigna tareas.</p>
+  </div>
+
+  <!-- ── Selector en cascada ───────────────────────────────────── -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-surface-container/60 border border-border rounded-2xl p-4">
+      <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">1 · Período Escolar</label>
+      <select id="sel-periodo" onchange="onPeriodoChange()"
+              class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/40 transition-all">
+        <option value="">— Selecciona —</option>
+        {% for p in periodos %}
+        <option value="{{ p.id }}">{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="bg-surface-container/60 border border-border rounded-2xl p-4 opacity-40 transition-all" id="card-combo">
+      <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">2 · Año y Sección</label>
+      <select id="sel-combo" onchange="onComboChange()" disabled
+              class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/40 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+        <option value="">— Elige el período primero —</option>
+      </select>
+    </div>
+
+    <div class="bg-surface-container/60 border border-border rounded-2xl p-4 opacity-40 transition-all" id="card-materia">
+      <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">3 · Materia</label>
+      <select id="sel-materia" onchange="cargarPlanificacion()" disabled
+              class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/40 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+        <option value="">— Completa los pasos anteriores —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── Panel Principal ────────────────────────────────────────────────── -->
+  <div id="panel-principal" class="hidden space-y-6 mt-4">
+
+    <!-- Barra superior -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 id="titulo-materia" class="font-headline font-bold text-base text-text-main"></h3>
+        <p id="sub-materia" class="text-xs text-text-muted mt-0.5"></p>
+      </div>
+      <button onclick="abrirModalTema()"
+              class="flex items-center gap-2 bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+        <ion-icon name="add-outline" class="text-base"></ion-icon> Nuevo Tema / Semana
+      </button>
+    </div>
+
+    <!-- Contenedor de Temas -->
+    <div id="contenedor-temas" class="space-y-4">
+      <!-- Inyectado por JS -->
+    </div>
+
+    <!-- Estado vacío interno -->
+    <div id="estado-vacio-temas" class="hidden py-12 text-center bg-surface-container/60 border border-border rounded-2xl border-dashed">
+      <ion-icon name="albums-outline" class="text-4xl text-text-muted/30 block mx-auto mb-3"></ion-icon>
+      <p class="text-text-muted text-sm">No hay temas planificados aún. Comienza agregando uno.</p>
+    </div>
+
+  </div>
+
+  <!-- Estado inicial -->
+  <div id="estado-inicial" class="py-20 text-center">
+    <ion-icon name="calendar-clear-outline" class="text-6xl text-secondary/20 block mx-auto mb-4"></ion-icon>
+    <p class="text-text-muted">Selecciona un período, sección y materia para ver o crear la planificación.</p>
+  </div>
+</div>
+
+<!-- ── Modal Nuevo Tema ──────────────────────────────────────────────── -->
+<div id="modal-tema" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-sm mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-base text-text-main">Nuevo Tema de Clase</h4>
+      <button onclick="cerrarModalTema()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    <div id="tema-error" class="hidden bg-error/10 border border-error/20 text-error text-xs rounded-xl px-3 py-2"></div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Título del Tema</label>
+        <input id="tm-titulo" type="text" placeholder="Ej: Semana 1 - Introducción"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/40 transition-all"/>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Descripción (Opcional)</label>
+        <textarea id="tm-desc" rows="3" placeholder="Breve descripción del tema..."
+                  class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm text-text-main focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/40 transition-all resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Fecha Programada (Opcional)</label>
+        <input id="tm-fecha" type="date"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-secondary/50 focus:ring-1 focus:ring-secondary/40 transition-all [color-scheme:dark]"/>
+      </div>
+    </div>
+    <button onclick="crearTema()"
+            class="w-full bg-secondary hover:bg-secondary/80 text-background font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-secondary">
+      Guardar Tema
+    </button>
+  </div>
+</div>
+
+<!-- ── Modal Subir Material ──────────────────────────────────────────────── -->
+<div id="modal-material" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-sm mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-base text-text-main">Añadir Material</h4>
+      <button onclick="cerrarModalMaterial()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    <input type="hidden" id="mat-tema-id" value="">
+    <div id="mat-error" class="hidden bg-error/10 border border-error/20 text-error text-xs rounded-xl px-3 py-2"></div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Título del Material</label>
+        <input id="mat-titulo" type="text" placeholder="Ej: Diapositivas Clase 1"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Enlace Externo (Opcional)</label>
+        <input id="mat-enlace" type="url" placeholder="https://..."
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/40 transition-all"/>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Archivo Adjunto (Opcional)</label>
+        <input id="mat-archivo" type="file"
+               class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm text-text-main focus:outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 transition-all"/>
+      </div>
+    </div>
+    <button onclick="subirMaterial()"
+            class="w-full bg-primary hover:bg-primary/80 text-text-main font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-primary flex items-center justify-center gap-2">
+      <ion-icon name="cloud-upload-outline"></ion-icon> Subir Material
+    </button>
+  </div>
+</div>
+
+<!-- ── Modal Nueva Tarea ──────────────────────────────────────────────── -->
+<div id="modal-tarea" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-sm mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-base text-text-main">Asignar Tarea</h4>
+      <button onclick="cerrarModalTarea()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    <input type="hidden" id="tar-tema-id" value="">
+    <div id="tar-error" class="hidden bg-error/10 border border-error/20 text-error text-xs rounded-xl px-3 py-2"></div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Título de la Tarea</label>
+        <input id="tar-titulo" type="text" placeholder="Ej: Ejercicios Prácticos 1"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-tertiary/50 focus:ring-1 focus:ring-tertiary/40 transition-all"/>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Instrucciones</label>
+        <textarea id="tar-inst" rows="3" placeholder="Detalles de lo que deben hacer..."
+                  class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm text-text-main focus:outline-none focus:border-tertiary/50 focus:ring-1 focus:ring-tertiary/40 transition-all resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Fecha y Hora Límite</label>
+        <input id="tar-fecha" type="datetime-local"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-tertiary/50 focus:ring-1 focus:ring-tertiary/40 transition-all [color-scheme:dark]"/>
+      </div>
+    </div>
+    <button onclick="crearTarea()"
+            class="w-full bg-tertiary hover:bg-tertiary/80 text-background font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-tertiary">
+      Asignar Tarea
+    </button>
+  </div>
+</div>
+
+<!-- ── Modal Editar Tarea ──────────────────────────────────────────────── -->
+<div id="modal-editar-tarea" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-md w-full max-w-sm mx-4 p-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <h4 class="font-headline font-bold text-base text-text-main">Editar Tarea</h4>
+      <button onclick="cerrarModalEditarTarea()" class="text-text-muted hover:text-text-main transition-colors">
+        <ion-icon name="close" class="text-xl"></ion-icon>
+      </button>
+    </div>
+    <input type="hidden" id="edit-tar-id" value="">
+    <div id="edit-tar-error" class="hidden bg-error/10 border border-error/20 text-error text-xs rounded-xl px-3 py-2"></div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Título de la Tarea</label>
+        <input id="edit-tar-titulo" type="text"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-tertiary/50 focus:ring-1 focus:ring-tertiary/40 transition-all"/>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Instrucciones</label>
+        <textarea id="edit-tar-inst" rows="3"
+                  class="w-full bg-surface-element border border-border rounded-xl py-2 px-3 text-sm text-text-main focus:outline-none focus:border-tertiary/50 focus:ring-1 focus:ring-tertiary/40 transition-all resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Fecha y Hora Límite</label>
+        <input id="edit-tar-fecha" type="datetime-local"
+               class="w-full bg-surface-element border border-border rounded-xl py-2.5 px-3 text-sm text-text-main focus:outline-none focus:border-tertiary/50 focus:ring-1 focus:ring-tertiary/40 transition-all [color-scheme:dark]"/>
+      </div>
+    </div>
+    <button onclick="guardarEdicionTarea()"
+            class="w-full bg-tertiary hover:bg-tertiary/80 text-background font-bold py-2.5 rounded-xl text-sm transition-all shadow-neon-tertiary">
+      Guardar Cambios
+    </button>
+  </div>
+</div>
+
+<!-- ── Modal Visor de Material ───────────────────────────────────────────── -->
+<div id="modal-visor-material" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
+  <div class="bg-surface-container border border-border rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative">
+    <!-- Encabezado -->
+    <div class="px-5 py-4 border-b border-border flex items-center justify-between bg-surface-element shrink-0">
+      <div class="flex items-center gap-3 truncate">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <ion-icon name="document-text-outline" class="text-xl"></ion-icon>
+        </div>
+        <h3 id="visor-titulo" class="font-headline font-bold text-text-main truncate">Cargando material...</h3>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <a id="visor-btn-descargar" href="#" target="_blank" download class="px-3 py-1.5 rounded-lg bg-secondary/10 text-secondary hover:bg-secondary hover:text-background font-bold text-sm transition-colors flex items-center gap-1">
+          <ion-icon name="download-outline"></ion-icon> <span class="hidden sm:inline">Descargar</span>
+        </a>
+        <button onclick="cerrarVisorMaterial()" class="p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-colors">
+          <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Contenedor del visor -->
+    <div id="visor-contenedor" class="flex-grow bg-surface-element relative overflow-hidden">
+      <iframe id="visor-iframe" src="" class="absolute inset-0 w-full h-full border-0 bg-white" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const CSRF = '{{ csrf_token }}';
+let _periodoId = null, _anoGrado = null, _seccion = null, _asignaturaId = null;
+
+function habilitarCard(id) {
+  document.getElementById(id).classList.remove('opacity-40');
+}
+function toast(msg, ok=true) {
+  const t = document.createElement('div');
+  t.className = `fixed bottom-6 right-6 z-[99999] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all
+    ${ok ? 'bg-secondary/10 border border-secondary/20 text-secondary' : 'bg-error/10 border border-error/20 text-error'}`;
+  t.innerHTML = `<ion-icon name="${ok?'checkmark-circle':'alert-circle'}-outline" class="text-base"></ion-icon>${msg}`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+async function onPeriodoChange() {
+  _periodoId = document.getElementById('sel-periodo').value;
+  const selCombo = document.getElementById('sel-combo');
+  const selMat   = document.getElementById('sel-materia');
+
+  selCombo.innerHTML = '<option value="">Cargando...</option>';
+  selCombo.disabled = true;
+  selMat.innerHTML = '<option value="">— Completa los pasos anteriores —</option>';
+  selMat.disabled = true;
+  document.getElementById('panel-principal').classList.add('hidden');
+  document.getElementById('estado-inicial').classList.remove('hidden');
+  ['card-combo','card-materia'].forEach(id => document.getElementById(id).classList.add('opacity-40'));
+  _anoGrado = null; _seccion = null; _asignaturaId = null;
+
+  if (!_periodoId) { selCombo.innerHTML = '<option value="">— Elige el período primero —</option>'; return; }
+
+  const r = await fetch(`/docentes/api/combinaciones/?periodo_id=${_periodoId}`);
+  const d = await r.json();
+  const combos = d.combinaciones || [];
+
+  if (!combos.length) {
+    selCombo.innerHTML = '<option value="">— Sin asignaciones en este período —</option>';
+    habilitarCard('card-combo');
+    return;
+  }
+
+  selCombo.innerHTML = '<option value="">— Selecciona Año y Sección —</option>';
+  combos.forEach(c => {
+    selCombo.innerHTML += `<option value="${c.valor}" data-ano="${c.ano_grado}" data-sec="${c.seccion}">${c.label}</option>`;
+  });
+  selCombo.disabled = false;
+  habilitarCard('card-combo');
+}
+
+async function onComboChange() {
+  const opt = document.getElementById('sel-combo').selectedOptions[0];
+  const selMat = document.getElementById('sel-materia');
+
+  selMat.innerHTML = '<option value="">Cargando materias...</option>';
+  selMat.disabled = true;
+  document.getElementById('panel-principal').classList.add('hidden');
+  document.getElementById('estado-inicial').classList.remove('hidden');
+  document.getElementById('card-materia').classList.add('opacity-40');
+  _asignaturaId = null;
+
+  if (!opt || !opt.value) { _anoGrado = null; _seccion = null; return; }
+
+  _anoGrado = opt.dataset.ano;
+  _seccion  = opt.dataset.sec;
+
+  const r = await fetch(`/docentes/api/materias-combo/?periodo_id=${_periodoId}&ano_grado=${_anoGrado}&seccion=${_seccion}`);
+  const d = await r.json();
+  const materias = d.materias || [];
+
+  if (!materias.length) {
+    selMat.innerHTML = '<option value="">— Sin materias asignadas —</option>';
+    habilitarCard('card-materia');
+    return;
+  }
+
+  selMat.innerHTML = '<option value="">— Selecciona materia —</option>';
+  materias.forEach(m => { selMat.innerHTML += `<option value="${m.id}">${m.nombre}</option>`; });
+  selMat.disabled = false;
+  habilitarCard('card-materia');
+}
+
+async function cargarPlanificacion() {
+  _asignaturaId = document.getElementById('sel-materia').value;
+  if (!_asignaturaId) return;
+
+  const matNombre = document.getElementById('sel-materia').selectedOptions[0].text;
+  document.getElementById('titulo-materia').textContent = matNombre;
+  document.getElementById('sub-materia').textContent = `Año ${_anoGrado} · Sección ${_seccion} · Período ${document.getElementById('sel-periodo').selectedOptions[0].text}`;
+
+  recargarTemas();
+}
+
+async function recargarTemas() {
+  const r = await fetch(`/docentes/api/planificacion/temas/?asignatura_id=${_asignaturaId}&periodo_id=${_periodoId}&seccion=${_seccion}`);
+  const d = await r.json();
+  
+  const cont = document.getElementById('contenedor-temas');
+  cont.innerHTML = '';
+  
+  if (!d.temas || d.temas.length === 0) {
+    document.getElementById('estado-vacio-temas').classList.remove('hidden');
+  } else {
+    document.getElementById('estado-vacio-temas').classList.add('hidden');
+    d.temas.forEach(tema => {
+      let matHtml = tema.materiales.map(m => `
+        <div class="flex items-center justify-between py-2 border-b border-border/50 last:border-0 group">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+              <ion-icon name="${m.archivo ? 'document-outline' : 'link-outline'}"></ion-icon>
+            </div>
+            <button onclick="abrirVisorMaterial('${m.archivo || m.enlace}', '${m.titulo.replace(/'/g, "\\'")}')" class="text-sm font-medium hover:text-primary transition-colors hover:underline text-left">
+              ${m.titulo}
+            </button>
+          </div>
+          <button onclick="eliminarMaterial(${m.id})" class="text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-all p-1">
+            <ion-icon name="trash-outline"></ion-icon>
+          </button>
+        </div>
+      `).join('');
+
+      let tarHtml = tema.tareas.map(t => `
+        <div class="flex items-start justify-between py-2 border-b border-border/50 last:border-0 group">
+          <div class="flex items-start gap-2">
+            <div class="w-6 h-6 mt-0.5 rounded-md bg-tertiary/10 text-tertiary flex items-center justify-center flex-shrink-0">
+              <ion-icon name="checkmark-done-outline"></ion-icon>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-text-main">${t.titulo}</p>
+              ${t.instrucciones ? `<p class="text-[11px] text-text-muted mt-0.5">${t.instrucciones}</p>` : ''}
+              ${t.fecha_entrega ? `<p class="text-[10px] text-tertiary/80 font-mono mt-1 font-semibold flex items-center gap-1"><ion-icon name="time-outline"></ion-icon> ${t.fecha_entrega.replace('T', ' ')}</p>` : ''}
+            </div>
+          </div>
+          <div class="flex items-center opacity-0 group-hover:opacity-100 transition-all gap-1">
+            <button onclick="abrirModalEditarTarea(${t.id}, '${t.titulo.replace(/'/g, "\\'")}', '${(t.instrucciones||'').replace(/'/g, "\\'")}', '${(t.fecha_entrega||'').split('T')[0]}')" class="text-text-muted hover:text-secondary p-1 transition-all">
+              <ion-icon name="pencil-outline"></ion-icon>
+            </button>
+            <button onclick="eliminarTarea(${t.id})" class="text-text-muted hover:text-error p-1 transition-all">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      cont.innerHTML += `
+        <div class="bg-surface-element border border-border rounded-xl overflow-hidden shadow-sm">
+          <!-- Cabecera del Tema -->
+          <div class="px-5 py-4 border-b border-border bg-surface-container/30 flex justify-between items-start">
+            <div>
+              <h4 class="font-bold text-base text-text-main">${tema.titulo}</h4>
+              ${tema.descripcion ? `<p class="text-xs text-text-muted mt-1">${tema.descripcion}</p>` : ''}
+              ${tema.fecha_programada ? `<p class="text-[10px] uppercase font-bold text-secondary mt-2 tracking-wide flex items-center gap-1"><ion-icon name="calendar-outline"></ion-icon> ${tema.fecha_programada}</p>` : ''}
+            </div>
+            <button onclick="eliminarTema(${tema.id})" class="text-text-muted hover:text-error hover:bg-error/10 p-2 rounded-lg transition-colors">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+          
+          <!-- Contenido: Materiales y Tareas -->
+          <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+            <!-- Materiales -->
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-1"><ion-icon name="folder-open-outline" class="text-primary"></ion-icon> Material de Apoyo</span>
+                <button onclick="abrirModalMaterial(${tema.id})" class="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded font-bold hover:bg-primary hover:text-text-main transition-colors">AÑADIR</button>
+              </div>
+              <div class="space-y-1">
+                ${matHtml || '<p class="text-xs text-text-muted/50 italic">Sin materiales.</p>'}
+              </div>
+            </div>
+            <!-- Tareas -->
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-1"><ion-icon name="clipboard-outline" class="text-tertiary"></ion-icon> Tareas</span>
+                <button onclick="abrirModalTarea(${tema.id})" class="text-[10px] bg-tertiary/10 text-tertiary px-2 py-1 rounded font-bold hover:bg-tertiary hover:text-background transition-colors">ASIGNAR</button>
+              </div>
+              <div class="space-y-1">
+                ${tarHtml || '<p class="text-xs text-text-muted/50 italic">Sin tareas asignadas.</p>'}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  document.getElementById('panel-principal').classList.remove('hidden');
+  document.getElementById('estado-inicial').classList.add('hidden');
+}
+
+// ── Temas
+function abrirModalTema() {
+  document.getElementById('tm-titulo').value = '';
+  document.getElementById('tm-desc').value = '';
+  document.getElementById('tm-fecha').value = '';
+  document.getElementById('tema-error').classList.add('hidden');
+  document.getElementById('modal-tema').classList.remove('hidden');
+  document.getElementById('tm-titulo').focus();
+}
+function cerrarModalTema() { document.getElementById('modal-tema').classList.add('hidden'); }
+
+async function crearTema() {
+  const titulo = document.getElementById('tm-titulo').value.trim();
+  const desc = document.getElementById('tm-desc').value.trim();
+  const fecha = document.getElementById('tm-fecha').value;
+
+  if(!titulo) { document.getElementById('tema-error').textContent = 'El título es obligatorio.'; document.getElementById('tema-error').classList.remove('hidden'); return; }
+
+  const r = await fetch('/docentes/api/planificacion/tema/crear/', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ asignatura_id: _asignaturaId, periodo_id: _periodoId, seccion: _seccion, titulo, descripcion: desc, fecha_programada: fecha })
+  });
+  const d = await r.json();
+  if(d.ok) {
+    cerrarModalTema();
+    toast('Tema creado exitosamente.');
+    recargarTemas();
+  } else {
+    document.getElementById('tema-error').textContent = d.error || 'Error al crear.'; document.getElementById('tema-error').classList.remove('hidden');
+  }
+}
+async function eliminarTema(id) {
+  if(!confirm('¿Estás seguro de eliminar este tema y todo su contenido?')) return;
+  const r = await fetch('/docentes/api/planificacion/tema/eliminar/', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify({ tema_id: id })
+  });
+  const d = await r.json();
+  if(d.ok) { toast('Tema eliminado.'); recargarTemas(); } else toast(d.error, false);
+}
+
+// ── Materiales
+function abrirModalMaterial(temaId) {
+  document.getElementById('mat-tema-id').value = temaId;
+  document.getElementById('mat-titulo').value = '';
+  document.getElementById('mat-enlace').value = '';
+  document.getElementById('mat-archivo').value = '';
+  document.getElementById('mat-error').classList.add('hidden');
+  document.getElementById('modal-material').classList.remove('hidden');
+}
+function cerrarModalMaterial() { document.getElementById('modal-material').classList.add('hidden'); }
+
+async function subirMaterial() {
+  const temaId = document.getElementById('mat-tema-id').value;
+  const titulo = document.getElementById('mat-titulo').value.trim();
+  const enlace = document.getElementById('mat-enlace').value.trim();
+  const archivo = document.getElementById('mat-archivo').files[0];
+
+  if(!titulo) { document.getElementById('mat-error').textContent = 'El título es obligatorio.'; document.getElementById('mat-error').classList.remove('hidden'); return; }
+  if(!enlace && !archivo) { document.getElementById('mat-error').textContent = 'Debes adjuntar un archivo o un enlace.'; document.getElementById('mat-error').classList.remove('hidden'); return; }
+
+  const formData = new FormData();
+  formData.append('tema_id', temaId);
+  formData.append('titulo', titulo);
+  if(enlace) formData.append('enlace', enlace);
+  if(archivo) formData.append('archivo', archivo);
+
+  const r = await fetch('/docentes/api/planificacion/material/subir/', {
+    method: 'POST', headers: {'X-CSRFToken':CSRF}, body: formData
+  });
+  const d = await r.json();
+  if(d.ok) {
+    cerrarModalMaterial();
+    toast('Material añadido.');
+    recargarTemas();
+  } else {
+    document.getElementById('mat-error').textContent = d.error || 'Error al subir.'; document.getElementById('mat-error').classList.remove('hidden');
+  }
+}
+async function eliminarMaterial(id) {
+  if(!confirm('¿Eliminar este material?')) return;
+  const r = await fetch('/docentes/api/planificacion/material/eliminar/', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify({ material_id: id })
+  });
+  if((await r.json()).ok) { toast('Material eliminado.'); recargarTemas(); }
+}
+
+// ── Tareas
+function abrirModalTarea(temaId) {
+  document.getElementById('tar-tema-id').value = temaId;
+  document.getElementById('tar-titulo').value = '';
+  document.getElementById('tar-inst').value = '';
+  document.getElementById('tar-fecha').value = '';
+  document.getElementById('tar-error').classList.add('hidden');
+  document.getElementById('modal-tarea').classList.remove('hidden');
+}
+function cerrarModalTarea() { document.getElementById('modal-tarea').classList.add('hidden'); }
+
+async function crearTarea() {
+  const temaId = document.getElementById('tar-tema-id').value;
+  const titulo = document.getElementById('tar-titulo').value.trim();
+  const inst = document.getElementById('tar-inst').value.trim();
+  const fecha = document.getElementById('tar-fecha').value;
+
+  if(!titulo) { document.getElementById('tar-error').textContent = 'El título es obligatorio.'; document.getElementById('tar-error').classList.remove('hidden'); return; }
+
+  const r = await fetch('/docentes/api/planificacion/tarea/crear/', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ tema_id: temaId, titulo, instrucciones: inst, fecha_entrega: fecha })
+  });
+  const d = await r.json();
+  if(d.ok) {
+    cerrarModalTarea();
+    toast('Tarea asignada.');
+    recargarTemas();
+  } else {
+    document.getElementById('tar-error').textContent = d.error || 'Error al asignar.'; document.getElementById('tar-error').classList.remove('hidden');
+  }
+}
+async function eliminarTarea(id) {
+  if(!confirm('¿Eliminar esta tarea?')) return;
+  const r = await fetch('/docentes/api/planificacion/tarea/eliminar/', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify({ tarea_id: id })
+  });
+  if((await r.json()).ok) { toast('Tarea eliminada.'); recargarTemas(); }
+function abrirModalEditarTarea(id, titulo, inst, fecha) {
+  document.getElementById('edit-tar-id').value = id;
+  document.getElementById('edit-tar-titulo').value = titulo;
+  document.getElementById('edit-tar-inst').value = inst;
+  document.getElementById('edit-tar-fecha').value = fecha ? fecha.slice(0,16) : '';
+  document.getElementById('edit-tar-error').classList.add('hidden');
+  document.getElementById('modal-editar-tarea').classList.remove('hidden');
+}
+function cerrarModalEditarTarea() { document.getElementById('modal-editar-tarea').classList.add('hidden'); }
+
+async function guardarEdicionTarea() {
+  const tareaId = document.getElementById('edit-tar-id').value;
+  const titulo = document.getElementById('edit-tar-titulo').value.trim();
+  const inst = document.getElementById('edit-tar-inst').value.trim();
+  const fecha = document.getElementById('edit-tar-fecha').value;
+
+  if(!titulo) { document.getElementById('edit-tar-error').textContent = 'El título es obligatorio.'; document.getElementById('edit-tar-error').classList.remove('hidden'); return; }
+
+  const r = await fetch('/docentes/api/planificacion/tarea/editar/', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body: JSON.stringify({ tarea_id: tareaId, titulo, instrucciones: inst, fecha_entrega: fecha })
+  });
+  const d = await r.json();
+  if(d.ok) {
+    cerrarModalEditarTarea();
+    toast('Tarea actualizada.');
+    recargarTemas();
+  } else {
+    document.getElementById('edit-tar-error').textContent = d.error || 'Error al actualizar.'; document.getElementById('edit-tar-error').classList.remove('hidden');
+  }
+function abrirVisorMaterial(url, titulo) {
+  document.getElementById('visor-titulo').textContent = titulo;
+  document.getElementById('visor-btn-descargar').href = url;
+  
+  const ext = url.split('.').pop().split('?')[0].toLowerCase();
+  const iframe = document.getElementById('visor-iframe');
+  
+  if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'mp4', 'webm'].includes(ext)) {
+    iframe.src = url;
+  } else {
+    const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
+    iframe.src = `https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`;
+  }
+  
+  document.getElementById('modal-visor-material').classList.remove('hidden');
+}
+
+function cerrarVisorMaterial() {
+  document.getElementById('modal-visor-material').classList.add('hidden');
+  document.getElementById('visor-iframe').src = '';
+}
+</script>
+{% endblock %}

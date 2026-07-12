@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Control de Expedientes Físicos{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Expedientes Físicos</h1>
+        <p class="page-subtitle" style="display: flex; align-items: center; gap: 8px;">
+            Auditoría centralizada de documentación entregada.
+            <button type="button" onclick="toggleHelpModal()" class="text-xs text-primary hover:underline font-bold inline-flex items-center gap-1 bg-transparent border-none cursor-pointer p-0" style="vertical-align: middle;">
+                <span class="material-symbols-outlined" style="font-size: 14px;">help</span> ¿Cómo usar esta sección?
+            </button>
+        </p>
+    </div>
+    <div class="page-actions">
+        <button type="button" id="btn-toggle-view" class="btn btn-secondary" onclick="toggleViewMode()" style="color:var(--color-primary)">
+            <span class="material-symbols-outlined" style="font-size:16px">grid_view</span>
+            Filtrar por Año
+        </button>
+
+        <a href="{% url 'digitalizacion' %}" class="btn btn-secondary">
+            <span class="material-symbols-outlined" style="font-size:16px">cloud_upload</span>
+            Subir Archivos
+        </a>
+        <a href="{% url 'nuevo_expediente' %}" class="btn btn-primary">
+            <span class="material-symbols-outlined" style="font-size:16px">person_add</span>
+            Nuevo Integrante
+        </a>
+    </div>
+</div>
+
+<form id="form-masivo" method="POST" action="{% url 'eliminar_masivo_expedientes' %}" data-turbo="false">
+    {% csrf_token %}
+    <div class="table-wrapper">
+        <!-- Toolbar -->
+        <div class="table-toolbar">
+            <div class="table-search">
+                <span class="table-search-icon material-symbols-outlined">search</span>
+                <input type="text" id="exp-table-search" placeholder="Buscar por nombre o cédula...">
+            </div>
+            <span class="table-count" id="exp-table-count"></span>
+        </div>
+
+        <!-- Table -->
+        <div id="vista-global" class="table-scroll">
+            <div id="botonera-volver" style="display:none; margin-bottom: 15px; padding: 10px 16px;">
+                <button type="button" class="btn btn-secondary" onclick="volverALaBiblioteca()" style="display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
+                    Volver a Selección de Año y Sección
+                </button>
+            </div>
+            <table id="expedientes-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-col="1" style="padding-left:16px;">Estudiante <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
+                        <th class="sortable" data-col="2">Cédula <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
+                        <th style="text-align:center">Copia de Cédula</th>
+                        <th style="text-align:center">Partida de Nac.</th>
+                        <th style="text-align:center">Notas Cert.</th>
+                        <th class="sortable" data-col="6" style="text-align:center">Estatus <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
+                        <th style="width:80px">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in expedientes %}
+                    <tr class="estudiante-row" data-ano="{{ exp.estudiante.get_ano_cursando_display }}" data-seccion="{{ exp.estudiante.seccion|default:'Única' }}">
+                        <td style="padding-left:16px">
+                            <a href="{% url 'detalle_expediente' exp.estudiante.cedula_identidad %}"
+                                style="color:var(--color-text-primary);text-decoration:none;font-weight:500">
+                                {{ exp.estudiante.nombres }} {{ exp.estudiante.apellidos }}
+                            </a>
+                        </td>
+                        <td style="color:var(--color-text-secondary)">{{exp.estudiante.cedula_identidad|formato_cedula}}</td>
+                        <td style="text-align:center">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:{% if exp.copia_cedula %}var(--color-success){% else %}var(--color-error){% endif %}">
+                                {% if exp.copia_cedula %}check_circle{% else %}cancel{% endif %}
+                            </span>
+                        </td>
+                        <td style="text-align:center">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:{% if exp.partida_nacimiento %}var(--color-success){% else %}var(--color-error){% endif %}">
+                                {% if exp.partida_nacimiento %}check_circle{% else %}cancel{% endif %}
+                            </span>
+                        </td>
+                        <td style="text-align:center">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:{% if exp.notas_certificadas_previas %}var(--color-success){% else %}var(--color-error){% endif %}">
+                                {% if exp.notas_certificadas_previas %}check_circle{% else %}cancel{% endif %}
+                            </span>
+                        </td>
+                        <td style="text-align:center">
+                            {% if exp.estatus == 'SOLVENTE' %}
+                            <span class="badge badge-success">Solvente</span>
+                            {% else %}
+                            <span class="badge badge-warning">Incompleto</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:4px">
+                                <a href="{% url 'editar_expediente' exp.estudiante.cedula_identidad %}"
+                                    class="btn btn-ghost btn-icon btn-sm" title="Editar">
+                                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                                </a>
+                                {% if request.user.rol != 'PERSONAL' %}
+                                <a href="{% url 'eliminar_expediente' exp.estudiante.cedula_identidad %}"
+                                    onclick="return confirm('ATENCIÓN: ¿Eliminar el expediente de {{exp.estudiante.cedula_identidad|formato_cedula}}?')"
+                                    class="btn btn-ghost btn-icon btn-sm" title="Eliminar"
+                                    style="color:var(--color-error)">
+                                    <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                </a>
+                                {% elif request.user.rol == 'PERSONAL' %}
+                                <button type="button"
+                                    onclick="solicitarAccion({accion:'eliminar_expedientes',modulo:'Expedientes',descripcion:'Solicito eliminar el expediente del estudiante {{ exp.estudiante.nombres }} {{ exp.estudiante.apellidos }} ({{exp.estudiante.cedula_identidad|formato_cedula}}).',payload:{expedientes_ids:[{{ exp.id }}]}})"
+                                    class="btn btn-ghost btn-icon btn-sm" title="Solicitar Eliminación"
+                                    style="color:var(--color-accent)">
+                                    <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <span class="material-symbols-outlined empty-state-icon">folder_off</span>
+                                <div class="empty-state-title">Sin expedientes</div>
+                                <div class="empty-state-text">No hay expedientes cargados en la base de datos aún.</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Vista Filtrada -->
+        <div id="vista-filtrada" style="display:none; padding: 20px;">
+            {% regroup expedientes|dictsort:"estudiante.seccion"|dictsort:"estudiante.ano_cursando" by estudiante.get_ano_cursando_display as expedientes_por_ano %}
+            {% for ano in expedientes_por_ano %}
+                <div class="ano-bloque" style="margin-bottom: 2rem;">
+                    <h2 class="ano-titulo" style="font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-bottom: 15px; border-bottom: 2px solid var(--color-border); padding-bottom: 5px;">{{ ano.grouper|default:"Sin Año" }}</h2>
+                    {% regroup ano.list by estudiante.seccion as expedientes_por_seccion %}
+                    <div class="secciones-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;">
+                        {% for seccion in expedientes_por_seccion %}
+                            <button type="button" class="btn-seccion-card btn-filtro-ano bg-surface text-text-main font-bold border border-border rounded-xl p-4 flex items-center justify-center gap-2.5 text-base shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/20 hover:text-primary hover:border-primary" 
+                                onclick="filtrarPorGrupo('{{ ano.grouper|default:'Sin Año' }}', '{{ seccion.grouper|default:'Única' }}')">
+                                <span class="material-symbols-outlined text-accent">local_library</span>
+                                {{ ano.grouper|default:"Sin Año" }} - Sección {{ seccion.grouper|default:"Única" }}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <span class="material-symbols-outlined empty-state-icon">folder_off</span>
+                    <div class="empty-state-title">Sin expedientes</div>
+                    <div class="empty-state-text">No hay expedientes cargados en la base de datos aún.</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        <div class="table-pagination" id="exp-table-pagination"></div>
+    </div>
+</form>
+
+<!-- Modal de Ayuda (Guía de Expedientes Físicos) -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-white/10 shadow-glass rounded-2xl max-w-lg w-full overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-border bg-surface-element">
+            <div class="flex items-center gap-2 text-primary">
+                <span class="material-symbols-outlined">help</span>
+                <h3 class="text-base font-bold text-text-main uppercase tracking-wider">Guía: Gestión de Expedientes</h3>
+            </div>
+            <button type="button" onclick="toggleHelpModal()" class="text-text-muted hover:text-text-main text-xl cursor-pointer bg-transparent border-none">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto max-h-[60vh] space-y-6 text-sm leading-relaxed text-text-muted">
+            <!-- Sección 1 -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">search</span> 1. Búsqueda y Filtros Rápidos
+                </h4>
+                <p class="text-xs">
+                    Puedes buscar a cualquier alumno escribiendo su <strong>nombre, apellido o número de cédula</strong> en la barra de búsqueda superior de la tabla. Además, al presionar <strong>"Filtrar por Año"</strong>, la vista cambiará a una cuadrícula organizada por Año Escolar y Sección para ubicar grupos específicos rápidamente.
+                </p>
+            </div>
+ 
+            <!-- Sección 2 -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">folder_shared</span> 2. Estatus del Expediente
+                </h4>
+                <p class="text-xs">
+                    El sistema evalúa el estatus de los documentos esenciales de cada alumno:
+                </p>
+                <ul class="list-disc list-inside text-xs mt-2 pl-2 space-y-1">
+                    <li><strong class="text-emerald-400">✓ Solvente:</strong> Se han cargado y verificado todos los documentos obligatorios (Cédula, Partida de Nacimiento y Notas Certificadas).</li>
+                    <li><strong class="text-amber-400">⚠ Incompleto:</strong> Falta uno o más documentos obligatorios por registrar o subir.</li>
+                </ul>
+            </div>
+
+            <!-- Sección 3 -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">edit_square</span> 3. Gestión y Modificación
+                </h4>
+                <p class="text-xs">
+                    Al hacer clic en el nombre del estudiante, accederás a la vista detallada de su expediente, donde podrás ver los documentos digitalizados e imprimir constancias. Para modificar la información, usa el botón de <strong>Editar</strong> (icono de lápiz).
+                </p>
+            </div>
+
+            <!-- Sección 4 -->
+            <div>
+                <h4 class="text-xs font-bold text-text-main uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px">gavel</span> 4. Permisos y Eliminación
+                </h4>
+                <p class="text-xs">
+                    Si eres operador con rol <strong>Personal</strong>, no podrás borrar expedientes directamente. En su lugar, el sistema enviará una <strong>Solicitud de Eliminación</strong> a los administradores para que autoricen el borrado. Si eres Administrador o Desarrollador, podrás eliminar el registro directamente tras confirmar la acción.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-4 border-t border-border bg-surface-element flex justify-end">
+            <button type="button" onclick="toggleHelpModal()" class="btn btn-secondary font-bold text-xs uppercase px-4 py-2">
+                Entendido
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleHelpModal() {
+        const modal = document.getElementById('helpModal');
+        if (modal) {
+            modal.classList.toggle('hidden');
+        }
+    }
+    function toggleViewMode() {
+        var btn = document.getElementById('btn-toggle-view');
+        var vistaGlobal = document.getElementById('vista-global');
+        var vistaFiltrada = document.getElementById('vista-filtrada');
+        var paginacion = document.getElementById('exp-table-pagination');
+        var barraBusqueda = document.querySelector('.table-toolbar');
+        
+        // Al alternar, siempre nos aseguramos de restaurar los filtros ocultos
+        restaurarVistaGlobal();
+        
+        if (vistaGlobal.style.display !== 'none') {
+            vistaGlobal.style.display = 'none';
+            if (paginacion) paginacion.style.display = 'none';
+            if (barraBusqueda) barraBusqueda.style.display = 'none';
+            vistaFiltrada.style.display = 'block';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">table_rows</span> Vista Global';
+        } else {
+            vistaGlobal.style.display = 'block';
+            if (paginacion) paginacion.style.display = 'flex';
+            if (barraBusqueda) barraBusqueda.style.display = 'flex';
+            vistaFiltrada.style.display = 'none';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">grid_view</span> Filtrar por Año';
+        }
+    }
+
+    function restaurarVistaGlobal() {
+        // Mostrar todas las filas si estaban ocultas por el filtro rápido
+        var rows = document.querySelectorAll('.estudiante-row');
+        rows.forEach(function(row) {
+            row.style.display = '';
+        });
+        
+        var inputBusqueda = document.getElementById('exp-table-search');
+        if (inputBusqueda && inputBusqueda.value.includes('Filtro activo')) {
+            inputBusqueda.value = '';
+        }
+        var botoneraVolver = document.getElementById('botonera-volver');
+        if (botoneraVolver) botoneraVolver.style.display = 'none';
+    }
+
+    function filtrarPorGrupo(ano, seccion) {
+        var vistaGlobal = document.getElementById('vista-global');
+        var vistaFiltrada = document.getElementById('vista-filtrada');
+        var paginacion = document.getElementById('exp-table-pagination');
+        var barraBusqueda = document.querySelector('.table-toolbar');
+        var btnToggle = document.getElementById('btn-toggle-view');
+
+        // Ocultar cuadrícula y mostrar tabla
+        vistaFiltrada.style.display = 'none';
+        vistaGlobal.style.display = 'block';
+        if (paginacion) paginacion.style.display = 'none'; // Se apaga paginación porque es filtro en caliente
+        if (barraBusqueda) barraBusqueda.style.display = 'flex';
+        
+        // Actualizar botón para poder volver
+        btnToggle.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">table_rows</span> Quitar Filtro Rápido';
+        
+        // Actualizar buscador visualmente para informar
+        var inputBusqueda = document.getElementById('exp-table-search');
+        if (inputBusqueda) {
+            inputBusqueda.value = 'Filtro activo: ' + ano + ' - Sección ' + seccion;
+        }
+
+        var botoneraVolver = document.getElementById('botonera-volver');
+        if (botoneraVolver) botoneraVolver.style.display = 'block';
+
+        // Aplicar filtro directo al DOM de la tabla
+        var rows = document.querySelectorAll('.estudiante-row');
+        rows.forEach(function(row) {
+            var rowAno = row.getAttribute('data-ano');
+            var rowSeccion = row.getAttribute('data-seccion');
+            
+            if (rowAno === ano && rowSeccion === seccion) {
+                row.style.display = ''; 
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function volverALaBiblioteca() {
+        var vistaGlobal = document.getElementById('vista-global');
+        var vistaFiltrada = document.getElementById('vista-filtrada');
+        var paginacion = document.getElementById('exp-table-pagination');
+        var barraBusqueda = document.querySelector('.table-toolbar');
+        var btnToggle = document.getElementById('btn-toggle-view');
+        var botoneraVolver = document.getElementById('botonera-volver');
+
+        // Restaurar estado visual (ocultar global, mostrar cuadrícula)
+        vistaGlobal.style.display = 'none';
+        if (paginacion) paginacion.style.display = 'none';
+        if (barraBusqueda) barraBusqueda.style.display = 'none';
+        if (botoneraVolver) botoneraVolver.style.display = 'none';
+        vistaFiltrada.style.display = 'block';
+        
+        // Restaurar el botón superior principal
+        btnToggle.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">table_rows</span> Vista Global';
+        
+        // Limpiar las filas de la tabla para que la vista global esté intacta la próxima vez
+        restaurarVistaGlobal();
+        if (typeof resetearBotonesFiltro === 'function') {
+            resetearBotonesFiltro();
+        }
+    }
+
+    function resetearBotonesFiltro() {
+        const botones = document.querySelectorAll('.btn-filtro-ano');
+        botones.forEach(boton => {
+            // Remover clases de estado activo del sistema
+            boton.classList.remove('bg-primary', 'text-text-main', 'border-primary', 'shadow-md');
+            // Asegurar que recuperen su estilo base y sus letras resalten
+            boton.classList.add('bg-surface', 'text-text-main', 'font-bold', 'border-border');
+        });
+    }
+
+    window.addEventListener('pageshow', function(event) {
+        // Si la página se carga desde la caché (al ir hacia atrás), forzar el reinicio visual
+        if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+            resetearBotonesFiltro();
+        }
+    });
+
+    function initFiltrosInteractivos() {
+        const botonesFiltro = document.querySelectorAll('.btn-filtro-ano');
+        
+        botonesFiltro.forEach(boton => {
+            boton.addEventListener('click', function() {
+                // 1. Apagar todos los botones (volver al estado neutro del tema)
+                resetearBotonesFiltro();
+
+                // 2. Encender con fuerza el botón seleccionado usando el color del tema
+                this.classList.remove('bg-surface', 'border-border');
+                this.classList.add('bg-primary', 'text-text-main', 'border-primary', 'shadow-md');
+            });
+        });
+    }
+
+    function initListaExpedientes() {
+        // Tabla con paginación
+        if (typeof TableController !== 'undefined') {
+            new TableController('expedientes-table', {
+                searchInputId: 'exp-table-search',
+                countId: 'exp-table-count',
+                paginationId: 'exp-table-pagination',
+                perPage: 15
+            });
+        }
+        initFiltrosInteractivos();
+    }
+
+    // Inicializar de forma segura para soportar Hotwired Turbo y cargas tradicionales
+    if (window.TableController) {
+        initListaExpedientes();
+    } else {
+        document.addEventListener('DOMContentLoaded', initListaExpedientes);
+    }
+</script>
+{% endblock %}
+
