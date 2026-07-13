@@ -38,11 +38,18 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 _raw_hosts = os.environ.get('ALLOWED_HOSTS', '')
 ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
 
+# ── CSRF_TRUSTED_ORIGINS ──────────────────────────────────────────────────────
+# Dominios desde los cuales Django acepta POST (formularios con CSRF token).
+CSRF_TRUSTED_ORIGINS = [
+    'https://gestor-apacuana.vercel.app',
+    'https://*.vercel.app',
+]
+
 # ── NUEVO: Soporte automático y seguro para GitHub Codespaces ──
 # Detecta si estás en Codespaces y permite su dominio sin afectar producción (Render)
 if os.environ.get('CODESPACES') == 'true':
     ALLOWED_HOSTS.extend(['.app.github.dev', 'localhost', '127.0.0.1'])
-    CSRF_TRUSTED_ORIGINS = ['https://*.app.github.dev']
+    CSRF_TRUSTED_ORIGINS.append('https://*.app.github.dev')
 
 # En desarrollo local, permitir todo si no se definió la variable
 if not ALLOWED_HOSTS:
