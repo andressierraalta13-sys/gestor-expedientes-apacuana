@@ -149,32 +149,43 @@ if _database_url:
 
     _parsed = _up.urlparse(_database_url)
 
-    # ── Resolución forzada a IPv4 ─────────────────────────────────────────────
-    # Vercel Serverless no soporta conexiones salientes IPv6.
-    # Supabase puede resolver a IPv6, causando "Cannot assign requested address".
-    # Resolvemos manualmente a IPv4 para evitar este problema.
     _db_host = _parsed.hostname
-    try:
-        _ipv4_results = socket.getaddrinfo(_db_host, _parsed.port or 5432, socket.AF_INET)
-        if _ipv4_results:
-            _db_host = _ipv4_results[0][4][0]  # Usar la primera dirección IPv4
-    except Exception:
-        pass  # Si falla, usar el hostname original
+    _db_user = _parsed.username
 
-    # Supabase requiere SSL. Asegurar sslmode=require en las opciones.
+    # ── Resolución forzada a IPv4 (Solo para hosts que no sean el Pooler) ────────
+    # Vercel Serverless no soporta conexiones salientes IPv6.
+    # Si es el pooler (contiene 'pooler.supabase.com'), ya tiene IPv4 de forma nativa.
+    # Si es la conexión directa (db.xxx.supabase.co), intentamos resolver a IPv4
+    # (aunque las bases de datos gratis de Supabase son IPv6-only y fallará, forzando a usar el Pooler).
+    if _db_host and "pooler.supabase.com" not in _db_host:
+        try:
+            _ipv4_results = socket.getaddrinfo(_db_host, _parsed.port or 5432, socket.AF_INET)
+            if _ipv4_results:
+                _db_host = _ipv4_results[0][4][0]  # Usar la primera dirección IPv4
+        except Exception:
+            pass  # Si falla, usar el hostname original
+
+    # Configuración de opciones SSL obligatorias
+    _db_options = {
+        'sslmode': 'require',
+    }
+
+    # Si se usa la conexión directa (el usuario es 'postgres' sin el ref del proyecto),
+    # pasamos el parámetro de proyecto en las opciones. Si se usa el pooler
+    # (el usuario es 'postgres.ref'), no se debe enviar 'options' para evitar conflictos.
+    if _db_user and '.' not in _db_user:
+        _db_options['options'] = '-c project=vgzojsbmmvptfhdrfsko'
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': _parsed.path.lstrip('/'),
-            'USER': _parsed.username,
+            'USER': _db_user,
             'PASSWORD': _up.unquote(_parsed.password) if _parsed.password else '',
             'HOST': _db_host,
             'PORT': _parsed.port or 5432,
             'CONN_MAX_AGE': 600,        # Reutilizar conexiones por 10 minutos
-            'OPTIONS': {
-                'sslmode': 'require',   # Obligatorio para Supabase
-                'options': '-c project=vgzojsbmmvptfhdrfsko',
-            },
+            'OPTIONS': _db_options,
         }
     }
 else:
