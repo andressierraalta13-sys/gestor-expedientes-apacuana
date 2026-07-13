@@ -114,6 +114,10 @@ def notas_calificaciones_view(request):
             'periodos': periodos_disponibles,
         })
 
+    # Reset sequences if using PostgreSQL to avoid IntegrityError on PK
+    from apps.calificaciones.excel_utils import reset_db_sequences
+    reset_db_sequences()
+
     excel_file = request.FILES['archivo_excel']
 
     if not excel_file.name.lower().endswith(('.xlsx', '.xls')):

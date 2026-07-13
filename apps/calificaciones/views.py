@@ -94,7 +94,9 @@ def carga_masiva_view(request):
     if request.method != 'POST' or not request.FILES.get('archivo_excel'):
         return render(request, 'calificaciones/carga_masiva.html')
 
-
+    # Reset sequences if using PostgreSQL to avoid IntegrityError on PK
+    from apps.calificaciones.excel_utils import reset_db_sequences
+    reset_db_sequences()
 
     excel_file = request.FILES['archivo_excel']
 
