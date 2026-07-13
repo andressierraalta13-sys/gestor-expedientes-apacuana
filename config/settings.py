@@ -127,8 +127,21 @@ _database_url = os.environ.get('DATABASE_URL', '')
 
 if _database_url:
     import urllib.parse as _up
+    import socket
 
     _parsed = _up.urlparse(_database_url)
+
+    # ── Resolución forzada a IPv4 ─────────────────────────────────────────────
+    # Vercel Serverless no soporta conexiones salientes IPv6.
+    # Supabase puede resolver a IPv6, causando "Cannot assign requested address".
+    # Resolvemos manualmente a IPv4 para evitar este problema.
+    _db_host = _parsed.hostname
+    try:
+        _ipv4_results = socket.getaddrinfo(_db_host, _parsed.port or 5432, socket.AF_INET)
+        if _ipv4_results:
+            _db_host = _ipv4_results[0][4][0]  # Usar la primera dirección IPv4
+    except Exception:
+        pass  # Si falla, usar el hostname original
 
     # Supabase requiere SSL. Asegurar sslmode=require en las opciones.
     DATABASES = {
@@ -137,7 +150,7 @@ if _database_url:
             'NAME': _parsed.path.lstrip('/'),
             'USER': _parsed.username,
             'PASSWORD': _up.unquote(_parsed.password) if _parsed.password else '',
-            'HOST': _parsed.hostname,
+            'HOST': _db_host,
             'PORT': _parsed.port or 5432,
             'CONN_MAX_AGE': 600,        # Reutilizar conexiones por 10 minutos
             'OPTIONS': {
