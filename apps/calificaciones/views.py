@@ -95,6 +95,7 @@ def carga_masiva_view(request):
         return render(request, 'calificaciones/carga_masiva.html')
 
     # Reset sequences if using PostgreSQL to avoid IntegrityError on PK
+    # (Auto-sincronizacion de secuencias para evitar fallos de duplicacion de id)
     from apps.calificaciones.excel_utils import reset_db_sequences
     reset_db_sequences()
 
