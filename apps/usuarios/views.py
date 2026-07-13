@@ -182,7 +182,10 @@ def login_view(request):
                             error = f'Error de autenticación: {error_msg}'
                             
                     except requests.exceptions.RequestException as e:
-                        error = 'Error de conexión con el servicio de autenticación (Supabase).'
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Error de conexion con Supabase Auth: {e}", exc_info=True)
+                        error = f'Error de conexión con el servicio de autenticación (Supabase): {e}'
 
     return render(request, 'usuarios/login.html', {'error': error})
 

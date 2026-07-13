@@ -14,6 +14,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 
+# ── Forzar IPv4 Globalmente para requests (Vercel Serverless IPv6 Fix) ──────
+import socket
+try:
+    import urllib3.util.connection as urllib3_cn
+    def allowed_gai_family():
+        return socket.AF_INET
+    urllib3_cn.allowed_gai_family = allowed_gai_family
+except ImportError:
+    pass
+
+
 # ── Seguridad ─────────────────────────────────────────────────────────────────
 # NUNCA hardcodear el secret key en producción. Usar variable de entorno.
 SECRET_KEY = os.environ.get(
