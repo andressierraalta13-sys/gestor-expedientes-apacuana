@@ -616,10 +616,38 @@ def nuevo_expediente_view(request):
 
 @login_required
 def detalle_expediente_view(request, cedula):
+    import unicodedata as _ud
+    import re as _re
     from django.shortcuts import get_object_or_404
     estudiante = get_object_or_404(Estudiante, cedula_identidad=cedula)
     expediente = getattr(estudiante, 'expediente', None)
     
+    # ── Función de normalización canónica (sin acentos ni puntuación) ─────────
+    def _canon(nombre):
+        s = _ud.normalize('NFKD', str(nombre or '')).encode('ascii', 'ignore').decode('ascii')
+        s = _re.sub(r'[^A-Za-z0-9 ]', ' ', s).upper()
+        return _re.sub(r'\s+', ' ', s).strip()
+
+    # ── 10 materias oficiales del plan de estudio (orden del formato) ─────────
+    MATERIAS_OFICIALES = [
+        ("LENGUA Y LITERATURA", ["LENGUA Y LITERATURA", "CASTELLANO", "LENGUA"]),
+        ("IDIOMAS", ["IDIOMAS", "INGLÉS", "INGLÉS Y OTRAS LENGUAS EXTRANJERAS"]),
+        ("MATEMÁTICA", ["MATEMÁTICA", "MATEMÁTICAS", "MATEMATICAS", "MATEMATICA"]),
+        ("EDUCACIÓN FÍSICA", ["EDUCACIÓN FÍSICA", "EDUCACION FISICA"]),
+        ("BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", ["BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "BIOLOGIA, AMBIENTE Y TECNOLOGIA", "A.C.T.", "A.C.T", "CIENCIAS NATURALES"]),
+        ("FÍSICA", ["FÍSICA", "FISICA"]),
+        ("QUÍMICA", ["QUÍMICA", "QUIMICA"]),
+        ("GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", ["GEOGRAFÍA, HISTORIA , Y SOBERANÍA NACIONAL", "GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", "GEOGRAFIA HISTORIA CIUDADANIA", "GEOGRAFIA, HISTORIA Y SOBERANIA NACIONAL"]),
+        ("INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", ["INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "I.T.P.", "I.T.P", "INNOVACION TECNOLOGICA Y PRODUCTIVA"]),
+        ("ORIENTACIÓN VOCACIONAL", ["ORIENTACIÓN VOCACIONAL", "ORIENTACION VOCACIONAL"]),
+    ]
+
+    # Pre-calcular claves canónicas de cada sinónimo para búsqueda rápida
+    _canon_map = {}  # canon_key -> display_name
+    for display_name, aliases in MATERIAS_OFICIALES:
+        for alias in aliases:
+            _canon_map[_canon(alias)] = display_name
+
     # Obtenemos las calificaciones en crudo del historial SQL
     notas_raw = Calificacion.objects.filter(inscripcion__estudiante=estudiante).select_related('asignatura', 'inscripcion')
     
@@ -638,31 +666,71 @@ def detalle_expediente_view(request, cedula):
         5: {'titulo': '5TO AÑO', 'materias': {}}
     }
     
-    # Rellenamos estructuradamente la matriz con los nuevos alias de tipos
+    # ── Paso 1: Recopilar notas por nombre canónico dentro de cada año ────────
+    # Estructura temporal: {año: {display_name: {l1, l2, l3, final}}}
+    notas_por_ano = {}
     for calif in notas_raw:
         try:
             ano = int(calif.asignatura.ano_grado)
         except (ValueError, TypeError):
             continue
-            
-        if ano in boleta_organizada:
-            materia_id = calif.asignatura.id
-            if materia_id not in boleta_organizada[ano]['materias']:
-                boleta_organizada[ano]['materias'][materia_id] = {
-                    'nombre': calif.asignatura.nombre,
+        if ano not in boleta_organizada:
+            continue
+
+        canon_key = _canon(calif.asignatura.nombre)
+        display_name = _canon_map.get(canon_key, calif.asignatura.nombre)
+
+        if ano not in notas_por_ano:
+            notas_por_ano[ano] = {}
+        if display_name not in notas_por_ano[ano]:
+            notas_por_ano[ano][display_name] = {'l1': '-', 'l2': '-', 'l3': '-', 'final': '-'}
+
+        tipo = str(calif.tipo).strip().upper()
+        if tipo == 'DEF':
+            notas_por_ano[ano][display_name]['final'] = calif.nota
+        elif tipo == 'L1':
+            notas_por_ano[ano][display_name]['l1'] = calif.nota
+        elif tipo == 'L2':
+            notas_por_ano[ano][display_name]['l2'] = calif.nota
+        elif tipo == 'L3':
+            notas_por_ano[ano][display_name]['l3'] = calif.nota
+
+    # ── Paso 2: Para años 1-5, construir la lista completa de 10 materias ────
+    from collections import OrderedDict
+    for ano_num in range(1, 6):
+        ano_notas = notas_por_ano.get(ano_num, {})
+        materias_ordenadas = OrderedDict()
+        idx = 0
+        for display_name, _aliases in MATERIAS_OFICIALES:
+            idx += 1
+            if display_name in ano_notas:
+                materias_ordenadas[f"of_{idx}"] = {
+                    'nombre': display_name,
+                    **ano_notas[display_name]
+                }
+            else:
+                materias_ordenadas[f"of_{idx}"] = {
+                    'nombre': display_name,
                     'l1': '-', 'l2': '-', 'l3': '-', 'final': '-'
                 }
-            
-            tipo = str(calif.tipo).strip().upper()
-            if tipo == 'DEF':
-                boleta_organizada[ano]['materias'][materia_id]['final'] = calif.nota
-            elif tipo == 'L1':
-                boleta_organizada[ano]['materias'][materia_id]['l1'] = calif.nota
-            elif tipo == 'L2':
-                boleta_organizada[ano]['materias'][materia_id]['l2'] = calif.nota
-            elif tipo == 'L3':
-                boleta_organizada[ano]['materias'][materia_id]['l3'] = calif.nota
-                
+        # Añadir cualquier materia extra no oficial que tenga notas cargadas
+        for extra_name, extra_data in ano_notas.items():
+            if extra_name not in [dn for dn, _ in MATERIAS_OFICIALES]:
+                idx += 1
+                materias_ordenadas[f"ex_{idx}"] = {'nombre': extra_name, **extra_data}
+
+        boleta_organizada[ano_num]['materias'] = materias_ordenadas
+
+    # ── Paso 3: Para grados (11-16), solo mostrar las materias que tengan notas
+    for ano_num in range(11, 17):
+        ano_notas = notas_por_ano.get(ano_num, {})
+        materias_grado = OrderedDict()
+        idx = 0
+        for name, data in ano_notas.items():
+            idx += 1
+            materias_grado[f"gr_{idx}"] = {'nombre': name, **data}
+        boleta_organizada[ano_num]['materias'] = materias_grado
+
     # Calculo algorítmico de promedios
     for ano_num, ano_data in boleta_organizada.items():
         sum_l1 = sum_l2 = sum_l3 = sum_def = 0
