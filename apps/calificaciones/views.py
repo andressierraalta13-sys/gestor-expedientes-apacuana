@@ -29,12 +29,9 @@ from .calificaciones_parser import CalificacionesParser, normalizar_cedula
 logger = logging.getLogger(__name__)
 
 NOMBRES_ANO = {
-    11: '1er', 12: '2do', 13: '3er', 14: '4to', 15: '5to', 16: '6to',
     1: '1er', 2: '2do', 3: '3er', 4: '4to', 5: '5to'
 }
 LABEL_ANO   = {
-    11: '1ER GRADO', 12: '2DO GRADO', 13: '3ER GRADO',
-    14: '4TO GRADO', 15: '5TO GRADO', 16: '6TO GRADO',
     1: '1ER AÑO', 2: '2DO AÑO', 3: '3ER AÑO', 
     4: '4TO AÑO', 5: '5TO AÑO'
 }

@@ -90,8 +90,6 @@ def planificacion_docente_view(request):
 # ─── APIs JSON ────────────────────────────────────────────────────────────────
 
 MAPA_GRADOS = {
-    11: '1er Grado', 12: '2do Grado', 13: '3er Grado', 
-    14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
     1: '1er Año', 2: '2do Año', 3: '3er Año', 
     4: '4to Año', 5: '5to Año'
 }

@@ -653,12 +653,6 @@ def detalle_expediente_view(request, cedula):
     
     # Mátriz de Construcción IA para organizar Años, Materias y Lapsos
     boleta_organizada = { 
-        11: {'titulo': '1ER GRADO', 'materias': {}},
-        12: {'titulo': '2DO GRADO', 'materias': {}},
-        13: {'titulo': '3ER GRADO', 'materias': {}},
-        14: {'titulo': '4TO GRADO', 'materias': {}},
-        15: {'titulo': '5TO GRADO', 'materias': {}},
-        16: {'titulo': '6TO GRADO', 'materias': {}},
         1: {'titulo': '1ER AÑO', 'materias': {}},
         2: {'titulo': '2DO AÑO', 'materias': {}},
         3: {'titulo': '3ER AÑO', 'materias': {}},
@@ -721,15 +715,6 @@ def detalle_expediente_view(request, cedula):
 
         boleta_organizada[ano_num]['materias'] = materias_ordenadas
 
-    # ── Paso 3: Para grados (11-16), solo mostrar las materias que tengan notas
-    for ano_num in range(11, 17):
-        ano_notas = notas_por_ano.get(ano_num, {})
-        materias_grado = OrderedDict()
-        idx = 0
-        for name, data in ano_notas.items():
-            idx += 1
-            materias_grado[f"gr_{idx}"] = {'nombre': name, **data}
-        boleta_organizada[ano_num]['materias'] = materias_grado
 
     # Calculo algorítmico de promedios
     for ano_num, ano_data in boleta_organizada.items():

@@ -63,20 +63,7 @@
             <p class="text-text-muted tracking-widest uppercase text-xs mt-2 relative z-10">C.I. {{estudiante.cedula_identidad|formato_cedula}}</p>
 
             <div class="mt-4 relative z-10 flex flex-col items-center">
-                <span class="text-[9px] font-bold text-text-muted/80 tracking-widest uppercase mb-1">{% if estudiante.ano_cursando >= 11 %}GRADO CURSANDO{% else %}AÑO CURSANDO{% endif %}</span>
-                {% if estudiante.ano_cursando == 11 %}
-                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
-                {% elif estudiante.ano_cursando == 12 %}
-                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">2DO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
-                {% elif estudiante.ano_cursando == 13 %}
-                <span class="bg-sky-500/20 text-sky-400 border border-sky-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">3ER GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
-                {% elif estudiante.ano_cursando == 14 %}
-                <span class="bg-sky-500/20 text-sky-400 border border-sky-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">4TO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
-                {% elif estudiante.ano_cursando == 15 %}
-                <span class="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">5TO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
-                {% elif estudiante.ano_cursando == 16 %}
-                <span class="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">6TO GRADO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
-                {% elif estudiante.ano_cursando == 1 %}
+                {% if estudiante.ano_cursando == 1 %}
                 <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% elif estudiante.ano_cursando == 2 %}
                 <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">2DO AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
@@ -613,22 +600,7 @@
                     <span class="text-sm font-semibold text-text-main">Convocatoria</span>
                 </a>
                 
-                <!-- FORMATOS WORD PRIMARIA -->
-                <a href="/media/formatos_word/Certificado%20de%20Educaci%C3%B3n%20Inicial.docx" download 
-                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
-                    <ion-icon name="download-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
-                    <span class="text-sm font-semibold text-text-main">Certificado Inicial (DOC)</span>
-                </a>
-                <a href="/media/formatos_word/Certificado%20de%20Educaci%C3%B3n%20Primaria.doc" download 
-                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
-                    <ion-icon name="download-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
-                    <span class="text-sm font-semibold text-text-main">Certificado Primaria (DOC)</span>
-                </a>
-                <a href="/media/formatos_word/Constancia%20de%20Prosecuci%C3%B3n%20en%20el%20Nivel%20de%20Educaci%C3%B3n%20Primaria.doc" download 
-                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
-                    <ion-icon name="download-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
-                    <span class="text-sm font-semibold text-text-main">Const. Prosecución (DOC)</span>
-                </a>
+
                 <a href="{% url 'emitir_notas_certificadas_auto' estudiante.cedula_identidad %}"
                     class="flex items-center gap-3 p-4 bg-success-subtle hover:bg-success/20 border border-success/30 hover:border-success/50 rounded-xl transition-all group col-span-1 md:col-span-2 lg:col-span-3">
                     <ion-icon name="school-outline" class="text-2xl text-success group-hover:text-success/80 transition-colors"></ion-icon>
