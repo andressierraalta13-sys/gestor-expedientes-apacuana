@@ -1584,6 +1584,19 @@ def generar_boleta_view(request, cedula):
         ("INNOVACION TECNOLOGICA Y PRODUCTIVA", ["INNOVACION TECNOLOGICA Y PRODUCTIVA", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "INP", "ITP"])
     ]
 
+    # Parse sin profesor parameters
+    sin_profesor_map = {}
+    for k, v in request.GET.items():
+        if k.startswith('sp_mat_'):
+            idx = k.split('_')[-1]
+            mat_name = v
+            lapso = request.GET.get(f'sp_lap_{idx}')
+            if mat_name and lapso:
+                mat_clean = clean_string(mat_name)
+                if mat_clean not in sin_profesor_map:
+                    sin_profesor_map[mat_clean] = []
+                sin_profesor_map[mat_clean].append(lapso.upper())
+
     materias_boleta = []
     
     # Calculate grades
@@ -1613,16 +1626,36 @@ def generar_boleta_view(request, cedula):
                 elif calif.tipo == 'DEF':
                     def_val = val
 
-        if m1_val is not None:
+        # Apply "S/P" (Sin Profesor) overrides
+        lapsos_sp = []
+        disp_clean = clean_string(display_name)
+        if disp_clean in sin_profesor_map:
+            lapsos_sp.extend(sin_profesor_map[disp_clean])
+        else:
+            # try matching aliases
+            for alias in aliases:
+                al_clean = clean_string(alias)
+                if al_clean in sin_profesor_map:
+                    lapsos_sp.extend(sin_profesor_map[al_clean])
+                    break
+
+        if 'M1' in lapsos_sp:
+            m1_val = 'S/P'
+        if 'M2' in lapsos_sp:
+            m2_val = 'S/P'
+        if 'M3' in lapsos_sp:
+            m3_val = 'S/P'
+
+        if m1_val is not None and m1_val != 'S/P':
             sum_m1 += m1_val
             count_m1 += 1
-        if m2_val is not None:
+        if m2_val is not None and m2_val != 'S/P':
             sum_m2 += m2_val
             count_m2 += 1
-        if m3_val is not None:
+        if m3_val is not None and m3_val != 'S/P':
             sum_m3 += m3_val
             count_m3 += 1
-        if def_val is not None:
+        if def_val is not None and def_val != 'S/P':
             sum_def += def_val
             count_def += 1
 

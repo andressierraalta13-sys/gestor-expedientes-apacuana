@@ -646,6 +646,31 @@
                 <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">Asunto del Promedio Condecorado</label>
                 <input type="text" id="boletaAsuntoPremio" placeholder="Ej: Excelencia Académica" class="form-input w-full">
             </div>
+            
+            <div class="mt-2 border-t border-border pt-4">
+                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Hubo profesor en la materia?</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="huboProfesor" value="Sí" checked class="form-radio text-primary" onchange="toggleSinProfesor()">
+                        <span class="text-sm font-semibold text-text-main">Sí</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="huboProfesor" value="No" class="form-radio text-primary" onchange="toggleSinProfesor()">
+                        <span class="text-sm font-semibold text-text-main">No</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="divSinProfesor" class="hidden flex-col gap-2 mt-2">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs text-text-muted font-bold uppercase tracking-widest">Registros Sin Profesor</label>
+                    <button type="button" onclick="agregarFilaSinProf()" class="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30 transition">+ Añadir</button>
+                </div>
+                <div id="sinProfesorContainer" class="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+
             <button onclick="generarBoleta()" class="btn btn-primary w-full py-3 font-bold mt-2">
                 Generar PDF
             </button>
@@ -901,13 +926,82 @@
         }
     }
 
+    function toggleSinProfesor() {
+        const val = document.querySelector('input[name="huboProfesor"]:checked').value;
+        const div = document.getElementById('divSinProfesor');
+        if (val === 'No') {
+            div.classList.remove('hidden');
+            div.classList.add('flex');
+            if (document.getElementById('sinProfesorContainer').children.length === 0) {
+                agregarFilaSinProf();
+            }
+        } else {
+            div.classList.add('hidden');
+            div.classList.remove('flex');
+            document.getElementById('sinProfesorContainer').innerHTML = '';
+        }
+    }
+
+    function agregarFilaSinProf() {
+        const container = document.getElementById('sinProfesorContainer');
+        if (container.children.length >= 10) {
+            alert('Máximo 10 registros permitidos.');
+            return;
+        }
+        const materias = [
+            "LENGUA Y LITERATURA", "IDIOMAS", "MATEMÁTICA", "EDUCACIÓN FÍSICA",
+            "BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "FÍSICA", "QUÍMICA",
+            "GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA",
+            "ORIENTACIÓN VOCACIONAL"
+        ];
+        const row = document.createElement('div');
+        row.className = "flex gap-2 items-center bg-surface p-2 rounded border border-border sin-prof-row";
+        
+        let matOpts = materias.map(m => `<option value="${m}">${m}</option>`).join('');
+        row.innerHTML = `
+            <select class="form-input text-xs w-full p-1" name="sp_mat">
+                ${matOpts}
+            </select>
+            <select class="form-input text-xs w-20 p-1" name="sp_lap">
+                <option value="M1">M1</option>
+                <option value="M2">M2</option>
+                <option value="M3">M3</option>
+            </select>
+            <button type="button" class="text-error hover:text-red-400" onclick="this.parentElement.remove()">
+                <ion-icon name="trash"></ion-icon>
+            </button>
+        `;
+        container.appendChild(row);
+    }
+
     function generarBoleta() {
         const hayPremio = document.getElementById('boletaHayPremio').value;
         const asunto = document.getElementById('boletaAsuntoPremio').value;
         let url = "{% url 'boleta_calificaciones' estudiante.cedula_identidad %}";
+        let params = new URLSearchParams();
+        
         if (hayPremio === 'Sí' && asunto.trim() !== '') {
-            url += `?premio=${encodeURIComponent(asunto)}`;
+            params.append('premio', asunto.trim());
         }
+        
+        const huboProfesor = document.querySelector('input[name="huboProfesor"]:checked').value;
+        if (huboProfesor === 'No') {
+            const rows = document.querySelectorAll('.sin-prof-row');
+            let idx = 1;
+            rows.forEach(row => {
+                const mat = row.querySelector('[name="sp_mat"]').value;
+                const lap = row.querySelector('[name="sp_lap"]').value;
+                params.append(`sp_mat_${idx}`, mat);
+                params.append(`sp_lap_${idx}`, lap);
+                idx++;
+            });
+        }
+        
+        const qs = params.toString();
+        if (qs) {
+            url += '?' + qs;
+        }
+        
         window.open(url, '_blank');
         document.getElementById('modalBoleta').classList.add('hidden');
     }

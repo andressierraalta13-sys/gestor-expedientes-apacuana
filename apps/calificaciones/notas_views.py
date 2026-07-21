@@ -300,8 +300,9 @@ def notas_calificaciones_view(request):
                     )
                     lapso_map = {c.tipo: c.nota for c in califs}
 
-                    if 'L1' in lapso_map and 'L2' in lapso_map and 'L3' in lapso_map:
-                        def_val = round((lapso_map['L1'] + lapso_map['L2'] + lapso_map['L3']) / 3, 2)
+                    notas_validas = [nota for nota in lapso_map.values() if nota is not None]
+                    if notas_validas:
+                        def_val = round(sum(notas_validas) / len(notas_validas), 2)
                         def_existente = Calificacion.objects.filter(
                             inscripcion=inscripcion, asignatura=asignatura, tipo='DEF'
                         ).first()
@@ -594,12 +595,14 @@ def notas_calificaciones_view(request):
 
                         notas_guardadas.append(f'{tipo}={valor}')
 
-                    # Auto-calcular Definitiva si no fue proveída en el Excel pero están completos L1, L2, L3 (ya sea por este archivo o por BD)
+                    # Auto-calcular Definitiva si no fue proveída en el Excel basado en lapsos válidos
                     if notas_mapa['DEF'] is None:
                         califs = Calificacion.objects.filter(inscripcion=inscripcion, asignatura=asignatura, tipo__in=['L1', 'L2', 'L3'])
                         lapso_map = {c.tipo: c.nota for c in califs}
-                        if 'L1' in lapso_map and 'L2' in lapso_map and 'L3' in lapso_map:
-                            def_val = round((lapso_map['L1'] + lapso_map['L2'] + lapso_map['L3']) / 3, 2)
+                        notas_validas = [nota for nota in lapso_map.values() if nota is not None]
+                        
+                        if notas_validas:
+                            def_val = round(sum(notas_validas) / len(notas_validas), 2)
                             def_existente = Calificacion.objects.filter(inscripcion=inscripcion, asignatura=asignatura, tipo='DEF').first()
                             if def_existente:
                                 if def_existente.nota != def_val:
