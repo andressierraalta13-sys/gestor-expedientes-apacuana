@@ -38,8 +38,8 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 _raw_hosts = os.environ.get('ALLOWED_HOSTS', '')
 ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
 
-# Garantizar localhost y 127.0.0.1 en ALLOWED_HOSTS
-for host in ['localhost', '127.0.0.1']:
+# Garantizar localhost, 127.0.0.1 y dominios de Vercel en ALLOWED_HOSTS
+for host in ['localhost', '127.0.0.1', 'gestor-expedientes-apacuana.vercel.app', 'gestor-apacuana.vercel.app', '.vercel.app']:
     if host not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(host)
 
