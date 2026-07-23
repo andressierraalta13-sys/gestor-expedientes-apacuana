@@ -353,7 +353,6 @@
                             <table class="w-full text-left border-collapse" id="tabla-notas-{{ ano_num }}">
                                 <thead>
                                     <tr>
-                                        <th class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal" style="width:30px; display:none;" id="th-edit-{{ ano_num }}"></th>
                                         <th
                                             class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal">
                                             Materias</th>
@@ -374,11 +373,6 @@
                                 <tbody>
                                     {% for mat_id, mat in ano_data.materias.items %}
                                     <tr class="hover:bg-surface-hover transition-colors" id="row-{{ ano_num }}-{{ mat_id }}" data-materia="{{ mat.nombre }}" data-l1="{{ mat.l1 }}" data-l2="{{ mat.l2 }}" data-l3="{{ mat.l3 }}" data-final="{{ mat.final }}">
-                                        <td class="py-3 border-b border-border text-center edit-pencil-cell" style="display:none;">
-                                            <button type="button" class="text-primary/60 hover:text-primary transition-colors cursor-pointer bg-transparent border-none p-0" onclick="editarMateria({{ ano_num }}, '{{ mat_id }}', '{{ mat.nombre|escapejs }}')" title="Editar {{ mat.nombre }}">
-                                                <ion-icon name="create-outline" class="text-base"></ion-icon>
-                                            </button>
-                                        </td>
                                         <td class="py-3 border-b border-border text-xs text-text-main font-medium cell-nombre">{{ mat.nombre }}</td>
                                         <td
                                             class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l1">
@@ -398,7 +392,6 @@
                                 </tbody>
                                 <tfoot class="bg-primary/5 border-t-2 border-primary/30">
                                     <tr>
-                                        <td class="py-3 border-b border-border" id="tfoot-spacer-{{ ano_num }}" style="display:none;"></td>
                                         <td
                                             class="py-3 px-2 border-b border-border text-xs text-primary font-bold uppercase tracking-widest text-right">
                                             Promedios Oficiales:</td>
@@ -436,6 +429,9 @@
                                 .btn-acciones-notas.btn-eliminar-notas {
                                     color: var(--color-error);
                                 }
+                                .btn-acciones-notas.btn-guardar-notas {
+                                    color: var(--color-success);
+                                }
                                 /* Modo oscuro: fondo opaco personalizado, texto blanco */
                                 :root[data-theme="dark"] .btn-acciones-notas.btn-editar-notas {
                                     background-color: var(--color-primary);
@@ -443,6 +439,10 @@
                                 }
                                 :root[data-theme="dark"] .btn-acciones-notas.btn-eliminar-notas {
                                     background-color: var(--color-error);
+                                    color: white;
+                                }
+                                :root[data-theme="dark"] .btn-acciones-notas.btn-guardar-notas {
+                                    background-color: var(--color-success);
                                     color: white;
                                 }
                                 .btn-acciones-notas:hover {
@@ -826,27 +826,87 @@
     // ── Edición de Calificaciones ─────────────────────────────────────────────
 
     function activarModoEdicion(anoNum) {
-        // Mostrar columna de pencils
         const table = document.getElementById('tabla-notas-' + anoNum);
         if (!table) return;
         
-        // Show pencil column header
-        const thEdit = document.getElementById('th-edit-' + anoNum);
-        if (thEdit) thEdit.style.display = '';
-        
-        // Show tfoot spacer
-        const tfootSpacer = document.getElementById('tfoot-spacer-' + anoNum);
-        if (tfootSpacer) tfootSpacer.style.display = '';
-        
-        // Show all pencil cells in this table
-        table.querySelectorAll('.edit-pencil-cell').forEach(cell => {
-            cell.style.display = '';
+        // Convertir todas las filas a modo edición
+        const rows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
+        rows.forEach(row => {
+            const cellL1 = row.querySelector('.cell-l1');
+            const cellL2 = row.querySelector('.cell-l2');
+            const cellL3 = row.querySelector('.cell-l3');
+            
+            const origL1 = row.getAttribute('data-l1');
+            const origL2 = row.getAttribute('data-l2');
+            const origL3 = row.getAttribute('data-l3');
+            
+            function makeInput(val, fieldName) {
+                const displayVal = (val === undefined || val === null || val === '') ? '-' : val;
+                return `<input type="text" value="${displayVal}" 
+                    class="form-input text-center text-xs font-mono w-16 mx-auto p-1 rounded border border-primary/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30 grade-input-field" 
+                    data-field="${fieldName}" style="display:block; margin:0 auto;">`;
+            }
+            
+            if (cellL1) cellL1.innerHTML = makeInput(origL1, 'l1');
+            if (cellL2) cellL2.innerHTML = makeInput(origL2, 'l2');
+            if (cellL3) cellL3.innerHTML = makeInput(origL3, 'l3');
+            
+            // Añadir validación en vivo al escribir
+            row.querySelectorAll('.grade-input-field').forEach(inp => {
+                inp.addEventListener('input', function() {
+                    // Solo permitir números, comas, puntos y un guión
+                    let cleaned = this.value.replace(/[^0-9,.-]/g, '');
+                    
+                    // Asegurar que el guión esté al inicio y sea único
+                    if (cleaned.includes('-')) {
+                        cleaned = '-' + cleaned.replace(/-/g, '');
+                    }
+                    
+                    // Permitir máximo un punto o coma decimal
+                    const parts = cleaned.split(/[.,]/);
+                    if (parts.length > 2) {
+                        cleaned = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    
+                    this.value = cleaned;
+                });
+                
+                inp.addEventListener('blur', function() {
+                    // Validar rango [0, 20] si no es "-" ni vacío
+                    let val = this.value.trim().replace(',', '.');
+                    if (val !== '' && val !== '-') {
+                        const numVal = parseFloat(val);
+                        if (isNaN(numVal) || numVal < 0 || numVal > 20) {
+                            this.style.borderColor = 'var(--color-error)';
+                        } else {
+                            this.style.borderColor = '';
+                        }
+                    } else {
+                        this.style.borderColor = '';
+                    }
+                });
+            });
         });
         
-        // Toggle buttons
+        // Agregar botón Guardar si no existe
+        const acciones = document.getElementById('acciones-notas-' + anoNum);
+        if (acciones && !document.getElementById('btn-guardar-' + anoNum)) {
+            const saveBtn = document.createElement('button');
+            saveBtn.type = 'button';
+            saveBtn.id = 'btn-guardar-' + anoNum;
+            saveBtn.className = 'btn-acciones-notas btn-guardar-notas shadow-sm';
+            saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
+            saveBtn.onclick = function() { guardarCambiosCalificacion(anoNum); };
+            acciones.appendChild(saveBtn);
+        }
+        
+        // Alternar visibilidad de botones principales
         const btnEditar = document.getElementById('btn-editar-' + anoNum);
         const btnCancelar = document.getElementById('btn-cancelar-' + anoNum);
+        const btnEliminar = acciones ? acciones.querySelector('.btn-eliminar-notas') : null;
+        
         if (btnEditar) btnEditar.style.display = 'none';
+        if (btnEliminar) btnEliminar.style.display = 'none';
         if (btnCancelar) btnCancelar.style.display = 'flex';
     }
 
@@ -854,19 +914,9 @@
         const table = document.getElementById('tabla-notas-' + anoNum);
         if (!table) return;
         
-        // Hide pencil column
-        const thEdit = document.getElementById('th-edit-' + anoNum);
-        if (thEdit) thEdit.style.display = 'none';
-        
-        const tfootSpacer = document.getElementById('tfoot-spacer-' + anoNum);
-        if (tfootSpacer) tfootSpacer.style.display = 'none';
-        
-        table.querySelectorAll('.edit-pencil-cell').forEach(cell => {
-            cell.style.display = 'none';
-        });
-        
-        // Restore any cells that were in edit mode to original values
-        table.querySelectorAll('tr[id^="row-' + anoNum + '-"]').forEach(row => {
+        // Restaurar todas las filas a sus valores originales
+        const rows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
+        rows.forEach(row => {
             const origL1 = row.getAttribute('data-l1');
             const origL2 = row.getAttribute('data-l2');
             const origL3 = row.getAttribute('data-l3');
@@ -883,95 +933,98 @@
             if (cellFinal) cellFinal.innerHTML = origFinal;
         });
         
-        // Remove any save button
+        // Eliminar botón Guardar
         const saveBtn = document.getElementById('btn-guardar-' + anoNum);
         if (saveBtn) saveBtn.remove();
         
-        // Toggle buttons
+        // Alternar visibilidad de botones principales
+        const acciones = document.getElementById('acciones-notas-' + anoNum);
         const btnEditar = document.getElementById('btn-editar-' + anoNum);
         const btnCancelar = document.getElementById('btn-cancelar-' + anoNum);
+        const btnEliminar = acciones ? acciones.querySelector('.btn-eliminar-notas') : null;
+        
         if (btnEditar) btnEditar.style.display = 'flex';
+        if (btnEliminar) btnEliminar.style.display = 'flex';
         if (btnCancelar) btnCancelar.style.display = 'none';
-    }
-
-    function editarMateria(anoNum, matId, materiaNombre) {
-        const row = document.getElementById('row-' + anoNum + '-' + matId);
-        if (!row) return;
-        
-        // Check if already in edit mode
-        if (row.querySelector('input[data-field]')) return;
-        
-        const cellL1 = row.querySelector('.cell-l1');
-        const cellL2 = row.querySelector('.cell-l2');
-        const cellL3 = row.querySelector('.cell-l3');
-        
-        // Convert to inputs
-        const origL1 = row.getAttribute('data-l1');
-        const origL2 = row.getAttribute('data-l2');
-        const origL3 = row.getAttribute('data-l3');
-        
-        function makeInput(val, fieldName) {
-            const displayVal = (val === undefined || val === null) ? '-' : val;
-            return `<input type="text" value="${displayVal}" 
-                class="form-input text-center text-xs font-mono w-16 mx-auto p-1 rounded border border-primary/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30" 
-                data-field="${fieldName}" style="display:block; margin:0 auto;">`;
-        }
-        
-        cellL1.innerHTML = makeInput(origL1, 'l1');
-        cellL2.innerHTML = makeInput(origL2, 'l2');
-        cellL3.innerHTML = makeInput(origL3, 'l3');
-        
-        // Add save button if not exists
-        const acciones = document.getElementById('acciones-notas-' + anoNum);
-        if (acciones && !document.getElementById('btn-guardar-' + anoNum)) {
-            const saveBtn = document.createElement('button');
-            saveBtn.type = 'button';
-            saveBtn.id = 'btn-guardar-' + anoNum;
-            saveBtn.className = 'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-all';
-            saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
-            saveBtn.onclick = function() { guardarCambiosCalificacion(anoNum); };
-            acciones.appendChild(saveBtn);
-        }
     }
 
     function guardarCambiosCalificacion(anoNum) {
         const table = document.getElementById('tabla-notas-' + anoNum);
         if (!table) return;
         
-        // Find rows with inputs (edited rows)
-        const editedRows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
+        const rows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
         let pendientes = [];
+        let validationFailed = false;
         
-        editedRows.forEach(row => {
+        rows.forEach(row => {
+            if (validationFailed) return;
             const inputs = row.querySelectorAll('input[data-field]');
             if (inputs.length === 0) return;
             
             const materiaNombre = row.getAttribute('data-materia');
-            let l1 = null, l2 = null, l3 = null;
+            const origL1 = row.getAttribute('data-l1');
+            const origL2 = row.getAttribute('data-l2');
+            const origL3 = row.getAttribute('data-l3');
             
+            let l1 = null, l2 = null, l3 = null;
             inputs.forEach(inp => {
                 const field = inp.getAttribute('data-field');
-                const val = inp.value.trim();
-                if (field === 'l1') l1 = val !== '' ? val : null;
-                if (field === 'l2') l2 = val !== '' ? val : null;
-                if (field === 'l3') l3 = val !== '' ? val : null;
+                let val = inp.value.trim();
+                
+                // Validar rango en guardar
+                if (val !== '' && val !== '-') {
+                    const numVal = parseFloat(val.replace(',', '.'));
+                    if (isNaN(numVal) || numVal < 0 || numVal > 20) {
+                        validationFailed = true;
+                        inp.style.borderColor = 'var(--color-error)';
+                        inp.focus();
+                    } else {
+                        inp.style.borderColor = '';
+                    }
+                } else {
+                    inp.style.borderColor = '';
+                }
+                
+                if (field === 'l1') l1 = val;
+                if (field === 'l2') l2 = val;
+                if (field === 'l3') l3 = val;
             });
             
-            if (l1 !== null || l2 !== null || l3 !== null) {
+            if (validationFailed) return;
+            
+            // Normalizar valores para comparación
+            const normVal = (v) => (v === '' || v === null || v === undefined) ? '-' : v.trim();
+            const normL1 = normVal(l1);
+            const normL2 = normVal(l2);
+            const normL3 = normVal(l3);
+            const normOrigL1 = normVal(origL1);
+            const normOrigL2 = normVal(origL2);
+            const normOrigL3 = normVal(origL3);
+            
+            const changed = (normL1 !== normOrigL1) || (normL2 !== normOrigL2) || (normL3 !== normOrigL3);
+            
+            if (changed) {
                 pendientes.push({
                     rowId: row.id,
                     materia_nombre: materiaNombre,
-                    l1: l1, l2: l2, l3: l3
+                    l1: normL1,
+                    l2: normL2,
+                    l3: normL3
                 });
             }
         });
         
-        if (pendientes.length === 0) {
-            alert('No hay cambios para guardar.');
+        if (validationFailed) {
+            alert('⚠️ Error: Las notas deben ser números entre 0 y 20, o un guión "-" para dejarlas vacías.');
             return;
         }
         
-        // Disable save button
+        if (pendientes.length === 0) {
+            cancelarEdicion(anoNum);
+            return;
+        }
+        
+        // Deshabilitar botón Guardar
         const saveBtn = document.getElementById('btn-guardar-' + anoNum);
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -1000,7 +1053,7 @@
             .then(data => {
                 completados++;
                 if (data.ok) {
-                    // Update the row data attributes and cell content
+                    // Actualizar los atributos de datos y contenido de las celdas
                     const row = document.getElementById(item.rowId);
                     if (row) {
                         const notas = data.notas;
@@ -1015,7 +1068,7 @@
                         
                         const cellFinal = row.querySelector('.cell-final');
                         cellFinal.innerHTML = notas.final;
-                        // Update color classes
+                        // Actualizar clases de color
                         cellFinal.classList.remove('text-primary', 'text-error', 'text-text-muted/80');
                         if (notas.final !== '-' && parseFloat(notas.final) >= 10) {
                             cellFinal.classList.add('text-primary');
@@ -1032,12 +1085,16 @@
                 if (completados === pendientes.length) {
                     if (errores.length > 0) {
                         alert('Algunos cambios presentaron errores:\n' + errores.join('\n'));
+                        if (saveBtn) {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
+                        }
                     } else {
-                        // Flash success
+                        // Mostrar mensaje de éxito temporalmente
                         if (saveBtn) {
                             saveBtn.innerHTML = '<ion-icon name="checkmark-outline" class="text-sm"></ion-icon> ¡Guardado!';
-                            saveBtn.classList.remove('bg-success/10', 'text-success', 'border-success/20');
-                            saveBtn.classList.add('bg-success', 'text-white', 'border-success');
+                            saveBtn.style.backgroundColor = 'var(--color-success)';
+                            saveBtn.style.color = 'white';
                         }
                         setTimeout(() => cancelarEdicion(anoNum), 1200);
                     }
