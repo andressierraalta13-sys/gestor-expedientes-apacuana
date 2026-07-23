@@ -353,7 +353,7 @@
                             <table class="w-full text-left border-collapse" id="tabla-notas-{{ ano_num }}">
                                 <thead>
                                     <tr>
-                                        <th class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal" style="width:30px;" id="th-edit-{{ ano_num }}"></th>
+                                        <th class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal" style="width:30px; display:none;" id="th-edit-{{ ano_num }}"></th>
                                         <th
                                             class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal">
                                             Materias</th>
@@ -420,14 +420,44 @@
                         </div>
                         <!-- Botones Eliminar y Editar -->
                         <div class="flex items-center gap-3 mt-4" id="acciones-notas-{{ ano_num }}">
+                            <style>
+                                /* Estilos personalizados responsivos al tema para los botones */
+                                .btn-acciones-notas {
+                                    display: flex; align-items: center; gap: 0.375rem; 
+                                    padding: 0.5rem 1rem; border-radius: 0.5rem; 
+                                    font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+                                    transition: all 0.2s; border: none; cursor: pointer;
+                                    /* Modo claro por defecto: fondo gris/superficie, texto color personalizado */
+                                    background-color: var(--color-surface-element);
+                                }
+                                .btn-acciones-notas.btn-editar-notas {
+                                    color: var(--color-primary);
+                                }
+                                .btn-acciones-notas.btn-eliminar-notas {
+                                    color: var(--color-error);
+                                }
+                                /* Modo oscuro: fondo opaco personalizado, texto blanco */
+                                :root[data-theme="dark"] .btn-acciones-notas.btn-editar-notas {
+                                    background-color: var(--color-primary);
+                                    color: white;
+                                }
+                                :root[data-theme="dark"] .btn-acciones-notas.btn-eliminar-notas {
+                                    background-color: var(--color-error);
+                                    color: white;
+                                }
+                                .btn-acciones-notas:hover {
+                                    opacity: 0.8;
+                                    transform: translateY(-1px);
+                                }
+                            </style>
                             {% if puede_eliminar_calificaciones %}
                             <button type="button" onclick="eliminarCalificacionesAno({{ ano_num }})" 
-                                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-error/10 text-error border border-error/20 hover:bg-error/20 transition-all">
+                                class="btn-acciones-notas btn-eliminar-notas shadow-sm">
                                 <ion-icon name="trash-outline" class="text-sm"></ion-icon> Eliminar
                             </button>
                             {% endif %}
                             <button type="button" onclick="activarModoEdicion({{ ano_num }})" id="btn-editar-{{ ano_num }}"
-                                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all">
+                                class="btn-acciones-notas btn-editar-notas shadow-sm">
                                 <ion-icon name="create-outline" class="text-sm"></ion-icon> Editar
                             </button>
                             <button type="button" onclick="cancelarEdicion({{ ano_num }})" id="btn-cancelar-{{ ano_num }}" style="display:none;"
@@ -869,7 +899,7 @@
         if (!row) return;
         
         // Check if already in edit mode
-        if (row.querySelector('input[type="number"]')) return;
+        if (row.querySelector('input[data-field]')) return;
         
         const cellL1 = row.querySelector('.cell-l1');
         const cellL2 = row.querySelector('.cell-l2');
@@ -881,8 +911,8 @@
         const origL3 = row.getAttribute('data-l3');
         
         function makeInput(val, fieldName) {
-            const numVal = (val && val !== '-') ? parseFloat(val) : '';
-            return `<input type="number" min="0" max="20" step="0.01" value="${numVal}" 
+            const displayVal = (val === undefined || val === null) ? '-' : val;
+            return `<input type="text" value="${displayVal}" 
                 class="form-input text-center text-xs font-mono w-16 mx-auto p-1 rounded border border-primary/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30" 
                 data-field="${fieldName}" style="display:block; margin:0 auto;">`;
         }
@@ -913,7 +943,7 @@
         let pendientes = [];
         
         editedRows.forEach(row => {
-            const inputs = row.querySelectorAll('input[type="number"]');
+            const inputs = row.querySelectorAll('input[data-field]');
             if (inputs.length === 0) return;
             
             const materiaNombre = row.getAttribute('data-materia');

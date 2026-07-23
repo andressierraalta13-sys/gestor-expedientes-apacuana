@@ -2075,27 +2075,28 @@ def api_editar_calificacion_view(request, cedula):
     except (ValueError, TypeError):
         return JsonResponse({'ok': False, 'error': 'Año de grado inválido.'}, status=400)
 
-    # Validar notas en rango 0-20
+    # Validar notas en rango 0-20, o guión/vacío para eliminar
     def _parse_nota(val):
         if val is None or val == '' or val == '-':
-            return None
+            return 'DELETE'
         try:
-            f = float(val)
+            # Reemplazar comas por puntos por si el usuario escribe con coma decimal
+            val_str = str(val).replace(',', '.')
+            f = float(val_str)
             if f != f:  # NaN
-                return None
+                return 'DELETE'
             if not (0 <= f <= 20):
-                return None
+                return 'INVALID'
             return round(f, 2)
         except (ValueError, TypeError):
-            return None
+            return 'INVALID'
 
     nota_l1 = _parse_nota(l1_val)
     nota_l2 = _parse_nota(l2_val)
     nota_l3 = _parse_nota(l3_val)
 
-    # Verificar que al menos una nota sea válida
-    if nota_l1 is None and nota_l2 is None and nota_l3 is None:
-        return JsonResponse({'ok': False, 'error': 'Debe ingresar al menos una nota válida (0-20).'}, status=400)
+    if 'INVALID' in (nota_l1, nota_l2, nota_l3):
+        return JsonResponse({'ok': False, 'error': 'Las notas deben estar entre 0 y 20, o ser "-" para dejarlas vacías.'}, status=400)
 
     # Buscar estudiante
     estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
@@ -2133,10 +2134,17 @@ def api_editar_calificacion_view(request, cedula):
     if not asignatura:
         return JsonResponse({'ok': False, 'error': f'Asignatura "{materia_nombre}" no encontrada para {ano_grado}° año.'}, status=404)
 
-    # Actualizar o crear calificaciones
+    # Actualizar o eliminar calificaciones de lapsos
     notas_actualizadas = {}
     for tipo, nota_val in [('L1', nota_l1), ('L2', nota_l2), ('L3', nota_l3)]:
-        if nota_val is not None:
+        if nota_val == 'DELETE':
+            Calificacion.objects.filter(
+                inscripcion=inscripcion,
+                asignatura=asignatura,
+                tipo=tipo
+            ).delete()
+            notas_actualizadas[tipo] = '-'
+        else:
             obj, created = Calificacion.objects.update_or_create(
                 inscripcion=inscripcion,
                 asignatura=asignatura,
@@ -2145,7 +2153,7 @@ def api_editar_calificacion_view(request, cedula):
             )
             notas_actualizadas[tipo] = nota_val
 
-    # Recalcular definitiva
+    # Recalcular o eliminar definitiva
     califs = Calificacion.objects.filter(
         inscripcion=inscripcion, asignatura=asignatura, tipo__in=['L1', 'L2', 'L3']
     )
@@ -2162,6 +2170,13 @@ def api_editar_calificacion_view(request, cedula):
             defaults={'nota': def_val}
         )
         notas_actualizadas['DEF'] = def_val
+    else:
+        Calificacion.objects.filter(
+            inscripcion=inscripcion,
+            asignatura=asignatura,
+            tipo='DEF'
+        ).delete()
+        notas_actualizadas['DEF'] = '-'
 
     # Auditoría
     try:
