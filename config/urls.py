@@ -13,7 +13,8 @@ from .views import (dashboard_view, expedientes_view,
                     guardar_observacion_view, listar_observaciones_view, pdf_observacion_view,
                     eliminar_observacion_view, notificar_representante_view,
                     api_subir_foto_estudiante,
-                    notas_docentes_view, actas_consejos_view, actas_compromisos_view, actas_inasistencias_view)
+                    notas_docentes_view, actas_consejos_view, actas_compromisos_view, actas_inasistencias_view,
+                    api_editar_calificacion_view, api_eliminar_calificaciones_ano_view)
 from calificaciones.views import (
     carga_masiva_view, notas_certificadas_view,
     notas_certificadas_upload_view, notas_certificadas_download_view,
@@ -124,6 +125,8 @@ urlpatterns = [
     path('api/observaciones/<str:cedula>/eliminar/<int:obs_id>/', eliminar_observacion_view, name='eliminar_observacion'),
     path('api/observaciones/<str:cedula>/notificar/<int:obs_id>/', notificar_representante_view, name='notificar_representante'),
     path('api/estudiantes/<str:cedula>/subir-foto/', api_subir_foto_estudiante, name='api_subir_foto_estudiante'),
+    path('api/calificaciones/<str:cedula>/editar/', api_editar_calificacion_view, name='api_editar_calificacion'),
+    path('api/calificaciones/<str:cedula>/eliminar/', api_eliminar_calificaciones_ano_view, name='api_eliminar_calificaciones_ano'),
 
     # ─── Sub-apps ─────────────────────────────────────────────────────────────
     path('admin/', admin.site.urls),

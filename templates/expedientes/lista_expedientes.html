@@ -137,28 +137,28 @@
 
         <!-- Vista Filtrada -->
         <div id="vista-filtrada" style="display:none; padding: 20px;">
-            {% regroup expedientes|dictsort:"estudiante.seccion"|dictsort:"estudiante.ano_cursando" by estudiante.get_ano_cursando_display as expedientes_por_ano %}
-            {% for ano in expedientes_por_ano %}
+            {% if expedientes_agrupados %}
+            {% for grupo in expedientes_agrupados %}
                 <div class="ano-bloque" style="margin-bottom: 2rem;">
-                    <h2 class="ano-titulo" style="font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-bottom: 15px; border-bottom: 2px solid var(--color-border); padding-bottom: 5px;">{{ ano.grouper|default:"Sin Año" }}</h2>
-                    {% regroup ano.list by estudiante.seccion as expedientes_por_seccion %}
+                    <h2 class="ano-titulo" style="font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-bottom: 15px; border-bottom: 2px solid var(--color-border); padding-bottom: 5px;">{{ grupo.ano }}</h2>
                     <div class="secciones-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;">
-                        {% for seccion in expedientes_por_seccion %}
+                        {% for seccion_data in grupo.secciones %}
                             <button type="button" class="btn-seccion-card btn-filtro-ano bg-surface text-text-main font-bold border border-border rounded-xl p-4 flex items-center justify-center gap-2.5 text-base shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/20 hover:text-primary hover:border-primary" 
-                                onclick="filtrarPorGrupo('{{ ano.grouper|default:'Sin Año' }}', '{{ seccion.grouper|default:'Única' }}')">
+                                onclick="filtrarPorGrupo('{{ grupo.ano }}', '{{ seccion_data.seccion }}')">
                                 <span class="material-symbols-outlined text-accent">local_library</span>
-                                {{ ano.grouper|default:"Sin Año" }} - Sección {{ seccion.grouper|default:"Única" }}
+                                {{ grupo.ano }} - Sección {{ seccion_data.seccion }}
                             </button>
                         {% endfor %}
                     </div>
                 </div>
-            {% empty %}
+            {% endfor %}
+            {% else %}
                 <div class="empty-state">
                     <span class="material-symbols-outlined empty-state-icon">folder_off</span>
                     <div class="empty-state-title">Sin expedientes</div>
                     <div class="empty-state-text">No hay expedientes cargados en la base de datos aún.</div>
                 </div>
-            {% endfor %}
+            {% endif %}
         </div>
 
         <!-- Pagination -->

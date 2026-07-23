@@ -92,8 +92,30 @@ def expedientes_view(request):
         
         if query:
             expedientes = aplicar_filtro_busqueda(expedientes, query)
+        
+        # Pre-agrupar por año y sección para el filtro "Filtrar por Año"
+        # (dictsort con propiedades anidadas no funciona correctamente en Django templates)
+        from collections import OrderedDict
+        agrupados = OrderedDict()
+        for exp in expedientes.order_by('estudiante__ano_cursando', 'estudiante__seccion'):
+            ano_display = exp.estudiante.get_ano_cursando_display()
+            seccion = exp.estudiante.seccion or 'Única'
+            if ano_display not in agrupados:
+                agrupados[ano_display] = OrderedDict()
+            if seccion not in agrupados[ano_display]:
+                agrupados[ano_display][seccion] = []
+            agrupados[ano_display][seccion].append(exp)
+        
+        # Convertir a estructura que el template pueda iterar
+        expedientes_agrupados = []
+        for ano_display, secciones in agrupados.items():
+            secciones_list = [{'seccion': sec, 'expedientes': exps} for sec, exps in secciones.items()]
+            expedientes_agrupados.append({'ano': ano_display, 'secciones': secciones_list})
             
-        return render(request, 'expedientes/lista_expedientes.html', {'expedientes': expedientes})
+        return render(request, 'expedientes/lista_expedientes.html', {
+            'expedientes': expedientes,
+            'expedientes_agrupados': expedientes_agrupados,
+        })
     except Exception as e:
         import traceback
         error_msg = f"Error 500 en expedientes_view: {str(e)}\n\n{traceback.format_exc()}"
@@ -735,10 +757,14 @@ def detalle_expediente_view(request, cedula):
         }
                 
     # Limpiamos la matriz para enviar al frontend (solo los años que tengan datos o todos vacios listos)
+    # Determinar si el usuario actual puede eliminar calificaciones (solo Directora y Desarrollador)
+    puede_eliminar = request.user.rol in ('ADMINISTRATIVO', 'DESARROLLADOR') if hasattr(request.user, 'rol') else False
+    
     context = {
         'estudiante': estudiante,
         'expediente': expediente,
-        'boleta': boleta_organizada
+        'boleta': boleta_organizada,
+        'puede_eliminar_calificaciones': puede_eliminar,
     }
     return render(request, 'expedientes/detalle.html', context)
 
@@ -2014,3 +2040,225 @@ def auditoria_limpiar_view(request):
         return JsonResponse({'ok': True, 'mensaje': 'Todos los logs de auditoría e historial de cambios han sido eliminados.'})
     except Exception as e:
         return JsonResponse({'error': f'Error al limpiar bitácora: {str(e)}'}, status=500)
+
+
+# ─── API: EDITAR CALIFICACIÓN DE UNA MATERIA ──────────────────────────────────
+
+@login_required
+@require_POST
+def api_editar_calificacion_view(request, cedula):
+    """
+    POST JSON: {ano_grado, materia_nombre, l1, l2, l3}
+    Actualiza las calificaciones L1, L2, L3 y recalcula DEF para una materia
+    específica de un estudiante en un año determinado.
+    """
+    import json
+    import re as _re
+    import unicodedata as _ud
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Datos JSON inválidos.'}, status=400)
+
+    ano_grado = body.get('ano_grado')
+    materia_nombre = body.get('materia_nombre', '').strip()
+    l1_val = body.get('l1')
+    l2_val = body.get('l2')
+    l3_val = body.get('l3')
+
+    if not ano_grado or not materia_nombre:
+        return JsonResponse({'ok': False, 'error': 'Faltan campos obligatorios (ano_grado, materia_nombre).'}, status=400)
+
+    try:
+        ano_grado = int(ano_grado)
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Año de grado inválido.'}, status=400)
+
+    # Validar notas en rango 0-20
+    def _parse_nota(val):
+        if val is None or val == '' or val == '-':
+            return None
+        try:
+            f = float(val)
+            if f != f:  # NaN
+                return None
+            if not (0 <= f <= 20):
+                return None
+            return round(f, 2)
+        except (ValueError, TypeError):
+            return None
+
+    nota_l1 = _parse_nota(l1_val)
+    nota_l2 = _parse_nota(l2_val)
+    nota_l3 = _parse_nota(l3_val)
+
+    # Verificar que al menos una nota sea válida
+    if nota_l1 is None and nota_l2 is None and nota_l3 is None:
+        return JsonResponse({'ok': False, 'error': 'Debe ingresar al menos una nota válida (0-20).'}, status=400)
+
+    # Buscar estudiante
+    estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
+    if not estudiante:
+        return JsonResponse({'ok': False, 'error': f'Estudiante V-{cedula} no encontrado.'}, status=404)
+
+    # Buscar inscripción del año correspondiente
+    from inscripciones.models import Inscripcion, Asignatura
+    inscripcion = Inscripcion.objects.filter(
+        estudiante=estudiante, ano_grado=ano_grado
+    ).first()
+
+    if not inscripcion:
+        return JsonResponse({'ok': False, 'error': f'No se encontró inscripción para el año {ano_grado}.'}, status=404)
+
+    # Normalizar nombre de materia para buscar la asignatura
+    def _canon(nombre):
+        s = _ud.normalize('NFKD', str(nombre or '')).encode('ascii', 'ignore').decode('ascii')
+        s = _re.sub(r'[^A-Za-z0-9 ]', ' ', s).upper()
+        return _re.sub(r'\s+', ' ', s).strip()
+
+    # Buscar asignatura — intentar por nombre exacto y luego por canónico
+    asignatura = Asignatura.objects.filter(
+        nombre=materia_nombre, ano_grado=ano_grado
+    ).first()
+
+    if not asignatura:
+        # Búsqueda por canonización
+        canon_target = _canon(materia_nombre)
+        for asig in Asignatura.objects.filter(ano_grado=ano_grado):
+            if _canon(asig.nombre) == canon_target:
+                asignatura = asig
+                break
+
+    if not asignatura:
+        return JsonResponse({'ok': False, 'error': f'Asignatura "{materia_nombre}" no encontrada para {ano_grado}° año.'}, status=404)
+
+    # Actualizar o crear calificaciones
+    notas_actualizadas = {}
+    for tipo, nota_val in [('L1', nota_l1), ('L2', nota_l2), ('L3', nota_l3)]:
+        if nota_val is not None:
+            obj, created = Calificacion.objects.update_or_create(
+                inscripcion=inscripcion,
+                asignatura=asignatura,
+                tipo=tipo,
+                defaults={'nota': nota_val}
+            )
+            notas_actualizadas[tipo] = nota_val
+
+    # Recalcular definitiva
+    califs = Calificacion.objects.filter(
+        inscripcion=inscripcion, asignatura=asignatura, tipo__in=['L1', 'L2', 'L3']
+    )
+    lapso_map = {c.tipo: c.nota for c in califs}
+    notas_validas = [n for n in lapso_map.values() if n is not None]
+
+    def_val = None
+    if notas_validas:
+        def_val = round(sum(notas_validas) / len(notas_validas), 2)
+        Calificacion.objects.update_or_create(
+            inscripcion=inscripcion,
+            asignatura=asignatura,
+            tipo='DEF',
+            defaults={'nota': def_val}
+        )
+        notas_actualizadas['DEF'] = def_val
+
+    # Auditoría
+    try:
+        from auditoria.models import registrar_evento
+        registrar_evento(
+            tipo='MODIFICACION',
+            descripcion=f'Se editaron calificaciones de {materia_nombre} ({ano_grado}° año) para V-{cedula}. Notas: {notas_actualizadas}',
+            modulo='Calificaciones',
+            usuario=request.user.username,
+            nivel_riesgo='MEDIO'
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Calificaciones de "{materia_nombre}" actualizadas correctamente.',
+        'notas': {
+            'l1': lapso_map.get('L1', '-'),
+            'l2': lapso_map.get('L2', '-'),
+            'l3': lapso_map.get('L3', '-'),
+            'final': def_val if def_val is not None else '-',
+        }
+    })
+
+
+# ─── API: ELIMINAR CALIFICACIONES DE UN AÑO ──────────────────────────────────
+
+@login_required
+@require_POST
+def api_eliminar_calificaciones_ano_view(request, cedula):
+    """
+    POST JSON: {ano_grado}
+    Elimina todas las calificaciones de un estudiante para un año dado.
+    Solo permitido para roles ADMINISTRATIVO (Directora) y DESARROLLADOR.
+    """
+    import json
+
+    # Verificar permisos: solo ADMINISTRATIVO (Directora) y DESARROLLADOR
+    rol = getattr(request.user, 'rol', None)
+    if rol not in ('ADMINISTRATIVO', 'DESARROLLADOR'):
+        return JsonResponse({
+            'ok': False,
+            'error': 'No tienes permisos para eliminar calificaciones. Solo la Directora y los Desarrolladores pueden realizar esta acción.'
+        }, status=403)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Datos JSON inválidos.'}, status=400)
+
+    ano_grado = body.get('ano_grado')
+    if not ano_grado:
+        return JsonResponse({'ok': False, 'error': 'Debe especificar el año a eliminar (ano_grado).'}, status=400)
+
+    try:
+        ano_grado = int(ano_grado)
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Año de grado inválido.'}, status=400)
+
+    # Buscar estudiante
+    estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
+    if not estudiante:
+        return JsonResponse({'ok': False, 'error': f'Estudiante V-{cedula} no encontrado.'}, status=404)
+
+    # Buscar inscripción del año
+    from inscripciones.models import Inscripcion
+    inscripcion = Inscripcion.objects.filter(
+        estudiante=estudiante, ano_grado=ano_grado
+    ).first()
+
+    if not inscripcion:
+        return JsonResponse({'ok': False, 'error': f'No se encontraron calificaciones para el {ano_grado}° año.'}, status=404)
+
+    # Contar y eliminar calificaciones
+    count = Calificacion.objects.filter(inscripcion=inscripcion).count()
+    if count == 0:
+        return JsonResponse({'ok': False, 'error': 'No hay calificaciones cargadas para este año.'}, status=404)
+
+    Calificacion.objects.filter(inscripcion=inscripcion).delete()
+
+    # Auditoría
+    try:
+        from auditoria.models import registrar_evento
+        label_ano = {1: '1er', 2: '2do', 3: '3er', 4: '4to', 5: '5to'}
+        registrar_evento(
+            tipo='INACTIVACION',
+            descripcion=f'Se eliminaron {count} calificaciones del {label_ano.get(ano_grado, str(ano_grado))} Año para V-{cedula} ({estudiante.nombres} {estudiante.apellidos}).',
+            modulo='Calificaciones',
+            usuario=request.user.username,
+            nivel_riesgo='CRITICO'
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Se eliminaron {count} calificaciones del {ano_grado}° año correctamente.',
+        'eliminados': count
+    })

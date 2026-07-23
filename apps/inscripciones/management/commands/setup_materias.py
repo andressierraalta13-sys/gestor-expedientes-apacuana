@@ -8,16 +8,16 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         materias_config = [
-            {"nombre": "BIOLOGIA, AMBIENTE Y TECNOLOGIA", "abrv": "BAT"},
-            {"nombre": "EDUCACIÓN FÍSICA", "abrv": "EDF"},
-            {"nombre": "FÍSICA", "abrv": "FIS"},
-            {"nombre": "GEOGRAFÍA, HISTORIA , Y SOBERANÍA NACIONAL", "abrv": "GHC"},
-            {"nombre": "IDIOMAS", "abrv": "IDI"},
-            {"nombre": "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "abrv": "INP"},
             {"nombre": "LENGUA Y LITERATURA", "abrv": "LYL"},
+            {"nombre": "IDIOMAS", "abrv": "IDI"},
             {"nombre": "MATEMÁTICA", "abrv": "MAT"},
-            {"nombre": "ORIENTACIÓN VOCACIONAL", "abrv": "ORV"},
+            {"nombre": "EDUCACIÓN FÍSICA", "abrv": "EDF"},
+            {"nombre": "BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "abrv": "BAT"},
+            {"nombre": "FÍSICA", "abrv": "FIS"},
             {"nombre": "QUÍMICA", "abrv": "QUI"},
+            {"nombre": "GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", "abrv": "GHC"},
+            {"nombre": "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "abrv": "INP"},
+            {"nombre": "ORIENTACIÓN VOCACIONAL", "abrv": "ORV"},
         ]
 
         self.stdout.write("Iniciando restablecimiento de materias...")

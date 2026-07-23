@@ -338,7 +338,7 @@
 
             <div class="flex flex-col">
                 {% for ano_num, ano_data in boleta.items %}
-                <details class="group overflow-hidden">
+                <details class="group overflow-hidden" id="detalle-ano-{{ ano_num }}">
                     <summary
                         class="flex justify-between items-center py-4 px-1 cursor-pointer hover:bg-surface-hover transition-colors select-none">
                         <div class="flex items-center">
@@ -350,9 +350,10 @@
                     <div class="pb-6 pt-2 px-1 bg-transparent">
                         {% if ano_data.materias %}
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
+                            <table class="w-full text-left border-collapse" id="tabla-notas-{{ ano_num }}">
                                 <thead>
                                     <tr>
+                                        <th class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal" style="width:30px;" id="th-edit-{{ ano_num }}"></th>
                                         <th
                                             class="py-2 border-b border-border text-[10px] text-text-muted/80 uppercase tracking-widest font-normal">
                                             Materias</th>
@@ -372,19 +373,24 @@
                                 </thead>
                                 <tbody>
                                     {% for mat_id, mat in ano_data.materias.items %}
-                                    <tr class="hover:bg-surface-hover transition-colors">
-                                        <td class="py-3 border-b border-border text-xs text-text-main font-medium">{{ mat.nombre }}</td>
+                                    <tr class="hover:bg-surface-hover transition-colors" id="row-{{ ano_num }}-{{ mat_id }}" data-materia="{{ mat.nombre }}" data-l1="{{ mat.l1 }}" data-l2="{{ mat.l2 }}" data-l3="{{ mat.l3 }}" data-final="{{ mat.final }}">
+                                        <td class="py-3 border-b border-border text-center edit-pencil-cell" style="display:none;">
+                                            <button type="button" class="text-primary/60 hover:text-primary transition-colors cursor-pointer bg-transparent border-none p-0" onclick="editarMateria({{ ano_num }}, '{{ mat_id }}', '{{ mat.nombre|escapejs }}')" title="Editar {{ mat.nombre }}">
+                                                <ion-icon name="create-outline" class="text-base"></ion-icon>
+                                            </button>
+                                        </td>
+                                        <td class="py-3 border-b border-border text-xs text-text-main font-medium cell-nombre">{{ mat.nombre }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l1">
                                             {{ mat.l1 }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l2">
                                             {{ mat.l2 }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l3">
                                             {{ mat.l3 }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-center font-mono font-bold {% if mat.final != '-' and mat.final >= 10 %}text-primary{% elif mat.final != '-' %}text-error{% else %}text-text-muted/80{% endif %}">
+                                            class="py-3 border-b border-border text-xs text-center font-mono font-bold cell-final {% if mat.final != '-' and mat.final >= 10 %}text-primary{% elif mat.final != '-' %}text-error{% else %}text-text-muted/80{% endif %}">
                                             {{ mat.final }}
                                         </td>
                                     </tr>
@@ -392,6 +398,7 @@
                                 </tbody>
                                 <tfoot class="bg-primary/5 border-t-2 border-primary/30">
                                     <tr>
+                                        <td class="py-3 border-b border-border" id="tfoot-spacer-{{ ano_num }}" style="display:none;"></td>
                                         <td
                                             class="py-3 px-2 border-b border-border text-xs text-primary font-bold uppercase tracking-widest text-right">
                                             Promedios Oficiales:</td>
@@ -410,6 +417,23 @@
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+                        <!-- Botones Eliminar y Editar -->
+                        <div class="flex items-center gap-3 mt-4" id="acciones-notas-{{ ano_num }}">
+                            {% if puede_eliminar_calificaciones %}
+                            <button type="button" onclick="eliminarCalificacionesAno({{ ano_num }})" 
+                                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-error/10 text-error border border-error/20 hover:bg-error/20 transition-all">
+                                <ion-icon name="trash-outline" class="text-sm"></ion-icon> Eliminar
+                            </button>
+                            {% endif %}
+                            <button type="button" onclick="activarModoEdicion({{ ano_num }})" id="btn-editar-{{ ano_num }}"
+                                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all">
+                                <ion-icon name="create-outline" class="text-sm"></ion-icon> Editar
+                            </button>
+                            <button type="button" onclick="cancelarEdicion({{ ano_num }})" id="btn-cancelar-{{ ano_num }}" style="display:none;"
+                                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-surface-element text-text-muted border border-border hover:bg-surface-hover transition-all">
+                                <ion-icon name="close-outline" class="text-sm"></ion-icon> Cancelar
+                            </button>
                         </div>
                         {% else %}
                         <div
@@ -767,6 +791,299 @@
 <script>
     const CEDULA = '{{estudiante.cedula_identidad}}';
     const IS_PERSONAL = {% if request.user.rol == 'PERSONAL' %}true{% else %}false{% endif %};
+    const CSRF_TOKEN = '{{ csrf_token }}';
+
+    // ── Edición de Calificaciones ─────────────────────────────────────────────
+
+    function activarModoEdicion(anoNum) {
+        // Mostrar columna de pencils
+        const table = document.getElementById('tabla-notas-' + anoNum);
+        if (!table) return;
+        
+        // Show pencil column header
+        const thEdit = document.getElementById('th-edit-' + anoNum);
+        if (thEdit) thEdit.style.display = '';
+        
+        // Show tfoot spacer
+        const tfootSpacer = document.getElementById('tfoot-spacer-' + anoNum);
+        if (tfootSpacer) tfootSpacer.style.display = '';
+        
+        // Show all pencil cells in this table
+        table.querySelectorAll('.edit-pencil-cell').forEach(cell => {
+            cell.style.display = '';
+        });
+        
+        // Toggle buttons
+        const btnEditar = document.getElementById('btn-editar-' + anoNum);
+        const btnCancelar = document.getElementById('btn-cancelar-' + anoNum);
+        if (btnEditar) btnEditar.style.display = 'none';
+        if (btnCancelar) btnCancelar.style.display = 'flex';
+    }
+
+    function cancelarEdicion(anoNum) {
+        const table = document.getElementById('tabla-notas-' + anoNum);
+        if (!table) return;
+        
+        // Hide pencil column
+        const thEdit = document.getElementById('th-edit-' + anoNum);
+        if (thEdit) thEdit.style.display = 'none';
+        
+        const tfootSpacer = document.getElementById('tfoot-spacer-' + anoNum);
+        if (tfootSpacer) tfootSpacer.style.display = 'none';
+        
+        table.querySelectorAll('.edit-pencil-cell').forEach(cell => {
+            cell.style.display = 'none';
+        });
+        
+        // Restore any cells that were in edit mode to original values
+        table.querySelectorAll('tr[id^="row-' + anoNum + '-"]').forEach(row => {
+            const origL1 = row.getAttribute('data-l1');
+            const origL2 = row.getAttribute('data-l2');
+            const origL3 = row.getAttribute('data-l3');
+            const origFinal = row.getAttribute('data-final');
+            
+            const cellL1 = row.querySelector('.cell-l1');
+            const cellL2 = row.querySelector('.cell-l2');
+            const cellL3 = row.querySelector('.cell-l3');
+            const cellFinal = row.querySelector('.cell-final');
+            
+            if (cellL1) cellL1.innerHTML = origL1;
+            if (cellL2) cellL2.innerHTML = origL2;
+            if (cellL3) cellL3.innerHTML = origL3;
+            if (cellFinal) cellFinal.innerHTML = origFinal;
+        });
+        
+        // Remove any save button
+        const saveBtn = document.getElementById('btn-guardar-' + anoNum);
+        if (saveBtn) saveBtn.remove();
+        
+        // Toggle buttons
+        const btnEditar = document.getElementById('btn-editar-' + anoNum);
+        const btnCancelar = document.getElementById('btn-cancelar-' + anoNum);
+        if (btnEditar) btnEditar.style.display = 'flex';
+        if (btnCancelar) btnCancelar.style.display = 'none';
+    }
+
+    function editarMateria(anoNum, matId, materiaNombre) {
+        const row = document.getElementById('row-' + anoNum + '-' + matId);
+        if (!row) return;
+        
+        // Check if already in edit mode
+        if (row.querySelector('input[type="number"]')) return;
+        
+        const cellL1 = row.querySelector('.cell-l1');
+        const cellL2 = row.querySelector('.cell-l2');
+        const cellL3 = row.querySelector('.cell-l3');
+        
+        // Convert to inputs
+        const origL1 = row.getAttribute('data-l1');
+        const origL2 = row.getAttribute('data-l2');
+        const origL3 = row.getAttribute('data-l3');
+        
+        function makeInput(val, fieldName) {
+            const numVal = (val && val !== '-') ? parseFloat(val) : '';
+            return `<input type="number" min="0" max="20" step="0.01" value="${numVal}" 
+                class="form-input text-center text-xs font-mono w-16 mx-auto p-1 rounded border border-primary/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30" 
+                data-field="${fieldName}" style="display:block; margin:0 auto;">`;
+        }
+        
+        cellL1.innerHTML = makeInput(origL1, 'l1');
+        cellL2.innerHTML = makeInput(origL2, 'l2');
+        cellL3.innerHTML = makeInput(origL3, 'l3');
+        
+        // Add save button if not exists
+        const acciones = document.getElementById('acciones-notas-' + anoNum);
+        if (acciones && !document.getElementById('btn-guardar-' + anoNum)) {
+            const saveBtn = document.createElement('button');
+            saveBtn.type = 'button';
+            saveBtn.id = 'btn-guardar-' + anoNum;
+            saveBtn.className = 'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-all';
+            saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
+            saveBtn.onclick = function() { guardarCambiosCalificacion(anoNum); };
+            acciones.appendChild(saveBtn);
+        }
+    }
+
+    function guardarCambiosCalificacion(anoNum) {
+        const table = document.getElementById('tabla-notas-' + anoNum);
+        if (!table) return;
+        
+        // Find rows with inputs (edited rows)
+        const editedRows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
+        let pendientes = [];
+        
+        editedRows.forEach(row => {
+            const inputs = row.querySelectorAll('input[type="number"]');
+            if (inputs.length === 0) return;
+            
+            const materiaNombre = row.getAttribute('data-materia');
+            let l1 = null, l2 = null, l3 = null;
+            
+            inputs.forEach(inp => {
+                const field = inp.getAttribute('data-field');
+                const val = inp.value.trim();
+                if (field === 'l1') l1 = val !== '' ? val : null;
+                if (field === 'l2') l2 = val !== '' ? val : null;
+                if (field === 'l3') l3 = val !== '' ? val : null;
+            });
+            
+            if (l1 !== null || l2 !== null || l3 !== null) {
+                pendientes.push({
+                    rowId: row.id,
+                    materia_nombre: materiaNombre,
+                    l1: l1, l2: l2, l3: l3
+                });
+            }
+        });
+        
+        if (pendientes.length === 0) {
+            alert('No hay cambios para guardar.');
+            return;
+        }
+        
+        // Disable save button
+        const saveBtn = document.getElementById('btn-guardar-' + anoNum);
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<ion-icon name="hourglass-outline" class="text-sm animate-spin"></ion-icon> Guardando...';
+        }
+        
+        let completados = 0;
+        let errores = [];
+        
+        pendientes.forEach(item => {
+            fetch(`/api/calificaciones/${CEDULA}/editar/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    ano_grado: anoNum,
+                    materia_nombre: item.materia_nombre,
+                    l1: item.l1,
+                    l2: item.l2,
+                    l3: item.l3
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                completados++;
+                if (data.ok) {
+                    // Update the row data attributes and cell content
+                    const row = document.getElementById(item.rowId);
+                    if (row) {
+                        const notas = data.notas;
+                        row.setAttribute('data-l1', notas.l1);
+                        row.setAttribute('data-l2', notas.l2);
+                        row.setAttribute('data-l3', notas.l3);
+                        row.setAttribute('data-final', notas.final);
+                        
+                        row.querySelector('.cell-l1').innerHTML = notas.l1;
+                        row.querySelector('.cell-l2').innerHTML = notas.l2;
+                        row.querySelector('.cell-l3').innerHTML = notas.l3;
+                        
+                        const cellFinal = row.querySelector('.cell-final');
+                        cellFinal.innerHTML = notas.final;
+                        // Update color classes
+                        cellFinal.classList.remove('text-primary', 'text-error', 'text-text-muted/80');
+                        if (notas.final !== '-' && parseFloat(notas.final) >= 10) {
+                            cellFinal.classList.add('text-primary');
+                        } else if (notas.final !== '-') {
+                            cellFinal.classList.add('text-error');
+                        } else {
+                            cellFinal.classList.add('text-text-muted/80');
+                        }
+                    }
+                } else {
+                    errores.push(data.error || 'Error desconocido');
+                }
+                
+                if (completados === pendientes.length) {
+                    if (errores.length > 0) {
+                        alert('Algunos cambios presentaron errores:\n' + errores.join('\n'));
+                    } else {
+                        // Flash success
+                        if (saveBtn) {
+                            saveBtn.innerHTML = '<ion-icon name="checkmark-outline" class="text-sm"></ion-icon> ¡Guardado!';
+                            saveBtn.classList.remove('bg-success/10', 'text-success', 'border-success/20');
+                            saveBtn.classList.add('bg-success', 'text-white', 'border-success');
+                        }
+                        setTimeout(() => cancelarEdicion(anoNum), 1200);
+                    }
+                }
+            })
+            .catch(err => {
+                completados++;
+                errores.push(err.message || 'Error de conexión');
+                if (completados === pendientes.length) {
+                    alert('Error de conexión:\n' + errores.join('\n'));
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
+                    }
+                }
+            });
+        });
+    }
+
+    function eliminarCalificacionesAno(anoNum) {
+        const labelAno = {1:'1er', 2:'2do', 3:'3er', 4:'4to', 5:'5to'};
+        const label = labelAno[anoNum] || anoNum;
+        
+        if (!confirm(`⚠️ ATENCIÓN: ¿Está seguro de eliminar TODAS las calificaciones del ${label} Año?\n\nEsta acción no se puede deshacer y eliminará las notas de todos los lapsos de todas las materias de este año.`)) {
+            return;
+        }
+        
+        // Double confirmation
+        if (!confirm(`CONFIRMACIÓN FINAL: Se eliminarán permanentemente las calificaciones del ${label} Año para V-${CEDULA}.\n\n¿Desea continuar?`)) {
+            return;
+        }
+        
+        fetch(`/api/calificaciones/${CEDULA}/eliminar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({ ano_grado: anoNum })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                alert('✅ ' + data.mensaje);
+                // Clear the table cells
+                const table = document.getElementById('tabla-notas-' + anoNum);
+                if (table) {
+                    table.querySelectorAll('tr[id^="row-' + anoNum + '-"]').forEach(row => {
+                        row.setAttribute('data-l1', '-');
+                        row.setAttribute('data-l2', '-');
+                        row.setAttribute('data-l3', '-');
+                        row.setAttribute('data-final', '-');
+                        row.querySelector('.cell-l1').innerHTML = '-';
+                        row.querySelector('.cell-l2').innerHTML = '-';
+                        row.querySelector('.cell-l3').innerHTML = '-';
+                        const cellFinal = row.querySelector('.cell-final');
+                        cellFinal.innerHTML = '-';
+                        cellFinal.classList.remove('text-primary', 'text-error');
+                        cellFinal.classList.add('text-text-muted/80');
+                    });
+                }
+                // Clear promedios
+                const tfoot = table ? table.querySelector('tfoot') : null;
+                if (tfoot) {
+                    tfoot.querySelectorAll('td.font-black').forEach(td => {
+                        td.innerHTML = '-';
+                    });
+                }
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        })
+        .catch(err => {
+            alert('❌ Error de conexión: ' + (err.message || 'Error desconocido'));
+        });
+    }
 
     function cargarObservaciones() {
         fetch(`/api/observaciones/${CEDULA}/listar/`)
