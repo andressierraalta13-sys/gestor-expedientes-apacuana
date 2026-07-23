@@ -564,10 +564,9 @@ def nuevo_expediente_view(request):
         # ==============================================================
         # IA SEGURIDAD: Algoritmo de certificación de Integridad y Duplicidad
         # ==============================================================
-        # Verificar duplicado usando objects_all (incluye alumnos soft-deleted)
-        if Estudiante.objects_all.filter(cedula_identidad=cedula).exists():
-            # BLOQUEO ACTIVO DE SOBREESCRITURA
-            error_context['error'] = f"Ya se encuentra registrado (o fue eliminado previamente) un integrante con la cédula V-{cedula}. La plataforma ha congelado la operación para preservar la integridad legal de la base de datos."
+        # Verificar duplicado en la base de datos
+        if Estudiante.objects.filter(cedula_identidad=cedula).exists():
+            error_context['error'] = f"Ya se encuentra registrado un integrante con la cédula V-{cedula}."
             return render(request, 'expedientes/nuevo.html', error_context)
             
         # Si la IA otorga luz verde, persistimos en PostgreSQL/SQLite

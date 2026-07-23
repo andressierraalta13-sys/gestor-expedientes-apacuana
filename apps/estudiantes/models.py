@@ -62,25 +62,17 @@ class Estudiante(models.Model):
     mes_culminacion_5to_ano = models.CharField(max_length=2, blank=True, null=True, verbose_name="Mes Culminación 5to Año")
     ano_culminacion_5to_ano = models.CharField(max_length=4, blank=True, null=True, verbose_name="Año Culminación 5to Año")
 
-    # ── Soft Delete (Borrado Lógico) ─────────────────────────────────────────
-    activo             = models.BooleanField(default=True, help_text='False = registro inactivado (soft delete).')
-    fecha_inactivacion = models.DateTimeField(null=True, blank=True,
-                                              help_text='Fecha en que el registro fue inactivado.')
+    activo             = models.BooleanField(default=True, help_text='Obsoleto: el borrado de estudiantes es físico y definitivo.')
+    fecha_inactivacion = models.DateTimeField(null=True, blank=True, help_text='Obsoleto.')
 
-    # Managers: por defecto solo activos; objects_all incluye inactivos
-    objects     = SoftDeleteManager()
-    objects_all = AllObjectsManager()
+    # Managers: objects y objects_all retornan todos los estudiantes reales en BD
+    objects     = models.Manager()
+    objects_all = models.Manager()
 
     history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.cedula_identidad} - {self.nombres} {self.apellidos}"
-
-    def delete(self, *args, **kwargs):
-        from django.utils.timezone import now
-        self.activo = False
-        self.fecha_inactivacion = now()
-        self.save()
 
 
 class Expediente(models.Model):

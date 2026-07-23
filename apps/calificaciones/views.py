@@ -63,15 +63,14 @@ def _calcular_integridad(expediente, estudiante) -> dict:
 def _buscar_duplicado(cedula: str, apellidos: str, nombres: str, fecha_nac) -> Estudiante | None:
     """
     Búsqueda inteligente de duplicados:
-      1. Por cédula exacta — usa objects_all para detectar incluso alumnos hard-deleted.
+      1. Por cédula exacta.
       2. Si no hay cédula: apellidos + nombres + fecha_nacimiento.
     """
     if cedula:
-        # Usar objects_all para evitar re-crear alumnos que ya existieron
-        return Estudiante.objects_all.filter(cedula_identidad=cedula).first()
+        return Estudiante.objects.filter(cedula_identidad=cedula).first()
 
     if apellidos and nombres and fecha_nac:
-        return Estudiante.objects_all.filter(
+        return Estudiante.objects.filter(
             apellidos__iexact=apellidos,
             nombres__iexact=nombres,
             fecha_nacimiento=fecha_nac,
@@ -90,6 +89,12 @@ def carga_masiva_view(request):
     """
     if request.method != 'POST' or not request.FILES.get('archivo_excel'):
         return render(request, 'calificaciones/carga_masiva.html')
+
+    # Limpieza preventiva de cualquier registro inactivo legado (soft-deleted) en BD
+    try:
+        Estudiante.objects.filter(activo=False).delete()
+    except Exception:
+        pass
 
     # Reset sequences if using PostgreSQL to avoid IntegrityError on PK
     # (Auto-sincronizacion de secuencias para evitar fallos de duplicacion de id)
@@ -153,13 +158,7 @@ def carga_masiva_view(request):
                 existente = _buscar_duplicado(cedula, apellidos, nombres, fecha_nac)
 
                 if existente:
-                    # Reactivar si estaba eliminado (soft-delete) y actualizar datos
                     hubo_cambios = False
-                    if not existente.activo:
-                        existente.activo = True
-                        existente.fecha_inactivacion = None
-                        hubo_cambios = True
-                        
                     if alumno.get('ano_cursante'): 
                         existente.ano_cursando = alumno['ano_cursante']
                         hubo_cambios = True
