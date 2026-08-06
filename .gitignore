@@ -100,4 +100,22 @@ test_dump_supabase.json
 
 # Customizaciones de Agente (Antigravity Config)
 .agents/
-gestor-expedientes-apacuana/
+.claude/
+
+# Bases de datos y SQL (exclusiones dedicadas)
+*.sqlite3
+*.sqlite3-journal
+*.db
+*.sql
+inserts.sql
+schema_postgres*.sql
+actualizaciones_db_supabase.sql
+migrate_queries.sql
+db_backup_*
+*dump*.json
+db_dump*.json
+test_dump*.json
+
+
+
+

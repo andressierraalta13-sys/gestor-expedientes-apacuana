@@ -34,12 +34,6 @@ class Estudiante(models.Model):
     cedula_representante = models.CharField(max_length=20, blank=True, null=True, verbose_name="C.I. del Representante")
     
     ANO_CURSANDO_CHOICES = (
-        (11, '1er Grado'),
-        (12, '2do Grado'),
-        (13, '3er Grado'),
-        (14, '4to Grado'),
-        (15, '5to Grado'),
-        (16, '6to Grado'),
         (1, '1er Año'),
         (2, '2do Año'),
         (3, '3er Año'),
@@ -62,17 +56,22 @@ class Estudiante(models.Model):
     mes_culminacion_5to_ano = models.CharField(max_length=2, blank=True, null=True, verbose_name="Mes Culminación 5to Año")
     ano_culminacion_5to_ano = models.CharField(max_length=4, blank=True, null=True, verbose_name="Año Culminación 5to Año")
 
-    activo             = models.BooleanField(default=True, help_text='Obsoleto: el borrado de estudiantes es físico y definitivo.')
-    fecha_inactivacion = models.DateTimeField(null=True, blank=True, help_text='Obsoleto.')
+    # ── Soft Delete (Borrado Lógico) ─────────────────────────────────────────
+    activo             = models.BooleanField(default=True, help_text='False = registro inactivado (soft delete).')
+    fecha_inactivacion = models.DateTimeField(null=True, blank=True,
+                                              help_text='Fecha en que el registro fue inactivado.')
 
-    # Managers: objects y objects_all retornan todos los estudiantes reales en BD
-    objects     = models.Manager()
-    objects_all = models.Manager()
+    # Managers: por defecto solo activos; objects_all incluye inactivos
+    objects     = SoftDeleteManager()
+    objects_all = AllObjectsManager()
 
     history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.cedula_identidad} - {self.nombres} {self.apellidos}"
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
 
 
 class Expediente(models.Model):

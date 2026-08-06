@@ -42,6 +42,15 @@
                 <input type="text" id="exp-table-search" placeholder="Buscar por nombre o cédula...">
             </div>
             <span class="table-count" id="exp-table-count"></span>
+
+            {% if request.user.rol == 'DESARROLLADOR' %}
+            <div class="mass-actions" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <button type="submit" id="btn-eliminar-masivo" class="btn btn-danger" style="display: none; background-color: var(--color-error); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 500; cursor: pointer; align-items: center; gap: 6px;" onclick="return confirm('¿Está seguro de que desea eliminar permanentemente los expedientes seleccionados?')">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">delete_sweep</span>
+                    Eliminar Seleccionados (<span id="seleccionados-count">0</span>)
+                </button>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Table -->
@@ -55,19 +64,29 @@
             <table id="expedientes-table">
                 <thead>
                     <tr>
-                        <th class="sortable" data-col="1" style="padding-left:16px;">Estudiante <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
-                        <th class="sortable" data-col="2">Cédula <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
+                        {% if request.user.rol == 'DESARROLLADOR' %}
+                        <th style="width: 40px; text-align: center; padding-left: 16px;">
+                            <input type="checkbox" id="select-all-expedientes" style="cursor: pointer;">
+                        </th>
+                        {% endif %}
+                        <th class="sortable" data-col="{% if request.user.rol == 'DESARROLLADOR' %}1{% else %}0{% endif %}" {% if request.user.rol != 'DESARROLLADOR' %}style="padding-left:16px;"{% endif %}>Estudiante <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
+                        <th class="sortable" data-col="{% if request.user.rol == 'DESARROLLADOR' %}2{% else %}1{% endif %}">Cédula <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
                         <th style="text-align:center">Copia de Cédula</th>
                         <th style="text-align:center">Partida de Nac.</th>
                         <th style="text-align:center">Notas Cert.</th>
-                        <th class="sortable" data-col="6" style="text-align:center">Estatus <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
+                        <th class="sortable" data-col="{% if request.user.rol == 'DESARROLLADOR' %}6{% else %}5{% endif %}" style="text-align:center">Estatus <span class="sort-icon material-symbols-outlined" style="font-size:14px">unfold_more</span></th>
                         <th style="width:80px">Acción</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for exp in expedientes %}
                     <tr class="estudiante-row" data-ano="{{ exp.estudiante.get_ano_cursando_display }}" data-seccion="{{ exp.estudiante.seccion|default:'Única' }}">
-                        <td style="padding-left:16px">
+                        {% if request.user.rol == 'DESARROLLADOR' %}
+                        <td style="text-align: center; padding-left: 16px;">
+                            <input type="checkbox" name="estudiantes_seleccionados" value="{{ exp.estudiante.cedula_identidad }}" class="expediente-checkbox" style="cursor: pointer;">
+                        </td>
+                        {% endif %}
+                        <td {% if request.user.rol != 'DESARROLLADOR' %}style="padding-left:16px"{% endif %}>
                             <a href="{% url 'detalle_expediente' exp.estudiante.cedula_identidad %}"
                                 style="color:var(--color-text-primary);text-decoration:none;font-weight:500">
                                 {{ exp.estudiante.nombres }} {{ exp.estudiante.apellidos }}
@@ -122,7 +141,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="{% if request.user.rol == 'DESARROLLADOR' %}8{% else %}7{% endif %}">
                             <div class="empty-state">
                                 <span class="material-symbols-outlined empty-state-icon">folder_off</span>
                                 <div class="empty-state-title">Sin expedientes</div>
@@ -137,28 +156,28 @@
 
         <!-- Vista Filtrada -->
         <div id="vista-filtrada" style="display:none; padding: 20px;">
-            {% if expedientes_agrupados %}
-            {% for grupo in expedientes_agrupados %}
+            {% regroup expedientes|dictsort:"estudiante.seccion"|dictsort:"estudiante.ano_cursando" by estudiante.get_ano_cursando_display as expedientes_por_ano %}
+            {% for ano in expedientes_por_ano %}
                 <div class="ano-bloque" style="margin-bottom: 2rem;">
-                    <h2 class="ano-titulo" style="font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-bottom: 15px; border-bottom: 2px solid var(--color-border); padding-bottom: 5px;">{{ grupo.ano }}</h2>
+                    <h2 class="ano-titulo" style="font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-bottom: 15px; border-bottom: 2px solid var(--color-border); padding-bottom: 5px;">{{ ano.grouper|default:"Sin Año" }}</h2>
+                    {% regroup ano.list by estudiante.seccion as expedientes_por_seccion %}
                     <div class="secciones-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;">
-                        {% for seccion_data in grupo.secciones %}
+                        {% for seccion in expedientes_por_seccion %}
                             <button type="button" class="btn-seccion-card btn-filtro-ano bg-surface text-text-main font-bold border border-border rounded-xl p-4 flex items-center justify-center gap-2.5 text-base shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/20 hover:text-primary hover:border-primary" 
-                                onclick="filtrarPorGrupo('{{ grupo.ano }}', '{{ seccion_data.seccion }}')">
+                                onclick="filtrarPorGrupo('{{ ano.grouper|default:'Sin Año' }}', '{{ seccion.grouper|default:'Única' }}')">
                                 <span class="material-symbols-outlined text-accent">local_library</span>
-                                {{ grupo.ano }} - Sección {{ seccion_data.seccion }}
+                                {{ ano.grouper|default:"Sin Año" }} - Sección {{ seccion.grouper|default:"Única" }}
                             </button>
                         {% endfor %}
                     </div>
                 </div>
-            {% endfor %}
-            {% else %}
+            {% empty %}
                 <div class="empty-state">
                     <span class="material-symbols-outlined empty-state-icon">folder_off</span>
                     <div class="empty-state-title">Sin expedientes</div>
                     <div class="empty-state-text">No hay expedientes cargados en la base de datos aún.</div>
                 </div>
-            {% endif %}
+            {% endfor %}
         </div>
 
         <!-- Pagination -->
@@ -379,17 +398,80 @@
         });
     }
 
+    function updateDeleteButton() {
+        const deleteBtn = document.getElementById('btn-eliminar-masivo');
+        const countSpan = document.getElementById('seleccionados-count');
+        if (!deleteBtn) return;
+        
+        const checkedCount = document.querySelectorAll('.expediente-checkbox:checked').length;
+        if (checkedCount > 0) {
+            deleteBtn.style.display = 'inline-flex';
+            countSpan.textContent = checkedCount;
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+    }
+
+    function updateSelectAllCheckboxState() {
+        const selectAll = document.getElementById('select-all-expedientes');
+        if (!selectAll) return;
+        const checkboxes = document.querySelectorAll('.expediente-checkbox');
+        const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+            const row = cb.closest('tr');
+            return row && row.style.display !== 'none';
+        });
+        
+        const allChecked = visibleCheckboxes.length > 0 && visibleCheckboxes.every(cb => cb.checked);
+        const someChecked = visibleCheckboxes.some(cb => cb.checked);
+        
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+    }
+
+    function initMassDelete() {
+        const selectAll = document.getElementById('select-all-expedientes');
+        if (!selectAll) return;
+
+        selectAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.expediente-checkbox');
+            const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && row.style.display !== 'none';
+            });
+            
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateDeleteButton();
+        });
+
+        const table = document.getElementById('expedientes-table');
+        if (table) {
+            table.addEventListener('change', function(e) {
+                if (e.target && e.target.classList.contains('expediente-checkbox')) {
+                    updateSelectAllCheckboxState();
+                    updateDeleteButton();
+                }
+            });
+        }
+    }
+
     function initListaExpedientes() {
         // Tabla con paginación
         if (typeof TableController !== 'undefined') {
-            new TableController('expedientes-table', {
+            window.tableCtrl = new TableController('expedientes-table', {
                 searchInputId: 'exp-table-search',
                 countId: 'exp-table-count',
                 paginationId: 'exp-table-pagination',
-                perPage: 15
+                perPage: 15,
+                onRender: function() {
+                    updateSelectAllCheckboxState();
+                    updateDeleteButton();
+                }
             });
         }
         initFiltrosInteractivos();
+        initMassDelete();
     }
 
     // Inicializar de forma segura para soportar Hotwired Turbo y cargas tradicionales

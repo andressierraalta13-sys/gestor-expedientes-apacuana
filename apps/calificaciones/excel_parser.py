@@ -58,15 +58,8 @@ YEAR_PATTERNS_DOC = {
     '5TO': 5, 'QUINTO': 5, 'QUINTO AÑO': 5,
 }
 
-# Patrones de grado para Primaria (códigos BD: 11-16)
-GRADE_PATTERNS_DOC = {
-    '1ER': 11, '1RO': 11, 'PRIMERO': 11, 'PRIMER GRADO': 11,
-    '2DO': 12, '2NDO': 12, 'SEGUNDO': 12, 'SEGUNDO GRADO': 12,
-    '3ER': 13, '3RO': 13, 'TERCERO': 13, 'TERCER GRADO': 13,
-    '4TO': 14, 'CUARTO': 14, 'CUARTO GRADO': 14,
-    '5TO': 15, 'QUINTO': 15, 'QUINTO GRADO': 15,
-    '6TO': 16, 'SEXTO': 16, 'SEXTO GRADO': 16,
-}
+# Patrones de grado para Primaria (Eliminados de la lógica)
+GRADE_PATTERNS_DOC = {}
 
 # Inferencia de año académico por rango de edad
 YEAR_BY_AGE_RANGE = [

@@ -3,16 +3,16 @@ from django.db import transaction
 from inscripciones.models import Asignatura
 
 MATERIAS_OFICIALES = [
-    {"nombre": "LENGUA Y LITERATURA",           "abrv": "LYL"},
-    {"nombre": "IDIOMAS",                       "abrv": "IDI"},
-    {"nombre": "MATEMÁTICA",                   "abrv": "MAT"},
+    {"nombre": "BIOLOGIA, AMBIENTE Y TECNOLOGIA", "abrv": "BAT"},
     {"nombre": "EDUCACIÓN FÍSICA",              "abrv": "EDF"},
-    {"nombre": "BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "abrv": "BAT"},
     {"nombre": "FÍSICA",                        "abrv": "FIS"},
-    {"nombre": "QUÍMICA",                       "abrv": "QUI"},
-    {"nombre": "GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", "abrv": "GHC"},
+    {"nombre": "GEOGRAFÍA, HISTORIA , Y SOBERANÍA NACIONAL", "abrv": "GHC"},
+    {"nombre": "IDIOMAS",                       "abrv": "IDI"},
     {"nombre": "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "abrv": "INP"},
+    {"nombre": "LENGUA Y LITERATURA",           "abrv": "LYL"},
+    {"nombre": "MATEMÁTICA",                   "abrv": "MAT"},
     {"nombre": "ORIENTACIÓN VOCACIONAL",        "abrv": "ORV"},
+    {"nombre": "QUÍMICA",                       "abrv": "QUI"},
 ]
 
 CODIGOS_OFICIALES = {f"A{ano}-{m['abrv']}" for ano in range(1, 6) for m in MATERIAS_OFICIALES}

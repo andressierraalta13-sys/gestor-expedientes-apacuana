@@ -92,30 +92,8 @@ def expedientes_view(request):
         
         if query:
             expedientes = aplicar_filtro_busqueda(expedientes, query)
-        
-        # Pre-agrupar por año y sección para el filtro "Filtrar por Año"
-        # (dictsort con propiedades anidadas no funciona correctamente en Django templates)
-        from collections import OrderedDict
-        agrupados = OrderedDict()
-        for exp in expedientes.order_by('estudiante__ano_cursando', 'estudiante__seccion'):
-            ano_display = exp.estudiante.get_ano_cursando_display()
-            seccion = exp.estudiante.seccion or 'Única'
-            if ano_display not in agrupados:
-                agrupados[ano_display] = OrderedDict()
-            if seccion not in agrupados[ano_display]:
-                agrupados[ano_display][seccion] = []
-            agrupados[ano_display][seccion].append(exp)
-        
-        # Convertir a estructura que el template pueda iterar
-        expedientes_agrupados = []
-        for ano_display, secciones in agrupados.items():
-            secciones_list = [{'seccion': sec, 'expedientes': exps} for sec, exps in secciones.items()]
-            expedientes_agrupados.append({'ano': ano_display, 'secciones': secciones_list})
             
-        return render(request, 'expedientes/lista_expedientes.html', {
-            'expedientes': expedientes,
-            'expedientes_agrupados': expedientes_agrupados,
-        })
+        return render(request, 'expedientes/lista_expedientes.html', {'expedientes': expedientes})
     except Exception as e:
         import traceback
         error_msg = f"Error 500 en expedientes_view: {str(e)}\n\n{traceback.format_exc()}"
@@ -170,8 +148,6 @@ def api_check_estudiante(request):
     estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
     if estudiante:
         mapa_grados = {
-            11: '1er Grado', 12: '2do Grado', 13: '3er Grado',
-            14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
             1: '1er Año', 2: '2do Año', 3: '3er Año', 
             4: '4to Año', 5: '5to Año', 6: 'Egresado/Graduado'
         }
@@ -564,9 +540,10 @@ def nuevo_expediente_view(request):
         # ==============================================================
         # IA SEGURIDAD: Algoritmo de certificación de Integridad y Duplicidad
         # ==============================================================
-        # Verificar duplicado en la base de datos
-        if Estudiante.objects.filter(cedula_identidad=cedula).exists():
-            error_context['error'] = f"Ya se encuentra registrado un integrante con la cédula V-{cedula}."
+        # Verificar duplicado usando objects_all (incluye alumnos soft-deleted)
+        if Estudiante.objects_all.filter(cedula_identidad=cedula).exists():
+            # BLOQUEO ACTIVO DE SOBREESCRITURA
+            error_context['error'] = f"Ya se encuentra registrado (o fue eliminado previamente) un integrante con la cédula V-{cedula}. La plataforma ha congelado la operación para preservar la integridad legal de la base de datos."
             return render(request, 'expedientes/nuevo.html', error_context)
             
         # Si la IA otorga luz verde, persistimos en PostgreSQL/SQLite
@@ -637,38 +614,10 @@ def nuevo_expediente_view(request):
 
 @login_required
 def detalle_expediente_view(request, cedula):
-    import unicodedata as _ud
-    import re as _re
     from django.shortcuts import get_object_or_404
     estudiante = get_object_or_404(Estudiante, cedula_identidad=cedula)
     expediente = getattr(estudiante, 'expediente', None)
     
-    # ── Función de normalización canónica (sin acentos ni puntuación) ─────────
-    def _canon(nombre):
-        s = _ud.normalize('NFKD', str(nombre or '')).encode('ascii', 'ignore').decode('ascii')
-        s = _re.sub(r'[^A-Za-z0-9 ]', ' ', s).upper()
-        return _re.sub(r'\s+', ' ', s).strip()
-
-    # ── 10 materias oficiales del plan de estudio (orden del formato) ─────────
-    MATERIAS_OFICIALES = [
-        ("LENGUA Y LITERATURA", ["LENGUA Y LITERATURA", "CASTELLANO", "LENGUA"]),
-        ("IDIOMAS", ["IDIOMAS", "INGLÉS", "INGLÉS Y OTRAS LENGUAS EXTRANJERAS"]),
-        ("MATEMÁTICA", ["MATEMÁTICA", "MATEMÁTICAS", "MATEMATICAS", "MATEMATICA"]),
-        ("EDUCACIÓN FÍSICA", ["EDUCACIÓN FÍSICA", "EDUCACION FISICA"]),
-        ("BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", ["BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "BIOLOGIA, AMBIENTE Y TECNOLOGIA", "A.C.T.", "A.C.T", "CIENCIAS NATURALES"]),
-        ("FÍSICA", ["FÍSICA", "FISICA"]),
-        ("QUÍMICA", ["QUÍMICA", "QUIMICA"]),
-        ("GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", ["GEOGRAFÍA, HISTORIA , Y SOBERANÍA NACIONAL", "GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", "GEOGRAFIA HISTORIA CIUDADANIA", "GEOGRAFIA, HISTORIA Y SOBERANIA NACIONAL"]),
-        ("INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", ["INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "I.T.P.", "I.T.P", "INNOVACION TECNOLOGICA Y PRODUCTIVA"]),
-        ("ORIENTACIÓN VOCACIONAL", ["ORIENTACIÓN VOCACIONAL", "ORIENTACION VOCACIONAL"]),
-    ]
-
-    # Pre-calcular claves canónicas de cada sinónimo para búsqueda rápida
-    _canon_map = {}  # canon_key -> display_name
-    for display_name, aliases in MATERIAS_OFICIALES:
-        for alias in aliases:
-            _canon_map[_canon(alias)] = display_name
-
     # Obtenemos las calificaciones en crudo del historial SQL
     notas_raw = Calificacion.objects.filter(inscripcion__estudiante=estudiante).select_related('asignatura', 'inscripcion')
     
@@ -681,62 +630,31 @@ def detalle_expediente_view(request, cedula):
         5: {'titulo': '5TO AÑO', 'materias': {}}
     }
     
-    # ── Paso 1: Recopilar notas por nombre canónico dentro de cada año ────────
-    # Estructura temporal: {año: {display_name: {l1, l2, l3, final}}}
-    notas_por_ano = {}
+    # Rellenamos estructuradamente la matriz con los nuevos alias de tipos
     for calif in notas_raw:
         try:
             ano = int(calif.asignatura.ano_grado)
         except (ValueError, TypeError):
             continue
-        if ano not in boleta_organizada:
-            continue
-
-        canon_key = _canon(calif.asignatura.nombre)
-        display_name = _canon_map.get(canon_key, calif.asignatura.nombre)
-
-        if ano not in notas_por_ano:
-            notas_por_ano[ano] = {}
-        if display_name not in notas_por_ano[ano]:
-            notas_por_ano[ano][display_name] = {'l1': '-', 'l2': '-', 'l3': '-', 'final': '-'}
-
-        tipo = str(calif.tipo).strip().upper()
-        if tipo == 'DEF':
-            notas_por_ano[ano][display_name]['final'] = calif.nota
-        elif tipo == 'L1':
-            notas_por_ano[ano][display_name]['l1'] = calif.nota
-        elif tipo == 'L2':
-            notas_por_ano[ano][display_name]['l2'] = calif.nota
-        elif tipo == 'L3':
-            notas_por_ano[ano][display_name]['l3'] = calif.nota
-
-    # ── Paso 2: Para años 1-5, construir la lista completa de 10 materias ────
-    from collections import OrderedDict
-    for ano_num in range(1, 6):
-        ano_notas = notas_por_ano.get(ano_num, {})
-        materias_ordenadas = OrderedDict()
-        idx = 0
-        for display_name, _aliases in MATERIAS_OFICIALES:
-            idx += 1
-            if display_name in ano_notas:
-                materias_ordenadas[f"of_{idx}"] = {
-                    'nombre': display_name,
-                    **ano_notas[display_name]
-                }
-            else:
-                materias_ordenadas[f"of_{idx}"] = {
-                    'nombre': display_name,
+            
+        if ano in boleta_organizada:
+            materia_id = calif.asignatura.id
+            if materia_id not in boleta_organizada[ano]['materias']:
+                boleta_organizada[ano]['materias'][materia_id] = {
+                    'nombre': calif.asignatura.nombre,
                     'l1': '-', 'l2': '-', 'l3': '-', 'final': '-'
                 }
-        # Añadir cualquier materia extra no oficial que tenga notas cargadas
-        for extra_name, extra_data in ano_notas.items():
-            if extra_name not in [dn for dn, _ in MATERIAS_OFICIALES]:
-                idx += 1
-                materias_ordenadas[f"ex_{idx}"] = {'nombre': extra_name, **extra_data}
-
-        boleta_organizada[ano_num]['materias'] = materias_ordenadas
-
-
+            
+            tipo = str(calif.tipo).strip().upper()
+            if tipo == 'DEF':
+                boleta_organizada[ano]['materias'][materia_id]['final'] = calif.nota
+            elif tipo == 'L1':
+                boleta_organizada[ano]['materias'][materia_id]['l1'] = calif.nota
+            elif tipo == 'L2':
+                boleta_organizada[ano]['materias'][materia_id]['l2'] = calif.nota
+            elif tipo == 'L3':
+                boleta_organizada[ano]['materias'][materia_id]['l3'] = calif.nota
+                
     # Calculo algorítmico de promedios
     for ano_num, ano_data in boleta_organizada.items():
         sum_l1 = sum_l2 = sum_l3 = sum_def = 0
@@ -756,14 +674,10 @@ def detalle_expediente_view(request, cedula):
         }
                 
     # Limpiamos la matriz para enviar al frontend (solo los años que tengan datos o todos vacios listos)
-    # Determinar si el usuario actual puede eliminar calificaciones (solo Directora y Desarrollador)
-    puede_eliminar = request.user.rol in ('ADMINISTRATIVO', 'DESARROLLADOR') if hasattr(request.user, 'rol') else False
-    
     context = {
         'estudiante': estudiante,
         'expediente': expediente,
-        'boleta': boleta_organizada,
-        'puede_eliminar_calificaciones': puede_eliminar,
+        'boleta': boleta_organizada
     }
     return render(request, 'expedientes/detalle.html', context)
 
@@ -879,11 +793,11 @@ def eliminar_masivo_expedientes_view(request):
     
     is_json = request.headers.get('Content-Type') == 'application/json' or request.headers.get('Accept') == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-    if request.user.rol == 'PERSONAL':
-        registrar_evento('BLOQUEO_DELETE', 'Intento de eliminación masiva de expedientes', 'Expedientes', request.user.username, 'CRITICO', False)
+    if request.user.rol != 'DESARROLLADOR':
+        registrar_evento('BLOQUEO_DELETE', 'Intento de eliminación masiva de expedientes sin rol de desarrollador', 'Expedientes', request.user.username, 'CRITICO', False)
         if is_json:
-            return JsonResponse({'ok': False, 'error': 'No tienes permisos para realizar esta acción.'}, status=403)
-        messages.error(request, 'No tienes permisos para realizar esta acción.')
+            return JsonResponse({'ok': False, 'error': 'No tienes permisos para realizar esta acción (Solo Desarrollador).'}, status=403)
+        messages.error(request, 'No tienes permisos para realizar esta acción (Solo Desarrollador).')
         return redirect('expedientes')
 
     if request.method == 'POST':
@@ -1255,8 +1169,6 @@ def generar_constancia_estudio_view(request, cedula):
     estudiante = get_object_or_404(Estudiante, cedula_identidad=cedula)
 
     mapa_grados = {
-        11: "1er Grado", 12: "2do Grado", 13: "3er Grado",
-        14: "4to Grado", 15: "5to Grado", 16: "6to Grado",
         1: "1er Año", 2: "2do Año", 3: "3er Año",
         4: "4to Año", 5: "5to Año", 6: "Egresado/Graduado"
     }
@@ -1597,30 +1509,17 @@ def generar_boleta_view(request, cedula):
 
     # 10 subjects of the format
     TABLA_FORMATO = [
-        ("LENGUA Y LITERATURA", ["LENGUA Y LITERATURA", "LENGUA"]),
-        ("IDIOMAS", ["IDIOMAS", "INGLES", "INGLÉS"]),
-        ("MATEMATICA", ["MATEMATICA", "MATEMÁTICA"]),
-        ("EDUCACION FISICA", ["EDUCACION FISICA", "EDUCACIÓN FÍSICA"]),
-        ("AMBIENTE, CIENCIAS Y TECNOLOGIA", ["BIOLOGIA AMBIENTE Y TECNOLOGIA", "BIOLOGÍA AMBIENTE Y TECNOLOGÍA", "ACT", "AMBIENTE CIENCIAS Y TECNOLOGIA", "BIOLOGIA", "BIOLOGÍA", "CIENCIAS"]),
+        ("LENGUA Y LITERATURA", ["LENGUA Y LITERATURA", "LENGUA", "CASTELLANO"]),
+        ("IDIOMAS", ["IDIOMAS", "INGLES", "INGLÉS", "LENGUA EXTRANJERA"]),
+        ("MATEMATICA", ["MATEMATICA", "MATEMÁTICA", "MATEMATICAS"]),
+        ("EDUCACION FISICA", ["EDUCACION FISICA", "EDUCACIÓN FÍSICA", "ED. FISICA"]),
+        ("BIOLOGIA, AMBIENTE Y TECNOLOGIA", ["BIOLOGIA, AMBIENTE Y TECNOLOGIA", "BIOLOGIA AMBIENTE Y TECNOLOGIA", "BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "BIOLOGIA", "BIOLOGÍA", "CIENCIAS NATURALES", "ACT", "AMBIENTE CIENCIAS Y TECNOLOGIA", "AMBIENTE, CIENCIAS Y TECNOLOGIA"]),
         ("FISICA", ["FISICA", "FÍSICA"]),
         ("QUIMICA", ["QUIMICA", "QUÍMICA"]),
-        ("GEOGRAFIA, HISTORIA Y CIUDADANIA", ["GEOGRAFIA HISTORIA Y SOBERANIA NACIONAL", "GEOGRAFÍA HISTORIA Y SOBERANÍA NACIONAL", "GHC", "GEOGRAFIA", "GEOGRAFÍA"]),
-        ("ORIENTACION VOCACIONAL", ["ORIENTACION VOCACIONAL", "ORIENTACIÓN VOCACIONAL", "ORIENTACION CONVIVENCIA", "ORIENTACIÓN CONVIVENCIA", "ORIENTACION", "ORIENTACIÓN"]),
-        ("INNOVACION TECNOLOGICA Y PRODUCTIVA", ["INNOVACION TECNOLOGICA Y PRODUCTIVA", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "INP", "ITP"])
+        ("GHC", ["GHC", "GEOGRAFIA, HISTORIA Y CIUDADANIA", "GEOGRAFIA HISTORIA Y CIUDADANIA", "GEOGRAFÍA, HISTORIA Y CIUDADANÍA", "GEOGRAFIA HISTORIA Y SOBERANIA NACIONAL", "GEOGRAFÍA HISTORIA Y SOBERANÍA NACIONAL", "GEOGRAFIA", "GEOGRAFÍA", "HISTORIA"]),
+        ("INNOVACION TECNOLOGICA Y PRODUCTIVIDAD", ["INNOVACION TECNOLOGICA Y PRODUCTIVIDAD", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVIDAD", "INNOVACION TECNOLOGICA Y PRODUCTIVA", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA", "INP", "ITP"]),
+        ("ORIENTACION VOCACIONAL", ["ORIENTACION VOCACIONAL", "ORIENTACIÓN VOCACIONAL", "ORIERIENTACION VOCACIONAL", "ORIENTACION Y CONVIVENCIA", "ORIENTACIÓN Y CONVIVENCIA", "ORIENTACION", "ORIENTACIÓN"])
     ]
-
-    # Parse sin profesor parameters
-    sin_profesor_map = {}
-    for k, v in request.GET.items():
-        if k.startswith('sp_mat_'):
-            idx = k.split('_')[-1]
-            mat_name = v
-            lapso = request.GET.get(f'sp_lap_{idx}')
-            if mat_name and lapso:
-                mat_clean = clean_string(mat_name)
-                if mat_clean not in sin_profesor_map:
-                    sin_profesor_map[mat_clean] = []
-                sin_profesor_map[mat_clean].append(lapso.upper())
 
     materias_boleta = []
     
@@ -1637,7 +1536,7 @@ def generar_boleta_view(request, cedula):
                 matching_db_ids.append(asig.id)
 
         # Get grades for the matching database asignaturas
-        m1_val = m2_val = m3_val = def_val = None
+        m1_val = m2_val = m3_val = def_val = rev_val = None
         for calif in calificaciones:
             if calif.asignatura_id in matching_db_ids:
                 n = calif.nota
@@ -1650,37 +1549,19 @@ def generar_boleta_view(request, cedula):
                     m3_val = val
                 elif calif.tipo == 'DEF':
                     def_val = val
+                elif calif.tipo in ('REP', 'REV', 'REVISION', 'REPARACION'):
+                    rev_val = val
 
-        # Apply "S/P" (Sin Profesor) overrides
-        lapsos_sp = []
-        disp_clean = clean_string(display_name)
-        if disp_clean in sin_profesor_map:
-            lapsos_sp.extend(sin_profesor_map[disp_clean])
-        else:
-            # try matching aliases
-            for alias in aliases:
-                al_clean = clean_string(alias)
-                if al_clean in sin_profesor_map:
-                    lapsos_sp.extend(sin_profesor_map[al_clean])
-                    break
-
-        if 'M1' in lapsos_sp:
-            m1_val = 'S/P'
-        if 'M2' in lapsos_sp:
-            m2_val = 'S/P'
-        if 'M3' in lapsos_sp:
-            m3_val = 'S/P'
-
-        if m1_val is not None and m1_val != 'S/P':
+        if m1_val is not None:
             sum_m1 += m1_val
             count_m1 += 1
-        if m2_val is not None and m2_val != 'S/P':
+        if m2_val is not None:
             sum_m2 += m2_val
             count_m2 += 1
-        if m3_val is not None and m3_val != 'S/P':
+        if m3_val is not None:
             sum_m3 += m3_val
             count_m3 += 1
-        if def_val is not None and def_val != 'S/P':
+        if def_val is not None:
             sum_def += def_val
             count_def += 1
 
@@ -1689,7 +1570,8 @@ def generar_boleta_view(request, cedula):
             'm1': m1_val if m1_val is not None else '-',
             'm2': m2_val if m2_val is not None else '-',
             'm3': m3_val if m3_val is not None else '-',
-            'def': def_val if def_val is not None else '-'
+            'def': def_val if def_val is not None else '-',
+            'revision': rev_val if rev_val is not None else '-'
         })
 
     # Averages
@@ -1720,6 +1602,11 @@ def generar_boleta_view(request, cedula):
         'grado_ano': grado_text,
         'seccion': seccion,
         'periodo_escolar': periodo_escolar,
+        'codigo_plantel': estudiante.codigo_plantel or 'OD24061508',
+        'codigo_dea': '31060',
+        'rif': 'J-409396371',
+        'director': 'DORCA DIAZ',
+        'docente_guia': '',
         'logo_path': logo_path,
         'numero_expediente': expediente.numero_expediente if expediente else None,
         'numero_boleta': numero_boleta,
@@ -1727,9 +1614,6 @@ def generar_boleta_view(request, cedula):
         'promedios': promedios,
         'posicion': {'m1': '-', 'm2': '-', 'm3': '-'},
         'promedio_condecorado': request.GET.get('premio', ''),
-        'orientacion_m1': '',
-        'orientacion_m2': '',
-        'orientacion_m3': '',
     }
 
     template = get_template('formatos/boleta_calificaciones.html')
@@ -1767,6 +1651,172 @@ def generar_boleta_view(request, cedula):
         return response
     else:
         return HttpResponse(f"Error al generar el PDF de la Boleta: {pisa_status.err}", status=500)
+
+
+@login_required
+def generar_boleta_xlsx_view(request, cedula):
+    """
+    Genera la Boleta de Calificaciones en formato Excel (.xlsx) 
+    usando como plantilla oficial 'BOLETA LICEO NUEVA.xlsx'.
+    """
+    import os
+    import io
+    import openpyxl
+    from django.http import HttpResponse
+    from django.shortcuts import get_object_or_404
+    from django.conf import settings
+    from estudiantes.models import Estudiante
+    from inscripciones.models import Inscripcion, Asignatura
+    from calificaciones.models import Calificacion
+
+    estudiante = get_object_or_404(Estudiante, cedula_identidad=cedula)
+    
+    try:
+        ano_grado = int(request.GET.get('ano', estudiante.ano_cursando))
+    except (ValueError, TypeError):
+        ano_grado = estudiante.ano_cursando
+
+    if not (1 <= ano_grado <= 6):
+        ano_grado = 1
+
+    inscripcion = Inscripcion.objects.filter(
+        estudiante=estudiante,
+        ano_grado=ano_grado
+    ).order_by('-periodo__fecha_inicio').first()
+
+    mapa_grados = {
+        1: "1er Año", 2: "2do Año", 3: "3er Año",
+        4: "4to Año", 5: "5to Año", 6: "Egresado/Graduado"
+    }
+    grado_text = mapa_grados.get(ano_grado, f"{ano_grado}° Año")
+
+    if inscripcion:
+        periodo_escolar = inscripcion.periodo.nombre
+        seccion = inscripcion.seccion
+    else:
+        import datetime
+        ahora_temp = datetime.datetime.now()
+        a = ahora_temp.year
+        periodo_escolar = f"{a}-{a+1}" if ahora_temp.month >= 8 else f"{a-1}-{a}"
+        seccion = estudiante.seccion or "U"
+
+    if inscripcion:
+        calificaciones = Calificacion.objects.filter(inscripcion=inscripcion).select_related('asignatura')
+    else:
+        calificaciones = Calificacion.objects.filter(inscripcion__estudiante=estudiante, asignatura__ano_grado=ano_grado).select_related('asignatura')
+
+    template_path = os.path.join(settings.BASE_DIR, 'FORMATOS EXCEL', 'BOLETA LICEO NUEVA.xlsx')
+    if not os.path.exists(template_path):
+        return HttpResponse("No se encontró la plantilla de la boleta Excel.", status=500)
+
+    wb = openpyxl.load_workbook(template_path)
+    ws = wb.active
+
+    # Datos institucionales y de cabecera
+    ws['D2'] = "U. E. N. APACUANA"
+    ws['D3'] = estudiante.codigo_plantel or "OD24061508"
+    ws['G3'] = "CODIGO: 31060"
+    ws['C4'] = "J-409396371"
+    ws['F4'] = "DORCA DIAZ"
+    ws['B6'] = f"AÑO: {grado_text}"
+    ws['D6'] = f"SECC. {seccion}"
+    ws['B7'] = f"CEDULA: V-{estudiante.cedula_identidad}"
+    ws['G7'] = f"AÑO: {periodo_escolar}"
+    ws['D8'] = f"{estudiante.nombres} {estudiante.apellidos}"
+
+    MATERIAS_ROWS = {
+        10: ["LENGUA Y LITERATURA", "LENGUA", "CASTELLANO"],
+        11: ["IDIOMAS", "INGLES", "INGLÉS", "LENGUA EXTRANJERA"],
+        12: ["MATEMATICA", "MATEMÁTICA", "MATEMATICAS"],
+        13: ["EDUCACION FISICA", "EDUCACIÓN FÍSICA", "ED. FISICA"],
+        14: ["BIOLOGIA, AMBIENTE Y TECNOLOGIA", "BIOLOGIA AMBIENTE Y TECNOLOGIA", "BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "BIOLOGIA", "BIOLOGÍA", "CIENCIAS NATURALES", "ACT", "AMBIENTE CIENCIAS Y TECNOLOGIA"],
+        15: ["FISICA", "FÍSICA"],
+        16: ["QUIMICA", "QUÍMICA"],
+        17: ["GHC", "GEOGRAFIA, HISTORIA Y CIUDADANIA", "GEOGRAFIA HISTORIA Y CIUDADANIA", "GEOGRAFÍA, HISTORIA Y CIUDADANÍA", "GEOGRAFIA", "GEOGRAFÍA", "HISTORIA"],
+        18: ["INNOVACION TECNOLOGICA Y PRODUCTIVIDAD", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVIDAD", "INNOVACION TECNOLOGICA Y PRODUCTIVA", "INP", "ITP"],
+        19: ["ORIENTACION VOCACIONAL", "ORIENTACIÓN VOCACIONAL", "ORIERIENTACION VOCACIONAL", "ORIENTACION Y CONVIVENCIA", "ORIENTACIÓN Y CONVIVENCIA", "ORIENTACION"]
+    }
+
+    import unicodedata
+    import re
+    def clean_string(text):
+        if not text:
+            return ""
+        text = "".join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
+        text = re.sub(r'[^A-Z0-9\s]', '', text.upper())
+        return re.sub(r'\s+', ' ', text).strip()
+
+    asignaturas_db = Asignatura.objects.filter(ano_grado=ano_grado)
+
+    sum_m1 = sum_m2 = sum_m3 = sum_def = 0
+    count_m1 = count_m2 = count_m3 = count_def = 0
+
+    for row_idx, aliases in MATERIAS_ROWS.items():
+        matching_db_ids = []
+        for asig in asignaturas_db:
+            asig_clean = clean_string(asig.nombre)
+            if any(clean_string(alias) in asig_clean or asig_clean in clean_string(alias) for alias in aliases):
+                matching_db_ids.append(asig.id)
+
+        m1_val = m2_val = m3_val = def_val = rev_val = None
+        for calif in calificaciones:
+            if calif.asignatura_id in matching_db_ids:
+                n = calif.nota
+                val = int(n) if n.is_integer() else round(n, 2)
+                if calif.tipo == 'L1':
+                    m1_val = val
+                elif calif.tipo == 'L2':
+                    m2_val = val
+                elif calif.tipo == 'L3':
+                    m3_val = val
+                elif calif.tipo == 'DEF':
+                    def_val = val
+                elif calif.tipo in ('REP', 'REV', 'REVISION', 'REPARACION'):
+                    rev_val = val
+
+        if m1_val is not None:
+            ws.cell(row=row_idx, column=4, value=m1_val)
+            sum_m1 += m1_val
+            count_m1 += 1
+        if m2_val is not None:
+            ws.cell(row=row_idx, column=5, value=m2_val)
+            sum_m2 += m2_val
+            count_m2 += 1
+        if m3_val is not None:
+            ws.cell(row=row_idx, column=6, value=m3_val)
+            sum_m3 += m3_val
+            count_m3 += 1
+        if def_val is not None:
+            ws.cell(row=row_idx, column=7, value=def_val)
+            sum_def += def_val
+            count_def += 1
+        if rev_val is not None:
+            ws.cell(row=row_idx, column=8, value=rev_val)
+
+    if count_m1 > 0: ws.cell(row=21, column=4, value=round(sum_m1 / count_m1, 2))
+    if count_m2 > 0: ws.cell(row=21, column=5, value=round(sum_m2 / count_m2, 2))
+    if count_m3 > 0: ws.cell(row=21, column=6, value=round(sum_m3 / count_m3, 2))
+    if count_def > 0: ws.cell(row=21, column=7, value=round(sum_def / count_def, 2))
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    from auditoria.models import registrar_evento
+    registrar_evento(
+        tipo='CREACION',
+        descripcion=f'Se emitió la Boleta de Calificaciones en Excel para V-{estudiante.cedula_identidad}',
+        modulo='Expedientes',
+        usuario=request.user.username if request.user.is_authenticated else 'Sistema',
+        nivel_riesgo='INFORMATIVO'
+    )
+
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="Boleta_Calificaciones_V{cedula}.xlsx"'
+    return response
 
 def listar_observaciones_view(request, cedula):
     from django.shortcuts import get_object_or_404
@@ -2039,240 +2089,3 @@ def auditoria_limpiar_view(request):
         return JsonResponse({'ok': True, 'mensaje': 'Todos los logs de auditoría e historial de cambios han sido eliminados.'})
     except Exception as e:
         return JsonResponse({'error': f'Error al limpiar bitácora: {str(e)}'}, status=500)
-
-
-# ─── API: EDITAR CALIFICACIÓN DE UNA MATERIA ──────────────────────────────────
-
-@login_required
-@require_POST
-def api_editar_calificacion_view(request, cedula):
-    """
-    POST JSON: {ano_grado, materia_nombre, l1, l2, l3}
-    Actualiza las calificaciones L1, L2, L3 y recalcula DEF para una materia
-    específica de un estudiante en un año determinado.
-    """
-    import json
-    import re as _re
-    import unicodedata as _ud
-
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'error': 'Datos JSON inválidos.'}, status=400)
-
-    ano_grado = body.get('ano_grado')
-    materia_nombre = body.get('materia_nombre', '').strip()
-    l1_val = body.get('l1')
-    l2_val = body.get('l2')
-    l3_val = body.get('l3')
-
-    if not ano_grado or not materia_nombre:
-        return JsonResponse({'ok': False, 'error': 'Faltan campos obligatorios (ano_grado, materia_nombre).'}, status=400)
-
-    try:
-        ano_grado = int(ano_grado)
-    except (ValueError, TypeError):
-        return JsonResponse({'ok': False, 'error': 'Año de grado inválido.'}, status=400)
-
-    # Validar notas en rango 0-20, o guión/vacío para eliminar
-    def _parse_nota(val):
-        if val is None or val == '' or val == '-':
-            return 'DELETE'
-        try:
-            # Reemplazar comas por puntos por si el usuario escribe con coma decimal
-            val_str = str(val).replace(',', '.')
-            f = float(val_str)
-            if f != f:  # NaN
-                return 'DELETE'
-            if not (0 <= f <= 20):
-                return 'INVALID'
-            return round(f, 2)
-        except (ValueError, TypeError):
-            return 'INVALID'
-
-    nota_l1 = _parse_nota(l1_val)
-    nota_l2 = _parse_nota(l2_val)
-    nota_l3 = _parse_nota(l3_val)
-
-    if 'INVALID' in (nota_l1, nota_l2, nota_l3):
-        return JsonResponse({'ok': False, 'error': 'Las notas deben estar entre 0 y 20, o ser "-" para dejarlas vacías.'}, status=400)
-
-    # Buscar estudiante
-    estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
-    if not estudiante:
-        return JsonResponse({'ok': False, 'error': f'Estudiante V-{cedula} no encontrado.'}, status=404)
-
-    # Buscar inscripción del año correspondiente
-    from inscripciones.models import Inscripcion, Asignatura
-    inscripcion = Inscripcion.objects.filter(
-        estudiante=estudiante, ano_grado=ano_grado
-    ).first()
-
-    if not inscripcion:
-        return JsonResponse({'ok': False, 'error': f'No se encontró inscripción para el año {ano_grado}.'}, status=404)
-
-    # Normalizar nombre de materia para buscar la asignatura
-    def _canon(nombre):
-        s = _ud.normalize('NFKD', str(nombre or '')).encode('ascii', 'ignore').decode('ascii')
-        s = _re.sub(r'[^A-Za-z0-9 ]', ' ', s).upper()
-        return _re.sub(r'\s+', ' ', s).strip()
-
-    # Buscar asignatura — intentar por nombre exacto y luego por canónico
-    asignatura = Asignatura.objects.filter(
-        nombre=materia_nombre, ano_grado=ano_grado
-    ).first()
-
-    if not asignatura:
-        # Búsqueda por canonización
-        canon_target = _canon(materia_nombre)
-        for asig in Asignatura.objects.filter(ano_grado=ano_grado):
-            if _canon(asig.nombre) == canon_target:
-                asignatura = asig
-                break
-
-    if not asignatura:
-        return JsonResponse({'ok': False, 'error': f'Asignatura "{materia_nombre}" no encontrada para {ano_grado}° año.'}, status=404)
-
-    # Actualizar o eliminar calificaciones de lapsos
-    notas_actualizadas = {}
-    for tipo, nota_val in [('L1', nota_l1), ('L2', nota_l2), ('L3', nota_l3)]:
-        if nota_val == 'DELETE':
-            Calificacion.objects.filter(
-                inscripcion=inscripcion,
-                asignatura=asignatura,
-                tipo=tipo
-            ).delete()
-            notas_actualizadas[tipo] = '-'
-        else:
-            obj, created = Calificacion.objects.update_or_create(
-                inscripcion=inscripcion,
-                asignatura=asignatura,
-                tipo=tipo,
-                defaults={'nota': nota_val}
-            )
-            notas_actualizadas[tipo] = nota_val
-
-    # Recalcular o eliminar definitiva
-    califs = Calificacion.objects.filter(
-        inscripcion=inscripcion, asignatura=asignatura, tipo__in=['L1', 'L2', 'L3']
-    )
-    lapso_map = {c.tipo: c.nota for c in califs}
-    notas_validas = [n for n in lapso_map.values() if n is not None]
-
-    def_val = None
-    if notas_validas:
-        def_val = round(sum(notas_validas) / len(notas_validas), 2)
-        Calificacion.objects.update_or_create(
-            inscripcion=inscripcion,
-            asignatura=asignatura,
-            tipo='DEF',
-            defaults={'nota': def_val}
-        )
-        notas_actualizadas['DEF'] = def_val
-    else:
-        Calificacion.objects.filter(
-            inscripcion=inscripcion,
-            asignatura=asignatura,
-            tipo='DEF'
-        ).delete()
-        notas_actualizadas['DEF'] = '-'
-
-    # Auditoría
-    try:
-        from auditoria.models import registrar_evento
-        registrar_evento(
-            tipo='MODIFICACION',
-            descripcion=f'Se editaron calificaciones de {materia_nombre} ({ano_grado}° año) para V-{cedula}. Notas: {notas_actualizadas}',
-            modulo='Calificaciones',
-            usuario=request.user.username,
-            nivel_riesgo='MEDIO'
-        )
-    except Exception:
-        pass
-
-    return JsonResponse({
-        'ok': True,
-        'mensaje': f'Calificaciones de "{materia_nombre}" actualizadas correctamente.',
-        'notas': {
-            'l1': lapso_map.get('L1', '-'),
-            'l2': lapso_map.get('L2', '-'),
-            'l3': lapso_map.get('L3', '-'),
-            'final': def_val if def_val is not None else '-',
-        }
-    })
-
-
-# ─── API: ELIMINAR CALIFICACIONES DE UN AÑO ──────────────────────────────────
-
-@login_required
-@require_POST
-def api_eliminar_calificaciones_ano_view(request, cedula):
-    """
-    POST JSON: {ano_grado}
-    Elimina todas las calificaciones de un estudiante para un año dado.
-    Solo permitido para roles ADMINISTRATIVO (Directora) y DESARROLLADOR.
-    """
-    import json
-
-    # Verificar permisos: solo ADMINISTRATIVO (Directora) y DESARROLLADOR
-    rol = getattr(request.user, 'rol', None)
-    if rol not in ('ADMINISTRATIVO', 'DESARROLLADOR'):
-        return JsonResponse({
-            'ok': False,
-            'error': 'No tienes permisos para eliminar calificaciones. Solo la Directora y los Desarrolladores pueden realizar esta acción.'
-        }, status=403)
-
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'error': 'Datos JSON inválidos.'}, status=400)
-
-    ano_grado = body.get('ano_grado')
-    if not ano_grado:
-        return JsonResponse({'ok': False, 'error': 'Debe especificar el año a eliminar (ano_grado).'}, status=400)
-
-    try:
-        ano_grado = int(ano_grado)
-    except (ValueError, TypeError):
-        return JsonResponse({'ok': False, 'error': 'Año de grado inválido.'}, status=400)
-
-    # Buscar estudiante
-    estudiante = Estudiante.objects.filter(cedula_identidad=cedula).first()
-    if not estudiante:
-        return JsonResponse({'ok': False, 'error': f'Estudiante V-{cedula} no encontrado.'}, status=404)
-
-    # Buscar inscripción del año
-    from inscripciones.models import Inscripcion
-    inscripcion = Inscripcion.objects.filter(
-        estudiante=estudiante, ano_grado=ano_grado
-    ).first()
-
-    if not inscripcion:
-        return JsonResponse({'ok': False, 'error': f'No se encontraron calificaciones para el {ano_grado}° año.'}, status=404)
-
-    # Contar y eliminar calificaciones
-    count = Calificacion.objects.filter(inscripcion=inscripcion).count()
-    if count == 0:
-        return JsonResponse({'ok': False, 'error': 'No hay calificaciones cargadas para este año.'}, status=404)
-
-    Calificacion.objects.filter(inscripcion=inscripcion).delete()
-
-    # Auditoría
-    try:
-        from auditoria.models import registrar_evento
-        label_ano = {1: '1er', 2: '2do', 3: '3er', 4: '4to', 5: '5to'}
-        registrar_evento(
-            tipo='INACTIVACION',
-            descripcion=f'Se eliminaron {count} calificaciones del {label_ano.get(ano_grado, str(ano_grado))} Año para V-{cedula} ({estudiante.nombres} {estudiante.apellidos}).',
-            modulo='Calificaciones',
-            usuario=request.user.username,
-            nivel_riesgo='CRITICO'
-        )
-    except Exception:
-        pass
-
-    return JsonResponse({
-        'ok': True,
-        'mensaje': f'Se eliminaron {count} calificaciones del {ano_grado}° año correctamente.',
-        'eliminados': count
-    })

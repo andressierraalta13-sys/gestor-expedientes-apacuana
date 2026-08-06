@@ -24,3 +24,5 @@ create_user('director', 'admin123', 'DIRECTOR', True, True)
 
 # Crear un Administrativo para probar pagos
 create_user('admin_pagos', 'admin123', 'ADMINISTRATIVO', True, False)
+
+# Configuración finalizada

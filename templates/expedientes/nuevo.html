@@ -48,7 +48,7 @@
 
 <!-- Form Card -->
 <div class="card" style="max-width:800px">
-    <form method="POST" action="{% url 'nuevo_expediente' %}" style="display:flex;flex-direction:column;gap:20px">
+    <form method="POST" action="{% url 'nuevo_expediente' %}" data-turbo="false" style="display:flex;flex-direction:column;gap:20px">
         {% csrf_token %}
 
         <!-- Identity Data -->
@@ -85,14 +85,11 @@
                         <label class="form-label" style="color:var(--color-accent)">Grado/Año Cursante <span
                                 class="form-required">*</span></label>
                         <select name="ano_cursando" class="form-input" style="border-color:var(--color-accent)">
-
-                            <optgroup label="Secundaria">
-                                <option value="1">1er Año</option>
-                                <option value="2">2do Año</option>
-                                <option value="3">3er Año</option>
-                                <option value="4">4to Año</option>
-                                <option value="5">5to Año</option>
-                            </optgroup>
+                            <option value="1">1er Año</option>
+                            <option value="2">2do Año</option>
+                            <option value="3">3er Año</option>
+                            <option value="4">4to Año</option>
+                            <option value="5">5to Año</option>
                         </select>
                     </div>
                     <div class="form-group">

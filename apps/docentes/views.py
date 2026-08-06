@@ -601,8 +601,6 @@ def perfil_docente_admin_view(request, docente_id):
     periodo_activo = PeriodoAcademico.objects.filter(activo=True).first() or periodos.first()
 
     MAPA = {
-        11: '1er Grado', 12: '2do Grado', 13: '3er Grado', 
-        14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
         1: '1er Año', 2: '2do Año', 3: '3er Año', 
         4: '4to Año', 5: '5to Año'
     }
@@ -878,7 +876,7 @@ def api_materias_disponibles(request):
             s = 'MATEMATICA'
         return s
         
-    asignaturas = Asignatura.objects.all().order_by('nombre').values('id', 'nombre', 'codigo', 'ano_grado')
+    asignaturas = Asignatura.objects.filter(ano_grado__in=[1, 2, 3, 4, 5]).order_by('nombre').values('id', 'nombre', 'codigo', 'ano_grado')
     
     seen = set()
     unique_asignaturas = []
@@ -914,8 +912,6 @@ def api_combinaciones_docente(request):
     asignaciones = asignaciones.values('ano_grado', 'seccion').distinct().order_by('ano_grado', 'seccion')
 
     MAPA = {
-        11: '1er Grado', 12: '2do Grado', 13: '3er Grado', 
-        14: '4to Grado', 15: '5to Grado', 16: '6to Grado',
         1: '1er Año', 2: '2do Año', 3: '3er Año', 
         4: '4to Año', 5: '5to Año'
     }
@@ -1511,11 +1507,7 @@ def api_cerrar_periodo(request):
             # Promover estudiantes activos
             estudiantes = Estudiante.objects.filter(activo=True)
             for est in estudiantes:
-                if est.ano_cursando in [11, 12, 13, 14, 15]:
-                    est.ano_cursando += 1
-                elif est.ano_cursando == 16:
-                    est.ano_cursando = 1  # Pasa a Secundaria 1er Año
-                elif est.ano_cursando in [1, 2, 3, 4]:
+                if est.ano_cursando in [1, 2, 3, 4]:
                     est.ano_cursando += 1
                 elif est.ano_cursando == 5:
                     est.ano_cursando = 6  # Pasa a Egresado

@@ -63,6 +63,7 @@
             <p class="text-text-muted tracking-widest uppercase text-xs mt-2 relative z-10">C.I. {{estudiante.cedula_identidad|formato_cedula}}</p>
 
             <div class="mt-4 relative z-10 flex flex-col items-center">
+                <span class="text-[9px] font-bold text-text-muted/80 tracking-widest uppercase mb-1">AÑO CURSANDO</span>
                 {% if estudiante.ano_cursando == 1 %}
                 <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-sm font-black tracking-widest">1ER AÑO{% if estudiante.seccion %} - {{ estudiante.seccion|upper }}{% endif %}</span>
                 {% elif estudiante.ano_cursando == 2 %}
@@ -338,7 +339,7 @@
 
             <div class="flex flex-col">
                 {% for ano_num, ano_data in boleta.items %}
-                <details class="group overflow-hidden" id="detalle-ano-{{ ano_num }}">
+                <details class="group overflow-hidden">
                     <summary
                         class="flex justify-between items-center py-4 px-1 cursor-pointer hover:bg-surface-hover transition-colors select-none">
                         <div class="flex items-center">
@@ -350,7 +351,7 @@
                     <div class="pb-6 pt-2 px-1 bg-transparent">
                         {% if ano_data.materias %}
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse" id="tabla-notas-{{ ano_num }}">
+                            <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr>
                                         <th
@@ -372,19 +373,19 @@
                                 </thead>
                                 <tbody>
                                     {% for mat_id, mat in ano_data.materias.items %}
-                                    <tr class="hover:bg-surface-hover transition-colors" id="row-{{ ano_num }}-{{ mat_id }}" data-materia="{{ mat.nombre }}" data-l1="{{ mat.l1 }}" data-l2="{{ mat.l2 }}" data-l3="{{ mat.l3 }}" data-final="{{ mat.final }}">
-                                        <td class="py-3 border-b border-border text-xs text-text-main font-medium cell-nombre">{{ mat.nombre }}</td>
+                                    <tr class="hover:bg-surface-hover transition-colors">
+                                        <td class="py-3 border-b border-border text-xs text-text-main font-medium">{{ mat.nombre }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l1">
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
                                             {{ mat.l1 }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l2">
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
                                             {{ mat.l2 }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono cell-l3">
+                                            class="py-3 border-b border-border text-xs text-text-secondary text-center font-mono">
                                             {{ mat.l3 }}</td>
                                         <td
-                                            class="py-3 border-b border-border text-xs text-center font-mono font-bold cell-final {% if mat.final != '-' and mat.final >= 10 %}text-primary{% elif mat.final != '-' %}text-error{% else %}text-text-muted/80{% endif %}">
+                                            class="py-3 border-b border-border text-xs text-center font-mono font-bold {% if mat.final != '-' and mat.final >= 10 %}text-primary{% elif mat.final != '-' %}text-error{% else %}text-text-muted/80{% endif %}">
                                             {{ mat.final }}
                                         </td>
                                     </tr>
@@ -410,60 +411,6 @@
                                     </tr>
                                 </tfoot>
                             </table>
-                        </div>
-                        <!-- Botones Eliminar y Editar -->
-                        <div class="flex items-center gap-3 mt-4" id="acciones-notas-{{ ano_num }}">
-                            <style>
-                                /* Estilos personalizados responsivos al tema para los botones */
-                                .btn-acciones-notas {
-                                    display: flex; align-items: center; gap: 0.375rem; 
-                                    padding: 0.5rem 1rem; border-radius: 0.5rem; 
-                                    font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
-                                    transition: all 0.2s; border: none; cursor: pointer;
-                                    /* Modo claro por defecto: fondo gris/superficie, texto color personalizado */
-                                    background-color: var(--color-surface-element);
-                                }
-                                .btn-acciones-notas.btn-editar-notas {
-                                    color: var(--color-primary);
-                                }
-                                .btn-acciones-notas.btn-eliminar-notas {
-                                    color: var(--color-error);
-                                }
-                                .btn-acciones-notas.btn-guardar-notas {
-                                    color: var(--color-success);
-                                }
-                                /* Modo oscuro: fondo opaco personalizado, texto blanco */
-                                :root[data-theme="dark"] .btn-acciones-notas.btn-editar-notas {
-                                    background-color: var(--color-primary);
-                                    color: white;
-                                }
-                                :root[data-theme="dark"] .btn-acciones-notas.btn-eliminar-notas {
-                                    background-color: var(--color-error);
-                                    color: white;
-                                }
-                                :root[data-theme="dark"] .btn-acciones-notas.btn-guardar-notas {
-                                    background-color: var(--color-success);
-                                    color: white;
-                                }
-                                .btn-acciones-notas:hover {
-                                    opacity: 0.8;
-                                    transform: translateY(-1px);
-                                }
-                            </style>
-                            {% if puede_eliminar_calificaciones %}
-                            <button type="button" onclick="eliminarCalificacionesAno({{ ano_num }})" 
-                                class="btn-acciones-notas btn-eliminar-notas shadow-sm">
-                                <ion-icon name="trash-outline" class="text-sm"></ion-icon> Eliminar
-                            </button>
-                            {% endif %}
-                            <button type="button" onclick="activarModoEdicion({{ ano_num }})" id="btn-editar-{{ ano_num }}"
-                                class="btn-acciones-notas btn-editar-notas shadow-sm">
-                                <ion-icon name="create-outline" class="text-sm"></ion-icon> Editar
-                            </button>
-                            <button type="button" onclick="cancelarEdicion({{ ano_num }})" id="btn-cancelar-{{ ano_num }}" style="display:none;"
-                                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-surface-element text-text-muted border border-border hover:bg-surface-hover transition-all">
-                                <ion-icon name="close-outline" class="text-sm"></ion-icon> Cancelar
-                            </button>
                         </div>
                         {% else %}
                         <div
@@ -654,7 +601,22 @@
                     <span class="text-sm font-semibold text-text-main">Convocatoria</span>
                 </a>
                 
-
+                <!-- FORMATOS WORD PRIMARIA -->
+                <a href="/media/formatos_word/Certificado%20de%20Educaci%C3%B3n%20Inicial.docx" download 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="download-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Certificado Inicial (DOC)</span>
+                </a>
+                <a href="/media/formatos_word/Certificado%20de%20Educaci%C3%B3n%20Primaria.doc" download 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="download-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Certificado Primaria (DOC)</span>
+                </a>
+                <a href="/media/formatos_word/Constancia%20de%20Prosecuci%C3%B3n%20en%20el%20Nivel%20de%20Educaci%C3%B3n%20Primaria.doc" download 
+                    class="flex items-center gap-3 p-4 bg-surface-element hover:bg-primary/10 border border-border hover:border-primary/50 rounded-xl transition-all group">
+                    <ion-icon name="download-outline" class="text-2xl text-primary/70 group-hover:text-primary transition-colors"></ion-icon>
+                    <span class="text-sm font-semibold text-text-main">Const. Prosecución (DOC)</span>
+                </a>
                 <a href="{% url 'emitir_notas_certificadas_auto' estudiante.cedula_identidad %}"
                     class="flex items-center gap-3 p-4 bg-success-subtle hover:bg-success/20 border border-success/30 hover:border-success/50 rounded-xl transition-all group col-span-1 md:col-span-2 lg:col-span-3">
                     <ion-icon name="school-outline" class="text-2xl text-success group-hover:text-success/80 transition-colors"></ion-icon>
@@ -700,34 +662,14 @@
                 <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">Asunto del Promedio Condecorado</label>
                 <input type="text" id="boletaAsuntoPremio" placeholder="Ej: Excelencia Académica" class="form-input w-full">
             </div>
-            
-            <div class="mt-2 border-t border-border pt-4">
-                <label class="text-xs text-text-muted font-bold uppercase tracking-widest mb-1 block">¿Hubo profesor en la materia?</label>
-                <div class="flex gap-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="huboProfesor" value="Sí" checked class="form-radio text-primary" onchange="toggleSinProfesor()">
-                        <span class="text-sm font-semibold text-text-main">Sí</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="huboProfesor" value="No" class="form-radio text-primary" onchange="toggleSinProfesor()">
-                        <span class="text-sm font-semibold text-text-main">No</span>
-                    </label>
-                </div>
+            <div class="flex gap-3 mt-2">
+                <button onclick="generarBoleta('pdf')" class="btn btn-primary w-full py-3 font-bold">
+                    <ion-icon name="document-text-outline"></ion-icon> Generar PDF
+                </button>
+                <button onclick="generarBoleta('xlsx')" class="btn btn-secondary text-success w-full py-3 font-bold">
+                    <ion-icon name="grid-outline"></ion-icon> Generar Excel
+                </button>
             </div>
-
-            <div id="divSinProfesor" class="hidden flex-col gap-2 mt-2">
-                <div class="flex justify-between items-center">
-                    <label class="text-xs text-text-muted font-bold uppercase tracking-widest">Registros Sin Profesor</label>
-                    <button type="button" onclick="agregarFilaSinProf()" class="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30 transition">+ Añadir</button>
-                </div>
-                <div id="sinProfesorContainer" class="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
-                    <!-- Dinámico -->
-                </div>
-            </div>
-
-            <button onclick="generarBoleta()" class="btn btn-primary w-full py-3 font-bold mt-2">
-                Generar PDF
-            </button>
         </div>
     </div>
 </div>
@@ -821,356 +763,6 @@
 <script>
     const CEDULA = '{{estudiante.cedula_identidad}}';
     const IS_PERSONAL = {% if request.user.rol == 'PERSONAL' %}true{% else %}false{% endif %};
-    const CSRF_TOKEN = '{{ csrf_token }}';
-
-    // ── Edición de Calificaciones ─────────────────────────────────────────────
-
-    function activarModoEdicion(anoNum) {
-        const table = document.getElementById('tabla-notas-' + anoNum);
-        if (!table) return;
-        
-        // Convertir todas las filas a modo edición
-        const rows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
-        rows.forEach(row => {
-            const cellL1 = row.querySelector('.cell-l1');
-            const cellL2 = row.querySelector('.cell-l2');
-            const cellL3 = row.querySelector('.cell-l3');
-            
-            const origL1 = row.getAttribute('data-l1');
-            const origL2 = row.getAttribute('data-l2');
-            const origL3 = row.getAttribute('data-l3');
-            
-            function makeInput(val, fieldName) {
-                const displayVal = (val === undefined || val === null || val === '') ? '-' : val;
-                return `<input type="text" value="${displayVal}" 
-                    class="form-input text-center text-xs font-mono w-16 mx-auto p-1 rounded border border-primary/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30 grade-input-field" 
-                    data-field="${fieldName}" style="display:block; margin:0 auto;">`;
-            }
-            
-            if (cellL1) cellL1.innerHTML = makeInput(origL1, 'l1');
-            if (cellL2) cellL2.innerHTML = makeInput(origL2, 'l2');
-            if (cellL3) cellL3.innerHTML = makeInput(origL3, 'l3');
-            
-            // Añadir validación en vivo al escribir
-            row.querySelectorAll('.grade-input-field').forEach(inp => {
-                inp.addEventListener('input', function() {
-                    // Solo permitir números, comas, puntos y un guión
-                    let cleaned = this.value.replace(/[^0-9,.-]/g, '');
-                    
-                    // Asegurar que el guión esté al inicio y sea único
-                    if (cleaned.includes('-')) {
-                        cleaned = '-' + cleaned.replace(/-/g, '');
-                    }
-                    
-                    // Permitir máximo un punto o coma decimal
-                    const parts = cleaned.split(/[.,]/);
-                    if (parts.length > 2) {
-                        cleaned = parts[0] + '.' + parts.slice(1).join('');
-                    }
-                    
-                    this.value = cleaned;
-                });
-                
-                inp.addEventListener('blur', function() {
-                    // Validar rango [0, 20] si no es "-" ni vacío
-                    let val = this.value.trim().replace(',', '.');
-                    if (val !== '' && val !== '-') {
-                        const numVal = parseFloat(val);
-                        if (isNaN(numVal) || numVal < 0 || numVal > 20) {
-                            this.style.borderColor = 'var(--color-error)';
-                        } else {
-                            this.style.borderColor = '';
-                        }
-                    } else {
-                        this.style.borderColor = '';
-                    }
-                });
-            });
-        });
-        
-        // Agregar botón Guardar si no existe
-        const acciones = document.getElementById('acciones-notas-' + anoNum);
-        if (acciones && !document.getElementById('btn-guardar-' + anoNum)) {
-            const saveBtn = document.createElement('button');
-            saveBtn.type = 'button';
-            saveBtn.id = 'btn-guardar-' + anoNum;
-            saveBtn.className = 'btn-acciones-notas btn-guardar-notas shadow-sm';
-            saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
-            saveBtn.onclick = function() { guardarCambiosCalificacion(anoNum); };
-            acciones.appendChild(saveBtn);
-        }
-        
-        // Alternar visibilidad de botones principales
-        const btnEditar = document.getElementById('btn-editar-' + anoNum);
-        const btnCancelar = document.getElementById('btn-cancelar-' + anoNum);
-        const btnEliminar = acciones ? acciones.querySelector('.btn-eliminar-notas') : null;
-        
-        if (btnEditar) btnEditar.style.display = 'none';
-        if (btnEliminar) btnEliminar.style.display = 'none';
-        if (btnCancelar) btnCancelar.style.display = 'flex';
-    }
-
-    function cancelarEdicion(anoNum) {
-        const table = document.getElementById('tabla-notas-' + anoNum);
-        if (!table) return;
-        
-        // Restaurar todas las filas a sus valores originales
-        const rows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
-        rows.forEach(row => {
-            const origL1 = row.getAttribute('data-l1');
-            const origL2 = row.getAttribute('data-l2');
-            const origL3 = row.getAttribute('data-l3');
-            const origFinal = row.getAttribute('data-final');
-            
-            const cellL1 = row.querySelector('.cell-l1');
-            const cellL2 = row.querySelector('.cell-l2');
-            const cellL3 = row.querySelector('.cell-l3');
-            const cellFinal = row.querySelector('.cell-final');
-            
-            if (cellL1) cellL1.innerHTML = origL1;
-            if (cellL2) cellL2.innerHTML = origL2;
-            if (cellL3) cellL3.innerHTML = origL3;
-            if (cellFinal) cellFinal.innerHTML = origFinal;
-        });
-        
-        // Eliminar botón Guardar
-        const saveBtn = document.getElementById('btn-guardar-' + anoNum);
-        if (saveBtn) saveBtn.remove();
-        
-        // Alternar visibilidad de botones principales
-        const acciones = document.getElementById('acciones-notas-' + anoNum);
-        const btnEditar = document.getElementById('btn-editar-' + anoNum);
-        const btnCancelar = document.getElementById('btn-cancelar-' + anoNum);
-        const btnEliminar = acciones ? acciones.querySelector('.btn-eliminar-notas') : null;
-        
-        if (btnEditar) btnEditar.style.display = 'flex';
-        if (btnEliminar) btnEliminar.style.display = 'flex';
-        if (btnCancelar) btnCancelar.style.display = 'none';
-    }
-
-    function guardarCambiosCalificacion(anoNum) {
-        const table = document.getElementById('tabla-notas-' + anoNum);
-        if (!table) return;
-        
-        const rows = table.querySelectorAll('tr[id^="row-' + anoNum + '-"]');
-        let pendientes = [];
-        let validationFailed = false;
-        
-        rows.forEach(row => {
-            if (validationFailed) return;
-            const inputs = row.querySelectorAll('input[data-field]');
-            if (inputs.length === 0) return;
-            
-            const materiaNombre = row.getAttribute('data-materia');
-            const origL1 = row.getAttribute('data-l1');
-            const origL2 = row.getAttribute('data-l2');
-            const origL3 = row.getAttribute('data-l3');
-            
-            let l1 = null, l2 = null, l3 = null;
-            inputs.forEach(inp => {
-                const field = inp.getAttribute('data-field');
-                let val = inp.value.trim();
-                
-                // Validar rango en guardar
-                if (val !== '' && val !== '-') {
-                    const numVal = parseFloat(val.replace(',', '.'));
-                    if (isNaN(numVal) || numVal < 0 || numVal > 20) {
-                        validationFailed = true;
-                        inp.style.borderColor = 'var(--color-error)';
-                        inp.focus();
-                    } else {
-                        inp.style.borderColor = '';
-                    }
-                } else {
-                    inp.style.borderColor = '';
-                }
-                
-                if (field === 'l1') l1 = val;
-                if (field === 'l2') l2 = val;
-                if (field === 'l3') l3 = val;
-            });
-            
-            if (validationFailed) return;
-            
-            // Normalizar valores para comparación
-            const normVal = (v) => (v === '' || v === null || v === undefined) ? '-' : v.trim();
-            const normL1 = normVal(l1);
-            const normL2 = normVal(l2);
-            const normL3 = normVal(l3);
-            const normOrigL1 = normVal(origL1);
-            const normOrigL2 = normVal(origL2);
-            const normOrigL3 = normVal(origL3);
-            
-            const changed = (normL1 !== normOrigL1) || (normL2 !== normOrigL2) || (normL3 !== normOrigL3);
-            
-            if (changed) {
-                pendientes.push({
-                    rowId: row.id,
-                    materia_nombre: materiaNombre,
-                    l1: normL1,
-                    l2: normL2,
-                    l3: normL3
-                });
-            }
-        });
-        
-        if (validationFailed) {
-            alert('⚠️ Error: Las notas deben ser números entre 0 y 20, o un guión "-" para dejarlas vacías.');
-            return;
-        }
-        
-        if (pendientes.length === 0) {
-            cancelarEdicion(anoNum);
-            return;
-        }
-        
-        // Deshabilitar botón Guardar
-        const saveBtn = document.getElementById('btn-guardar-' + anoNum);
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<ion-icon name="hourglass-outline" class="text-sm animate-spin"></ion-icon> Guardando...';
-        }
-        
-        let completados = 0;
-        let errores = [];
-        
-        pendientes.forEach(item => {
-            fetch(`/api/calificaciones/${CEDULA}/editar/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF_TOKEN
-                },
-                body: JSON.stringify({
-                    ano_grado: anoNum,
-                    materia_nombre: item.materia_nombre,
-                    l1: item.l1,
-                    l2: item.l2,
-                    l3: item.l3
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                completados++;
-                if (data.ok) {
-                    // Actualizar los atributos de datos y contenido de las celdas
-                    const row = document.getElementById(item.rowId);
-                    if (row) {
-                        const notas = data.notas;
-                        row.setAttribute('data-l1', notas.l1);
-                        row.setAttribute('data-l2', notas.l2);
-                        row.setAttribute('data-l3', notas.l3);
-                        row.setAttribute('data-final', notas.final);
-                        
-                        row.querySelector('.cell-l1').innerHTML = notas.l1;
-                        row.querySelector('.cell-l2').innerHTML = notas.l2;
-                        row.querySelector('.cell-l3').innerHTML = notas.l3;
-                        
-                        const cellFinal = row.querySelector('.cell-final');
-                        cellFinal.innerHTML = notas.final;
-                        // Actualizar clases de color
-                        cellFinal.classList.remove('text-primary', 'text-error', 'text-text-muted/80');
-                        if (notas.final !== '-' && parseFloat(notas.final) >= 10) {
-                            cellFinal.classList.add('text-primary');
-                        } else if (notas.final !== '-') {
-                            cellFinal.classList.add('text-error');
-                        } else {
-                            cellFinal.classList.add('text-text-muted/80');
-                        }
-                    }
-                } else {
-                    errores.push(data.error || 'Error desconocido');
-                }
-                
-                if (completados === pendientes.length) {
-                    if (errores.length > 0) {
-                        alert('Algunos cambios presentaron errores:\n' + errores.join('\n'));
-                        if (saveBtn) {
-                            saveBtn.disabled = false;
-                            saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
-                        }
-                    } else {
-                        // Mostrar mensaje de éxito temporalmente
-                        if (saveBtn) {
-                            saveBtn.innerHTML = '<ion-icon name="checkmark-outline" class="text-sm"></ion-icon> ¡Guardado!';
-                            saveBtn.style.backgroundColor = 'var(--color-success)';
-                            saveBtn.style.color = 'white';
-                        }
-                        setTimeout(() => cancelarEdicion(anoNum), 1200);
-                    }
-                }
-            })
-            .catch(err => {
-                completados++;
-                errores.push(err.message || 'Error de conexión');
-                if (completados === pendientes.length) {
-                    alert('Error de conexión:\n' + errores.join('\n'));
-                    if (saveBtn) {
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = '<ion-icon name="save-outline" class="text-sm"></ion-icon> Guardar Cambios';
-                    }
-                }
-            });
-        });
-    }
-
-    function eliminarCalificacionesAno(anoNum) {
-        const labelAno = {1:'1er', 2:'2do', 3:'3er', 4:'4to', 5:'5to'};
-        const label = labelAno[anoNum] || anoNum;
-        
-        if (!confirm(`⚠️ ATENCIÓN: ¿Está seguro de eliminar TODAS las calificaciones del ${label} Año?\n\nEsta acción no se puede deshacer y eliminará las notas de todos los lapsos de todas las materias de este año.`)) {
-            return;
-        }
-        
-        // Double confirmation
-        if (!confirm(`CONFIRMACIÓN FINAL: Se eliminarán permanentemente las calificaciones del ${label} Año para V-${CEDULA}.\n\n¿Desea continuar?`)) {
-            return;
-        }
-        
-        fetch(`/api/calificaciones/${CEDULA}/eliminar/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': CSRF_TOKEN
-            },
-            body: JSON.stringify({ ano_grado: anoNum })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.ok) {
-                alert('✅ ' + data.mensaje);
-                // Clear the table cells
-                const table = document.getElementById('tabla-notas-' + anoNum);
-                if (table) {
-                    table.querySelectorAll('tr[id^="row-' + anoNum + '-"]').forEach(row => {
-                        row.setAttribute('data-l1', '-');
-                        row.setAttribute('data-l2', '-');
-                        row.setAttribute('data-l3', '-');
-                        row.setAttribute('data-final', '-');
-                        row.querySelector('.cell-l1').innerHTML = '-';
-                        row.querySelector('.cell-l2').innerHTML = '-';
-                        row.querySelector('.cell-l3').innerHTML = '-';
-                        const cellFinal = row.querySelector('.cell-final');
-                        cellFinal.innerHTML = '-';
-                        cellFinal.classList.remove('text-primary', 'text-error');
-                        cellFinal.classList.add('text-text-muted/80');
-                    });
-                }
-                // Clear promedios
-                const tfoot = table ? table.querySelector('tfoot') : null;
-                if (tfoot) {
-                    tfoot.querySelectorAll('td.font-black').forEach(td => {
-                        td.innerHTML = '-';
-                    });
-                }
-            } else {
-                alert('❌ Error: ' + data.error);
-            }
-        })
-        .catch(err => {
-            alert('❌ Error de conexión: ' + (err.message || 'Error desconocido'));
-        });
-    }
 
     function cargarObservaciones() {
         fetch(`/api/observaciones/${CEDULA}/listar/`)
@@ -1330,82 +922,15 @@
         }
     }
 
-    function toggleSinProfesor() {
-        const val = document.querySelector('input[name="huboProfesor"]:checked').value;
-        const div = document.getElementById('divSinProfesor');
-        if (val === 'No') {
-            div.classList.remove('hidden');
-            div.classList.add('flex');
-            if (document.getElementById('sinProfesorContainer').children.length === 0) {
-                agregarFilaSinProf();
-            }
-        } else {
-            div.classList.add('hidden');
-            div.classList.remove('flex');
-            document.getElementById('sinProfesorContainer').innerHTML = '';
-        }
-    }
-
-    function agregarFilaSinProf() {
-        const container = document.getElementById('sinProfesorContainer');
-        if (container.children.length >= 10) {
-            alert('Máximo 10 registros permitidos.');
-            return;
-        }
-        const materias = [
-            "LENGUA Y LITERATURA", "IDIOMAS", "MATEMÁTICA", "EDUCACIÓN FÍSICA",
-            "BIOLOGÍA, AMBIENTE Y TECNOLOGÍA", "FÍSICA", "QUÍMICA",
-            "GEOGRAFÍA, HISTORIA Y SOBERANÍA NACIONAL", "INNOVACIÓN TECNOLÓGICA Y PRODUCTIVA",
-            "ORIENTACIÓN VOCACIONAL"
-        ];
-        const row = document.createElement('div');
-        row.className = "flex gap-2 items-center bg-surface p-2 rounded border border-border sin-prof-row";
-        
-        let matOpts = materias.map(m => `<option value="${m}">${m}</option>`).join('');
-        row.innerHTML = `
-            <select class="form-input text-xs w-full p-1" name="sp_mat">
-                ${matOpts}
-            </select>
-            <select class="form-input text-xs w-20 p-1" name="sp_lap">
-                <option value="M1">M1</option>
-                <option value="M2">M2</option>
-                <option value="M3">M3</option>
-            </select>
-            <button type="button" class="text-error hover:text-red-400" onclick="this.parentElement.remove()">
-                <ion-icon name="trash"></ion-icon>
-            </button>
-        `;
-        container.appendChild(row);
-    }
-
-    function generarBoleta() {
+    function generarBoleta(formato = 'pdf') {
         const hayPremio = document.getElementById('boletaHayPremio').value;
         const asunto = document.getElementById('boletaAsuntoPremio').value;
-        let url = "{% url 'boleta_calificaciones' estudiante.cedula_identidad %}";
-        let params = new URLSearchParams();
-        
+        let url = formato === 'xlsx' 
+            ? "{% url 'boleta_calificaciones_xlsx' estudiante.cedula_identidad %}" 
+            : "{% url 'boleta_calificaciones' estudiante.cedula_identidad %}";
         if (hayPremio === 'Sí' && asunto.trim() !== '') {
-            params.append('premio', asunto.trim());
+            url += `?premio=${encodeURIComponent(asunto)}`;
         }
-        
-        const huboProfesor = document.querySelector('input[name="huboProfesor"]:checked').value;
-        if (huboProfesor === 'No') {
-            const rows = document.querySelectorAll('.sin-prof-row');
-            let idx = 1;
-            rows.forEach(row => {
-                const mat = row.querySelector('[name="sp_mat"]').value;
-                const lap = row.querySelector('[name="sp_lap"]').value;
-                params.append(`sp_mat_${idx}`, mat);
-                params.append(`sp_lap_${idx}`, lap);
-                idx++;
-            });
-        }
-        
-        const qs = params.toString();
-        if (qs) {
-            url += '?' + qs;
-        }
-        
         window.open(url, '_blank');
         document.getElementById('modalBoleta').classList.add('hidden');
     }
