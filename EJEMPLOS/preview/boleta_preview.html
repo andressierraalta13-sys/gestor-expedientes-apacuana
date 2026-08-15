@@ -207,52 +207,52 @@
           </tr>
           <tr>
             <td style="padding-bottom: 2px;">
-              <span class="lbl">CODIGO PLANTEL: &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">{{ codigo_plantel|default:"OD24061508" }}</span>
+              <span class="lbl">CODIGO PLANTEL: &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">OD24061508</span>
             </td>
             <td style="padding-bottom: 2px; text-align: right;">
-              <span class="lbl">CODIGO: &nbsp;</span><span class="val">{{ codigo_dea|default:"31060" }}</span>
+              <span class="lbl">CODIGO: &nbsp;</span><span class="val">31060</span>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 2px;">
-              <span class="lbl">RIF &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">{{ rif|default:"J-409396371" }}</span>
+              <span class="lbl">RIF &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">J-409396371</span>
             </td>
             <td style="padding-bottom: 2px; text-align: right;">
-              <span class="lbl">DIRECTOR (A): &nbsp;</span><span class="val">{{ director|default:"DORCA DIAZ" }}</span>
+              <span class="lbl">DIRECTOR (A): &nbsp;</span><span class="val">DORCA DIAZ</span>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 2px;" colspan="2">
-              <span class="lbl">DOCENTE GUIA &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">{{ docente_guia|default:"" }}</span>
+              <span class="lbl">DOCENTE GUIA &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">PROF. CARLOS MENDOZA</span>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 2px;" colspan="2">
-              <span class="lbl">A&Ntilde;O &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">{{ grado_ano }}</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <span class="lbl">SECC.</span> &nbsp; <span class="val">{{ seccion|default:"U" }}</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <span class="lbl">A&Ntilde;O &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">1er Año</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <span class="lbl">SECC.</span> &nbsp; <span class="val">B</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <span class="lbl">Firma:</span> _________________________
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 2px;">
-              <span class="lbl">CEDULA &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">V-{{ cedula }}</span>
+              <span class="lbl">CEDULA &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">V-13100302</span>
             </td>
             <td style="padding-bottom: 2px; text-align: right;">
-              <span class="lbl">A&Ntilde;O: &nbsp;</span><span class="val">{{ periodo_escolar|default:"2025-2026" }}</span>
+              <span class="lbl">A&Ntilde;O: &nbsp;</span><span class="val">2025-2026</span>
             </td>
           </tr>
           <tr>
             <td style="padding-bottom: 2px;">
-              <span class="lbl">NOMBRES - APELLIDOS &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">{{ nombres }} {{ apellidos }}</span>
+              <span class="lbl">NOMBRES - APELLIDOS &nbsp;&nbsp;&nbsp;&nbsp;</span><span class="val">PRUEBA AATROP SES</span>
             </td>
-            <td class="lbl" style="text-align: right; width: 100px; padding-bottom: 2px;">N&deg; {{ numero_boleta|default:"0001" }}</td>
+            <td class="lbl" style="text-align: right; width: 100px; padding-bottom: 2px;">N&deg; 0075</td>
           </tr>
         </table>
       </td>
       <td class="logo-cell">
-        {% if logo_path %}
-          <img src="{{ logo_path }}" alt="Logo" />
-        {% endif %}
+        
+          <img src="C:/Users/Dark/Downloads/gestor-expedientes-apacuana-main/media/apacuana-logo.png" alt="Logo" />
+        
       </td>
     </tr>
   </table>
@@ -274,33 +274,114 @@
             </tr>
           </thead>
           <tbody>
-            {% for item in materias_boleta %}
+            
             <tr>
-              <td class="subject-cell">{{ item.nombre }}</td>
-              <td>{{ item.m1 }}</td>
-              <td>{{ item.m2 }}</td>
-              <td>{{ item.m3 }}</td>
-              <td style="font-weight: bold;">{{ item.def }}</td>
-              <td>{{ item.revision|default:"-" }}</td>
+              <td class="subject-cell">LENGUA Y LITERATURA</td>
+              <td>20</td>
+              <td>17</td>
+              <td>10</td>
+              <td style="font-weight: bold;">15,67</td>
+              <td>-</td>
             </tr>
-            {% endfor %}
+            
+            <tr>
+              <td class="subject-cell">IDIOMAS</td>
+              <td>20</td>
+              <td>19</td>
+              <td>16</td>
+              <td style="font-weight: bold;">18,33</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">MATEMATICA</td>
+              <td>20</td>
+              <td>-</td>
+              <td>11</td>
+              <td style="font-weight: bold;">15,5</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">EDUCACION FISICA</td>
+              <td>20</td>
+              <td>18</td>
+              <td>11</td>
+              <td style="font-weight: bold;">16,33</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">BIOLOGIA, AMBIENTE Y TECNOLOGIA</td>
+              <td>20</td>
+              <td>19</td>
+              <td>18</td>
+              <td style="font-weight: bold;">19</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">FISICA</td>
+              <td>20</td>
+              <td>18</td>
+              <td>11</td>
+              <td style="font-weight: bold;">16,33</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">QUIMICA</td>
+              <td>20</td>
+              <td>-</td>
+              <td>19</td>
+              <td style="font-weight: bold;">19,5</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">GHC</td>
+              <td>20</td>
+              <td>18</td>
+              <td>18</td>
+              <td style="font-weight: bold;">18,67</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">INNOVACION TECNOLOGICA Y PRODUCTIVIDAD</td>
+              <td>20</td>
+              <td>13</td>
+              <td>17</td>
+              <td style="font-weight: bold;">16,67</td>
+              <td>-</td>
+            </tr>
+            
+            <tr>
+              <td class="subject-cell">ORIENTACION VOCACIONAL</td>
+              <td>20</td>
+              <td>20</td>
+              <td>20</td>
+              <td style="font-weight: bold;">20</td>
+              <td>-</td>
+            </tr>
+            
 
             <!-- PROMEDIO Row -->
             <tr class="prom-row">
               <td style="text-align: right; padding-right: 8px;">PROMEDIO</td>
-              <td>{{ promedios.m1 }}</td>
-              <td>{{ promedios.m2 }}</td>
-              <td>{{ promedios.m3 }}</td>
-              <td>{{ promedios.def }}</td>
+              <td>20,0</td>
+              <td>17,75</td>
+              <td>15,1</td>
+              <td>17,6</td>
               <td>-</td>
             </tr>
 
             <!-- POSICION DEL ESTUDIANTE Row -->
             <tr class="pos-row">
               <td style="text-align: right; padding-right: 8px;">POSICION DEL ESTUDIANTE</td>
-              <td>{{ posicion.m1|default:"-" }}</td>
-              <td>{{ posicion.m2|default:"-" }}</td>
-              <td>{{ posicion.m3|default:"-" }}</td>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
               <td>-</td>
               <td>-</td>
             </tr>
