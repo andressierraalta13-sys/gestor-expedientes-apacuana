@@ -6,44 +6,44 @@
     <style>
         @page {
             size: legal portrait;
-            margin: 0.25cm 0.3cm 0.25cm 0.3cm;
+            margin: 0.8cm 0.85cm 0.8cm 0.85cm;
         }
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 8.5px;
+            font-size: 7.5px;
             color: #000;
-            line-height: 1.15;
+            line-height: 1.1;
         }
         table { width: 100%; border-collapse: collapse; }
-        td, th { padding: 2.5px 3px; vertical-align: middle; }
-        .box td, .box th { border: 0.75px solid #000; }
+        td, th { padding: 1.2px 2px; vertical-align: middle; }
+        .box td, .box th { border: 0.7px solid #000; }
         .c { text-align: center; }
         .l { text-align: left; }
         .r { text-align: right; }
         .b { font-weight: bold; }
         .top { vertical-align: top; }
-        .seccion { margin-top: 6px; }
+        .seccion { margin-top: 3.5px; }
         .titulo {
             font-weight: bold;
-            font-size: 9px;
-            padding: 3.5px 4px;
-            border: 0.75px solid #000;
+            font-size: 8px;
+            padding: 2px 3px;
+            border: 0.7px solid #000;
         }
         .grades { table-layout: fixed; width: 100%; }
-        .grades td { font-size: 8px; word-wrap: break-word; padding: 2.8px 1.5px; }
-        .anio-tit { font-size: 9.5px; padding: 3.5px 0; }
-        .area { font-size: 7.5px; text-align: left; word-wrap: break-word; line-height: 1.12; }
-        .letras { font-size: 7px; }
-        .mini { font-size: 7px; }
-        .h-title { font-weight: bold; font-size: 11.5px; }
-        .h-line { font-size: 8.5px; font-weight: bold; }
-        .sello { vertical-align: middle; font-weight: bold; font-size: 11px; text-align: center; }
+        .grades td { font-size: 7px; word-wrap: break-word; padding: 1.2px 1.5px; }
+        .anio-tit { font-size: 8px; padding: 1.5px 0; }
+        .area { font-size: 6.8px; text-align: left; word-wrap: break-word; line-height: 1.05; }
+        .letras { font-size: 6px; }
+        .mini { font-size: 6px; }
+        .h-title { font-weight: bold; font-size: 10px; }
+        .h-line { font-size: 7.5px; font-weight: bold; }
+        .sello { vertical-align: middle; font-weight: bold; font-size: 9.5px; text-align: center; }
         .valor-fiscal {
-            font-size: 7px;
+            font-size: 6.5px;
             font-weight: bold;
             text-align: left;
-            margin-top: 8px;
-            padding: 2px 0;
+            margin-top: 4px;
+            padding: 1px 0;
         }
     </style>
 </head>
@@ -52,21 +52,21 @@
     <!-- ============ ENCABEZADO: LOGOS + TÍTULO ============ -->
     <table class="box">
         <tr>
-            <td style="width: 50%; vertical-align: middle; padding: 4px 6px;">
+            <td style="width: 52%; vertical-align: middle; padding: 2px 4px;">
                 {% if logo_gobierno %}
-                <img src="{{ logo_gobierno }}" style="width: 255px; height: auto;">
+                <img src="{{ logo_gobierno }}" style="width: 215px; height: auto;">
                 {% endif %}
             </td>
-            <td style="width: 50%; vertical-align: top; padding: 0;">
-                <div class="h-title c" style="padding: 4px 0;">CERTIFICACIÓN DE CALIFICACIONES EMG</div>
+            <td style="width: 48%; vertical-align: top; padding: 0;">
+                <div class="h-title c" style="padding: 2px 0;">CERTIFICACIÓN DE CALIFICACIONES EMG</div>
                 <table>
                     <tr>
-                        <td class="h-line l" style="padding: 3.5px 4px;">
+                        <td class="h-line l" style="padding: 2px 3px;">
                             I. Plan de Estudio: {{ plantel.plan_estudio }} &nbsp;&nbsp; Código: {{ codigo }}
                         </td>
                     </tr>
                     <tr>
-                        <td class="h-line l" style="border-top: 0.75px solid #000; padding: 3.5px 4px;">
+                        <td class="h-line l" style="border-top: 0.7px solid #000; padding: 2px 3px;">
                             Lugar y Fecha de Expedición: {{ plantel.localidad }}, {{ fecha_larga }}
                         </td>
                     </tr>
@@ -79,16 +79,16 @@
     <div class="titulo seccion" style="border-bottom: none;">II. Datos de la Institución Educativa o Centro de Desarrollo de la Calidad Educativa Estadal (CDCEE) que Emite la Certificación:</div>
     <table class="box">
         <tr>
-            <td style="width: 35%; padding: 3px 4px;"><span class="b">Código:</span> {{ plantel.codigo_plantel }}</td>
-            <td style="width: 65%; padding: 3px 4px;"><span class="b">Denominación y Epónimo:</span> {{ plantel.eponimo }}</td>
+            <td style="width: 35%; padding: 1.5px 3px;"><span class="b">Código:</span> {{ plantel.codigo_plantel }}</td>
+            <td style="width: 65%; padding: 1.5px 3px;"><span class="b">Denominación y Epónimo:</span> {{ plantel.eponimo }}</td>
         </tr>
         <tr>
-            <td style="padding: 3px 4px;"><span class="b">Dirección:</span> {{ plantel.direccion }}</td>
-            <td style="padding: 3px 4px;"><span class="b">Teléfono:</span> {{ plantel.telefono }}</td>
+            <td style="padding: 1.5px 3px;"><span class="b">Dirección:</span> {{ plantel.direccion }}</td>
+            <td style="padding: 1.5px 3px;"><span class="b">Teléfono:</span> {{ plantel.telefono }}</td>
         </tr>
         <tr>
-            <td style="padding: 3px 4px;"><span class="b">Municipio:</span> {{ plantel.municipio }} &nbsp;&nbsp; <span class="b">Entidad Federal:</span> {{ plantel.entidad_federal }}</td>
-            <td style="padding: 3px 4px;"><span class="b">CDCEE:</span> {{ plantel.zona_educativa }}</td>
+            <td style="padding: 1.5px 3px;"><span class="b">Municipio:</span> {{ plantel.municipio }} &nbsp;&nbsp; <span class="b">Entidad Federal:</span> {{ plantel.entidad_federal }}</td>
+            <td style="padding: 1.5px 3px;"><span class="b">CDCEE:</span> {{ plantel.zona_educativa }}</td>
         </tr>
     </table>
 
@@ -96,15 +96,15 @@
     <div class="titulo seccion" style="border-bottom: none;">III. Datos de Identificación del Estudiante:</div>
     <table class="box">
         <tr>
-            <td style="width: 40%; padding: 3px 4px;"><span class="b">Cédula de Identidad:</span> {{ e_cedula }}</td>
-            <td style="width: 60%; padding: 3px 4px;"><span class="b">Fecha de Nacimiento:</span> {{ fecha_nacimiento }}</td>
+            <td style="width: 40%; padding: 1.5px 3px;"><span class="b">Cédula de Identidad:</span> {{ e_cedula }}</td>
+            <td style="width: 60%; padding: 1.5px 3px;"><span class="b">Fecha de Nacimiento:</span> {{ fecha_nacimiento }}</td>
         </tr>
         <tr>
-            <td style="padding: 3px 4px;"><span class="b">Apellidos:</span> {{ apellido }}</td>
-            <td style="padding: 3px 4px;"><span class="b">Nombres:</span> {{ nombre }}</td>
+            <td style="padding: 1.5px 3px;"><span class="b">Apellidos:</span> {{ apellido }}</td>
+            <td style="padding: 1.5px 3px;"><span class="b">Nombres:</span> {{ nombre }}</td>
         </tr>
         <tr>
-            <td colspan="2" style="padding: 3px 4px;">
+            <td colspan="2" style="padding: 1.5px 3px;">
                 <span class="b">Lugar de Nacimiento:</span> &nbsp;&nbsp;
                 <span class="b">País:</span> {{ pais_nacimiento }} &nbsp;&nbsp;
                 <span class="b">Estado:</span> {{ estado_nacimiento }} &nbsp;&nbsp;
@@ -120,22 +120,22 @@
             <td style="width: 49.3%; vertical-align: top; border: none;">
                 <table class="box">
                     <tr>
-                        <td class="b c" style="width: 8%; padding: 2.5px;">Nº</td>
-                        <td class="b c" style="width: 56%; padding: 2.5px;">Denominación y Epónimo de la Institución Educativa</td>
-                        <td class="b c" style="width: 24%; padding: 2.5px;">Localidad</td>
-                        <td class="b c" style="width: 12%; padding: 2.5px;">E.F.</td>
+                        <td class="b c" style="width: 8%; padding: 1.5px;">Nº</td>
+                        <td class="b c" style="width: 56%; padding: 1.5px;">Denominación y Epónimo de la Institución Educativa</td>
+                        <td class="b c" style="width: 24%; padding: 1.5px;">Localidad</td>
+                        <td class="b c" style="width: 12%; padding: 1.5px;">E.F.</td>
                     </tr>
                     <tr>
-                        <td class="b c" style="padding: 2.5px;">1</td>
-                        <td class="c" style="font-size: 7.5px; padding: 2.5px;">{{ plantel.nombre }}</td>
-                        <td class="c" style="font-size: 7.5px; padding: 2.5px;">{{ plantel.localidad }}</td>
-                        <td class="c" style="padding: 2.5px;">{{ plantel.entidad_federal }}</td>
+                        <td class="b c" style="padding: 1.5px;">1</td>
+                        <td class="c" style="font-size: 6.5px; padding: 1.5px;">{{ plantel.nombre }}</td>
+                        <td class="c" style="font-size: 6.5px; padding: 1.5px;">{{ plantel.localidad }}</td>
+                        <td class="c" style="padding: 1.5px;">{{ plantel.entidad_federal }}</td>
                     </tr>
                     <tr>
-                        <td class="b c" style="padding: 2.5px;">2</td>
-                        <td class="c" style="padding: 2.5px;">************************</td>
-                        <td class="c" style="padding: 2.5px;">******************</td>
-                        <td class="c" style="padding: 2.5px;">***</td>
+                        <td class="b c" style="padding: 1.5px;">2</td>
+                        <td class="c" style="padding: 1.5px;">************************</td>
+                        <td class="c" style="padding: 1.5px;">******************</td>
+                        <td class="c" style="padding: 1.5px;">***</td>
                     </tr>
                 </table>
             </td>
@@ -143,14 +143,14 @@
             <td style="width: 49.3%; vertical-align: top; border: none;">
                 <table class="box">
                     <tr>
-                        <td class="b c" style="width: 8%; padding: 2.5px;">Nº</td>
-                        <td class="b c" style="width: 56%; padding: 2.5px;">Denominación y Epónimo de la Institución Educativa</td>
-                        <td class="b c" style="width: 24%; padding: 2.5px;">Localidad</td>
-                        <td class="b c" style="width: 12%; padding: 2.5px;">E.F.</td>
+                        <td class="b c" style="width: 8%; padding: 1.5px;">Nº</td>
+                        <td class="b c" style="width: 56%; padding: 1.5px;">Denominación y Epónimo de la Institución Educativa</td>
+                        <td class="b c" style="width: 24%; padding: 1.5px;">Localidad</td>
+                        <td class="b c" style="width: 12%; padding: 1.5px;">E.F.</td>
                     </tr>
-                    <tr><td class="b c" style="padding: 2.5px;">3</td><td class="c" style="padding: 2.5px;">************************</td><td class="c" style="padding: 2.5px;">******************</td><td class="c" style="padding: 2.5px;">***</td></tr>
-                    <tr><td class="b c" style="padding: 2.5px;">4</td><td class="c" style="padding: 2.5px;">************************</td><td class="c" style="padding: 2.5px;">******************</td><td class="c" style="padding: 2.5px;">***</td></tr>
-                    <tr><td class="b c" style="padding: 2.5px;">5</td><td class="c" style="padding: 2.5px;">************************</td><td class="c" style="padding: 2.5px;">******************</td><td class="c" style="padding: 2.5px;">***</td></tr>
+                    <tr><td class="b c" style="padding: 1.5px;">3</td><td class="c" style="padding: 1.5px;">************************</td><td class="c" style="padding: 1.5px;">******************</td><td class="c" style="padding: 1.5px;">***</td></tr>
+                    <tr><td class="b c" style="padding: 1.5px;">4</td><td class="c" style="padding: 1.5px;">************************</td><td class="c" style="padding: 1.5px;">******************</td><td class="c" style="padding: 1.5px;">***</td></tr>
+                    <tr><td class="b c" style="padding: 1.5px;">5</td><td class="c" style="padding: 1.5px;">************************</td><td class="c" style="padding: 1.5px;">******************</td><td class="c" style="padding: 1.5px;">***</td></tr>
                 </table>
             </td>
         </tr>
@@ -170,7 +170,7 @@
                 <!-- VI. OBSERVACIONES -->
                 <table class="box seccion">
                     <tr>
-                        <td style="height: 75px; vertical-align: top; padding: 4px 5px;">
+                        <td style="height: 48px; vertical-align: top; padding: 2px 3px;">
                             <span class="b">VI. Observaciones:</span>
                         </td>
                     </tr>
@@ -247,15 +247,15 @@
                 <table class="box">
                     <tr>
                         <td class="b c" style="width: 50%;">Director(a)</td>
-                        <td rowspan="6" class="sello" style="width: 50%; height: 95px;">SELLO</td>
+                        <td rowspan="6" class="sello" style="width: 50%; height: 60px;">SELLO</td>
                     </tr>
                     <tr><td class="b c mini">Apellidos y Nombres:</td></tr>
-                    <tr><td class="b c" style="font-size: 8px; padding: 2.5px;">{{ plantel.director_nombre }}</td></tr>
+                    <tr><td class="b c" style="font-size: 7px; padding: 1.5px;">{{ plantel.director_nombre }}</td></tr>
                     <tr><td class="b c mini">Cédula de Identidad:</td></tr>
-                    <tr><td class="b c" style="font-size: 8px; padding: 2.5px;">{{ plantel.director_cedula }}</td></tr>
-                    <tr><td class="b c mini" style="height: 28px; vertical-align: top;">Firma:</td></tr>
+                    <tr><td class="b c" style="font-size: 7px; padding: 1.5px;">{{ plantel.director_cedula }}</td></tr>
+                    <tr><td class="b c mini" style="height: 18px; vertical-align: top;">Firma:</td></tr>
                 </table>
-                <div class="c mini b" style="margin-top: 1.5px;">Para efectos de su Validez Nacional</div>
+                <div class="c mini b" style="margin-top: 1px;">Para efectos de su Validez Nacional</div>
             </td>
             <td style="width: 1.4%; border: none;"></td>
             <td style="width: 49.3%; vertical-align: top; border: none;">
@@ -263,15 +263,15 @@
                 <table class="box">
                     <tr>
                         <td class="b c" style="width: 50%;">Director(a)</td>
-                        <td rowspan="6" class="sello" style="width: 50%; height: 95px;">SELLO</td>
+                        <td rowspan="6" class="sello" style="width: 50%; height: 60px;">SELLO</td>
                     </tr>
                     <tr><td class="b c mini">Apellidos y Nombres:</td></tr>
-                    <tr><td class="c" style="font-size: 8px; padding: 2.5px;">*************************</td></tr>
+                    <tr><td class="c" style="font-size: 7px; padding: 1.5px;">*************************</td></tr>
                     <tr><td class="b c mini">Cédula de Identidad:</td></tr>
-                    <tr><td class="c" style="font-size: 8px; padding: 2.5px;">***************</td></tr>
-                    <tr><td class="b c mini" style="height: 28px; vertical-align: top;">Firma:</td></tr>
+                    <tr><td class="c" style="font-size: 7px; padding: 1.5px;">***************</td></tr>
+                    <tr><td class="b c mini" style="height: 18px; vertical-align: top;">Firma:</td></tr>
                 </table>
-                <div class="c mini b" style="margin-top: 1.5px;">Para efectos de su Validez Internacional</div>
+                <div class="c mini b" style="margin-top: 1px;">Para efectos de su Validez Internacional</div>
             </td>
         </tr>
     </table>
