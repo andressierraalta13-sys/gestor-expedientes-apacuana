@@ -5,46 +5,46 @@
     <title>Certificación de Calificaciones EMG</title>
     <style>
         @page {
-            size: legal portrait;
-            margin: 0.35cm 0.4cm 0.3cm 0.4cm;
-            @frame footer {
-                -pdf-frame-content: footer_content;
-                bottom: 0.15cm;
-                margin-left: 0.4cm;
-                margin-right: 0.4cm;
-                height: 0.35cm;
-            }
+            size: letter portrait;
+            margin: 0.35cm 0.4cm 0.35cm 0.4cm;
         }
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 7px;
+            font-size: 7.5px;
             color: #000;
-            line-height: 1.05;
+            line-height: 1.1;
         }
         table { width: 100%; border-collapse: collapse; }
-        td, th { padding: 0.8px 1.5px; vertical-align: middle; }
-        .box td, .box th { border: 0.6px solid #000; }
+        td, th { padding: 1.2px 2px; vertical-align: middle; }
+        .box td, .box th { border: 0.75px solid #000; }
         .c { text-align: center; }
         .l { text-align: left; }
         .r { text-align: right; }
         .b { font-weight: bold; }
         .top { vertical-align: top; }
-        .seccion { margin-top: 2px; }
+        .seccion { margin-top: 3px; }
         .titulo {
             font-weight: bold;
-            font-size: 7.5px;
-            padding: 1.5px 2px;
-            border: 0.6px solid #000;
+            font-size: 8px;
+            padding: 2px 3px;
+            border: 0.75px solid #000;
         }
         .grades { table-layout: fixed; width: 100%; }
-        .grades td { font-size: 6.5px; word-wrap: break-word; padding: 0.6px 1px; }
-        .anio-tit { font-size: 7.5px; padding: 1px 0; }
-        .area { font-size: 6px; text-align: left; word-wrap: break-word; line-height: 1.0; }
-        .letras { font-size: 5.5px; }
-        .mini { font-size: 5.5px; }
-        .h-title { font-weight: bold; font-size: 9.5px; }
-        .h-line { font-size: 7px; font-weight: bold; }
-        .sello { vertical-align: middle; font-weight: bold; font-size: 8.5px; text-align: center; }
+        .grades td { font-size: 7px; word-wrap: break-word; padding: 1px 1.5px; }
+        .anio-tit { font-size: 8px; padding: 2px 0; }
+        .area { font-size: 6.8px; text-align: left; word-wrap: break-word; line-height: 1.05; }
+        .letras { font-size: 6px; }
+        .mini { font-size: 6px; }
+        .h-title { font-weight: bold; font-size: 10px; }
+        .h-line { font-size: 7.5px; font-weight: bold; }
+        .sello { vertical-align: middle; font-weight: bold; font-size: 9px; text-align: center; }
+        .valor-fiscal {
+            font-size: 6.5px;
+            font-weight: bold;
+            text-align: left;
+            margin-top: 3px;
+            padding: 1px 0;
+        }
     </style>
 </head>
 <body>
@@ -52,21 +52,21 @@
     <!-- ============ ENCABEZADO: LOGOS + TÍTULO ============ -->
     <table class="box">
         <tr>
-            <td style="width: 52%; vertical-align: middle; padding: 2px;">
+            <td style="width: 52%; vertical-align: middle; padding: 2px 4px;">
                 {% if logo_gobierno %}
-                <img src="{{ logo_gobierno }}" style="width: 200px; height: auto;">
+                <img src="{{ logo_gobierno }}" style="width: 220px; height: auto;">
                 {% endif %}
             </td>
             <td style="width: 48%; vertical-align: top; padding: 0;">
-                <div class="h-title c" style="padding: 1px 0;">CERTIFICACIÓN DE CALIFICACIONES EMG</div>
+                <div class="h-title c" style="padding: 2px 0;">CERTIFICACIÓN DE CALIFICACIONES EMG</div>
                 <table>
                     <tr>
-                        <td class="h-line l" style="padding: 1.5px 2px;">
+                        <td class="h-line l" style="padding: 2px 3px;">
                             I. Plan de Estudio: {{ plantel.plan_estudio }} &nbsp;&nbsp; Código: {{ codigo }}
                         </td>
                     </tr>
                     <tr>
-                        <td class="h-line l" style="border-top: 0.6px solid #000; padding: 1.5px 2px;">
+                        <td class="h-line l" style="border-top: 0.75px solid #000; padding: 2px 3px;">
                             Lugar y Fecha de Expedición: {{ plantel.localidad }}, {{ fecha_larga }}
                         </td>
                     </tr>
@@ -127,8 +127,8 @@
                     </tr>
                     <tr>
                         <td class="b c">1</td>
-                        <td class="c" style="font-size: 6px;">{{ plantel.nombre }}</td>
-                        <td class="c" style="font-size: 6px;">{{ plantel.localidad }}</td>
+                        <td class="c" style="font-size: 6.5px;">{{ plantel.nombre }}</td>
+                        <td class="c" style="font-size: 6.5px;">{{ plantel.localidad }}</td>
                         <td class="c">{{ plantel.entidad_federal }}</td>
                     </tr>
                     <tr>
@@ -170,7 +170,7 @@
                 <!-- VI. OBSERVACIONES -->
                 <table class="box seccion">
                     <tr>
-                        <td style="height: 38px; vertical-align: top; padding: 2px;">
+                        <td style="height: 48px; vertical-align: top; padding: 2px 3px;">
                             <span class="b">VI. Observaciones:</span>
                         </td>
                     </tr>
@@ -250,10 +250,10 @@
                         <td rowspan="6" class="sello" style="width: 50%;">SELLO</td>
                     </tr>
                     <tr><td class="b c mini">Apellidos y Nombres:</td></tr>
-                    <tr><td class="b c" style="font-size: 6.5px;">{{ plantel.director_nombre }}</td></tr>
+                    <tr><td class="b c" style="font-size: 7px;">{{ plantel.director_nombre }}</td></tr>
                     <tr><td class="b c mini">Cédula de Identidad:</td></tr>
-                    <tr><td class="b c" style="font-size: 6.5px;">{{ plantel.director_cedula }}</td></tr>
-                    <tr><td class="b c mini" style="height: 14px; vertical-align: top;">Firma:</td></tr>
+                    <tr><td class="b c" style="font-size: 7px;">{{ plantel.director_cedula }}</td></tr>
+                    <tr><td class="b c mini" style="height: 18px; vertical-align: top;">Firma:</td></tr>
                 </table>
                 <div class="c mini b" style="margin-top: 1px;">Para efectos de su Validez Nacional</div>
             </td>
@@ -266,17 +266,17 @@
                         <td rowspan="6" class="sello" style="width: 50%;">SELLO</td>
                     </tr>
                     <tr><td class="b c mini">Apellidos y Nombres:</td></tr>
-                    <tr><td class="c" style="font-size: 6.5px;">*************************</td></tr>
+                    <tr><td class="c" style="font-size: 7px;">*************************</td></tr>
                     <tr><td class="b c mini">Cédula de Identidad:</td></tr>
-                    <tr><td class="c" style="font-size: 6.5px;">***************</td></tr>
-                    <tr><td class="b c mini" style="height: 14px; vertical-align: top;">Firma:</td></tr>
+                    <tr><td class="c" style="font-size: 7px;">***************</td></tr>
+                    <tr><td class="b c mini" style="height: 18px; vertical-align: top;">Firma:</td></tr>
                 </table>
                 <div class="c mini b" style="margin-top: 1px;">Para efectos de su Validez Internacional</div>
             </td>
         </tr>
     </table>
 
-    <div id="footer_content" class="l" style="font-size: 6px; font-weight: bold;">
+    <div class="valor-fiscal">
         VALOR FISCAL: Para su validez legal y de acuerdo al Ramo de Estampillas, al dorso de este documento se le debe colocar tres décimas de la Unidad Tributaria (0,3 U.T.)
     </div>
 
