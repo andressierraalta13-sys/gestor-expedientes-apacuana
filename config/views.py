@@ -87,8 +87,10 @@ def aplicar_filtro_busqueda(queryset, query):
 def expedientes_view(request):
     try:
         query = request.GET.get('q', '').strip()
-        # Filtrar expedientes huérfanos
-        expedientes = Expediente.objects.filter(estudiante__isnull=False).select_related('estudiante')
+        # Filtrar expedientes huérfanos y ordenar por año, sección y nombre
+        expedientes = Expediente.objects.filter(estudiante__isnull=False).select_related('estudiante').order_by(
+            'estudiante__ano_cursando', 'estudiante__seccion', 'estudiante__apellidos', 'estudiante__nombres'
+        )
         
         if query:
             expedientes = aplicar_filtro_busqueda(expedientes, query)

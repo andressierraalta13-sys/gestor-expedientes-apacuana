@@ -156,7 +156,7 @@
 
         <!-- Vista Filtrada -->
         <div id="vista-filtrada" style="display:none; padding: 20px;">
-            {% regroup expedientes|dictsort:"estudiante.seccion"|dictsort:"estudiante.ano_cursando" by estudiante.get_ano_cursando_display as expedientes_por_ano %}
+            {% regroup expedientes by estudiante.get_ano_cursando_display as expedientes_por_ano %}
             {% for ano in expedientes_por_ano %}
                 <div class="ano-bloque" style="margin-bottom: 2rem;">
                     <h2 class="ano-titulo" style="font-size: 1.25rem; font-weight: 600; color: var(--color-primary); margin-bottom: 15px; border-bottom: 2px solid var(--color-border); padding-bottom: 5px;">{{ ano.grouper|default:"Sin Año" }}</h2>
@@ -288,16 +288,22 @@
     }
 
     function restaurarVistaGlobal() {
-        // Mostrar todas las filas si estaban ocultas por el filtro rápido
-        var rows = document.querySelectorAll('.estudiante-row');
-        rows.forEach(function(row) {
-            row.style.display = '';
-        });
-        
         var inputBusqueda = document.getElementById('exp-table-search');
         if (inputBusqueda && inputBusqueda.value.includes('Filtro activo')) {
             inputBusqueda.value = '';
         }
+        
+        if (window.tableCtrl) {
+            window.tableCtrl.filteredRows = [...window.tableCtrl.allRows];
+            window.tableCtrl.currentPage = 1;
+            window.tableCtrl._render();
+        } else {
+            var rows = document.querySelectorAll('.estudiante-row');
+            rows.forEach(function(row) {
+                row.style.display = '';
+            });
+        }
+        
         var botoneraVolver = document.getElementById('botonera-volver');
         if (botoneraVolver) botoneraVolver.style.display = 'none';
     }
@@ -312,7 +318,6 @@
         // Ocultar cuadrícula y mostrar tabla
         vistaFiltrada.style.display = 'none';
         vistaGlobal.style.display = 'block';
-        if (paginacion) paginacion.style.display = 'none'; // Se apaga paginación porque es filtro en caliente
         if (barraBusqueda) barraBusqueda.style.display = 'flex';
         
         // Actualizar botón para poder volver
@@ -327,18 +332,29 @@
         var botoneraVolver = document.getElementById('botonera-volver');
         if (botoneraVolver) botoneraVolver.style.display = 'block';
 
-        // Aplicar filtro directo al DOM de la tabla
-        var rows = document.querySelectorAll('.estudiante-row');
-        rows.forEach(function(row) {
-            var rowAno = row.getAttribute('data-ano');
-            var rowSeccion = row.getAttribute('data-seccion');
-            
-            if (rowAno === ano && rowSeccion === seccion) {
-                row.style.display = ''; 
-            } else {
-                row.style.display = 'none';
-            }
-        });
+        if (window.tableCtrl) {
+            window.tableCtrl.filteredRows = window.tableCtrl.allRows.filter(row => {
+                var rowAno = row.getAttribute('data-ano');
+                var rowSeccion = row.getAttribute('data-seccion');
+                return rowAno === ano && rowSeccion === seccion;
+            });
+            window.tableCtrl.currentPage = 1;
+            window.tableCtrl._render();
+        } else {
+            // Aplicar filtro directo al DOM de la tabla
+            var rows = document.querySelectorAll('.estudiante-row');
+            rows.forEach(function(row) {
+                var rowAno = row.getAttribute('data-ano');
+                var rowSeccion = row.getAttribute('data-seccion');
+                
+                if (rowAno === ano && rowSeccion === seccion) {
+                    row.style.display = ''; 
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            if (paginacion) paginacion.style.display = 'none';
+        }
     }
 
     function volverALaBiblioteca() {
