@@ -35,7 +35,7 @@
             padding: 2px 3px;
             border: 0.75px solid #000;
         }
-        .grades { table-layout: fixed; }
+        .grades { table-layout: fixed; width: 100%; }
         .grades td { font-size: 7px; word-wrap: break-word; }
         .anio-tit { font-size: 8px; padding: 2px 0; }
         .area { font-size: 6.5px; text-align: left; word-wrap: break-word; }
@@ -126,8 +126,8 @@
                     </tr>
                     <tr>
                         <td class="b c">1</td>
-                        <td class="l" style="font-size: 6.5px;">{{ plantel.nombre }}</td>
-                        <td class="l" style="font-size: 6.5px;">{{ plantel.localidad }}</td>
+                        <td class="c" style="font-size: 6.5px;">{{ plantel.nombre }}</td>
+                        <td class="c" style="font-size: 6.5px;">{{ plantel.localidad }}</td>
                         <td class="c">{{ plantel.entidad_federal }}</td>
                     </tr>
                     <tr>
@@ -186,43 +186,44 @@
                 <!-- ÁREAS DE FORMACIÓN COMPLEMENTARIAS -->
                 <table class="box grades seccion">
                     <colgroup>
-                        <col style="width: 38%;"><col style="width: 10%;"><col style="width: 10%;"><col style="width: 18%;"><col style="width: 6%;"><col style="width: 9%;"><col style="width: 9%;"><col style="width: 0%;">
+                        <col style="width: 42%;"><col style="width: 7%;"><col style="width: 7%;"><col style="width: 12%;"><col style="width: 6%;"><col style="width: 9%;"><col style="width: 9%;"><col style="width: 8%;">
                     </colgroup>
                     <tr>
                         <td colspan="8" class="b c anio-tit">ÁREAS DE FORMACIÓN</td>
                     </tr>
                     <tr>
-                        <td rowspan="2" class="b c" style="width: 38%;">AREAS DE FORMACION</td>
-                        <td colspan="3" class="b c" style="width: 38%;">CALIFICACION</td>
+                        <td rowspan="2" class="b c" style="width: 42%;">AREAS DE FORMACION</td>
+                        <td colspan="3" class="b c" style="width: 26%;">CALIFICACION</td>
                         <td rowspan="2" class="b c" style="width: 6%;">T-E</td>
                         <td colspan="2" class="b c" style="width: 18%;">FECHA</td>
+                        <td rowspan="2" class="b c" style="width: 8%;">PLANTEL</td>
                     </tr>
                     <tr>
-                        <td class="b c" style="width: 10%;">AÑO</td>
-                        <td class="b c" style="width: 10%;">N°</td>
-                        <td class="b c" style="width: 18%;">LETRA</td>
+                        <td class="b c" style="width: 7%;">AÑO</td>
+                        <td class="b c" style="width: 7%;">N°</td>
+                        <td class="b c" style="width: 12%;">LETRA</td>
                         <td class="b c" style="width: 9%;">Mes</td>
                         <td class="b c" style="width: 9%;">Año</td>
                     </tr>
                     <tr>
                         <td rowspan="5" class="area">INNOVACION TECNOLOGIA Y PRODUCTIVIDAD</td>
-                        <td class="b c">1</td><td class="c">14</td><td class="c letras">CATORCE</td><td class="c">F</td><td class="c">07</td><td class="c">2024</td>
+                        <td class="b c">1</td><td class="c">14</td><td class="c letras">CATORCE</td><td class="c">F</td><td class="c">07</td><td class="c">2024</td><td class="c">1</td>
                     </tr>
-                    <tr><td class="b c">2</td><td class="c">11</td><td class="c letras">DIEZ</td><td class="c">F</td><td class="c">7</td><td class="c">2025</td></tr>
-                    <tr><td class="b c">3</td><td class="c">********</td><td class="c">******</td><td class="c">****</td><td class="c">****</td><td class="c">******</td></tr>
-                    <tr><td class="b c">4</td><td class="c">********</td><td class="c">******</td><td class="c">****</td><td class="c">****</td><td class="c">******</td></tr>
-                    <tr><td class="b c">5</td><td class="c">********</td><td class="c">******</td><td class="c">****</td><td class="c">****</td><td class="c">******</td></tr>
+                    <tr><td class="b c">2</td><td class="c">11</td><td class="c letras">DIEZ</td><td class="c">F</td><td class="c">7</td><td class="c">2025</td><td class="c">1</td></tr>
+                    <tr><td class="b c">3</td><td class="c">********</td><td class="c">******</td><td class="c">****</td><td class="c">****</td><td class="c">******</td><td class="c">**</td></tr>
+                    <tr><td class="b c">4</td><td class="c">********</td><td class="c">******</td><td class="c">****</td><td class="c">****</td><td class="c">******</td><td class="c">**</td></tr>
+                    <tr><td class="b c">5</td><td class="c">********</td><td class="c">******</td><td class="c">****</td><td class="c">****</td><td class="c">******</td><td class="c">**</td></tr>
                 </table>
 
                 <!-- ORIENTACION VACACIONAL -->
                 <table class="box grades seccion">
                     <colgroup>
-                        <col style="width: 38%;"><col style="width: 10%;"><col style="width: 52%;">
+                        <col style="width: 42%;"><col style="width: 7%;"><col style="width: 51%;">
                     </colgroup>
                     <tr>
-                        <td class="b c">AREAS DE FORMACION</td>
-                        <td class="b c">AÑO</td>
-                        <td class="b c">CALIFICACION LITERAL</td>
+                        <td class="b c" style="width: 42%;">AREAS DE FORMACION</td>
+                        <td class="b c" style="width: 7%;">AÑO</td>
+                        <td class="b c" style="width: 51%;">CALIFICACION LITERAL</td>
                     </tr>
                     <tr>
                         <td rowspan="5" class="area">ORIENTACION VACACIONAL</td>
